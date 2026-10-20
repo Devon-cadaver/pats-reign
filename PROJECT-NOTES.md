@@ -1,6 +1,6 @@
 # Pats Reign: project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 0.8.4. Where older notes or memory
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 0.8.6. Where older notes or memory
 disagree with this file, this file wins.
 
 ## Where things are
@@ -61,10 +61,14 @@ disagree with this file, this file wins.
   save and memory fixes). Deployed as v0.8.0, later fixes as v0.8.1 to v0.8.3 (see below). v0.8.4 (the end-game tester:
   the end game was about 1.5 bot-hours) added rune levels VI-VIII (one per great ship), 13 more designs (34 in all), harder undead
   with their own fight moves, tougher Helheim legends, Hel's tithe, lair trials, Hel's armada, and fixed old saves
-  never getting their legend designs and a geometry leak.
-- Sean has played none of it yet. Expect balance feedback. The knobs: lair waves and rebirths (lairSpawn), souls per
-  kill (killMon: 2 + 2 x (level - size)), rune level prices (UPG), TIER_COST 5-7, HALL, bounty pay (makeBounty), monster
-  hull x1.3 (spawnMon), DELTA (spawn levels), pots (potK, 1 + floor(level / 2) a battle), Jormungandr's lock 1.9 s.
+  never getting their legend designs and a geometry leak. v0.8.5 tuned the pacing from the tester's re-run (Naglfar
+  measured at 2.5-3.4 bot-hours with gaps under ~10 min, then 1.5-2 h of rune VIII; a human perhaps 1.5-2.5x that).
+  v0.8.6 fixed the bug tester's finds (ballista VI-VIII reloads, rune levels lost on reload aboard a prize ship).
+- Sean has played none of it yet. Expect balance feedback. The knobs: lair waves, rebirths and trials (lairSpawn,
+  lairTrial), souls per kill (killMon: 2 + 2 x (level - size)), rune level prices (UPG, souls in cost[i][3]), TIER_COST
+  5-7, design prices (HULLS / SAILS got.cost, got.need), HALL, Hel's tithe (titheCard), bounty pay (makeBounty), monster
+  hull x1.3 and the undead x(1.4 + 0.2 a size past the Drakkar) (spawnMon), Helheim legend multipliers and rageAt
+  (startLegend), DELTA (spawn levels), pots (potK), Jormungandr's lock 1.9 s, the armada (raiderFleet(true), EV.armada).
 - Testers: their full reports were delivered as messages in the 2026-10-20 session; the important findings and what
   was done about each are in the v0.8.0 section. qa/BRIEF.md and qa/BRIEF080.md in that session's scratchpad describe
   the set-up (Playwright from the npx cache, a frozen build on its own port per wave).
@@ -340,7 +344,7 @@ disagree with this file, this file wins.
 - Tested: a Drakkar bot (perfect runes, Space every 0.27 s) after 90 s had the Elder at 2% and 472 of 938 hull left
   (5 ward breaks, 5 lifts: 2 drops, 2 slams).
 
-## v0.8.0 to v0.8.4: Helheim, the end game (Sean, 2026-10-20 overnight)
+## v0.8.0 to v0.8.6: Helheim, the end game (Sean, 2026-10-20 overnight)
 - Sean: "put a few agents from opus and sonnet on bug testing and exploit testing ... create larger ships ... ship
   upgrades and designing with new hulls and sails ... a second map ... the underworld where every ship is a version of
   undead and so are the monsters. Burning sky at day, purple swirling abyss at night. All mobs are slightly harder."
@@ -540,6 +544,37 @@ disagree with this file, this file wins.
   - The soul barge throws soul orbs worth 3 (and gold) instead of cargo. Hel's bounties pay souls v x 3. DROP leaves the
     bounty offered at that harbour (TAKE IT / DROP used to reroll it). The saga pays every rank a deed has reached at once.
   - The sunstone points at Hel's Gate (🌀) until you have been to Helheim; the full chart names "Hel's Gate".
+- v0.8.5 (the end-game tester's re-run of v0.8.4, ~30 game hours of a bot that buys the next ship first, then the cheapest
+  thing that costs souls): the Naglfar came at 4.5-5.2 bot-hours with a 43-50 minute dead stretch before it (saving 1,000
+  souls with nothing else to buy); income 25-30 souls a minute after the Busse; Surtr won 1 in 3 for average play while
+  Nidhogg was the shortest fight; monster fights back to one volley from Busse VI; a Reborn-legend lair paid ~52 souls a
+  minute (twice normal) and sank a Busse 13 times; the armada cost a Naglfar 0-2% hull; 300k gold unspent at the end.
+  Tuned to its measured recommendations (with them the Naglfar came at 2.5-3.4 h, gaps mostly under 10 min, all rune VIII
+  about 1.5-2 h later):
+  - Ormen Lange 250 souls, Naglfar 300 (+ Helheim's three legends). Rune soul costs VI x0.9, VII x0.8, VIII x0.75
+    (VI 150-200, VII 240-300, VIII 380-450). The Ormen's designs cost 160-230 souls.
+  - Undead beasts' hull 1.4x on a Drakkar, +0.2 a size past it (2.0x on a Naglfar), so the great ships keep a dodge round.
+  - Surtr rages at half hull (was 70%); Nidhogg has 2.2x extra hull (was 1.6x). Reborn legends rise only for a ship a size
+    past the one they need, and pay 100 souls (+25% a rebirth) instead of 150.
+  - Hel's armada ships are a level stronger. Hel's tithe 2,500 on a Drakkar, then 5,000 a size past it (10k / 15k / 20k).
+    Pat's Hall can be raised from Gjallarhofn too (either home harbour).
+  - Armour past V counts 0.01 a level past the 0.7 defence cap (its card says rune levels are mostly hull).
+- v0.8.6 (the v0.8.4 bug and exploit tester, Sonnet, on a frozen build; no blockers):
+  - Ballista VI-VIII took both reloads to nothing (0.2 s at sea, 0 s in a broadside, 27 volleys in 2 s): the rune levels
+    now shave 0.05 s each (sea 0.95 -> 0.8 s, broadside 0.9 -> 0.75 s).
+  - A save made while sailing a small prize ship capped the upgrades by her size, so a Naglfar's rune levels were lost
+    on reload: the cap is now the biggest ship you own (your own ship waits among the prizes); cleanSave keeps four
+    prizes (Pat's Hall's fourth mooring was dropped on load).
+  - NEW VOYAGE clears the tithe, the trials and the bounty offers; previewing a design no longer clamps the hull to the
+    preview's smaller hull; the chart's gate label is clamped onto the chart; the status line lists Thor, Cursed, lair
+    wave and bounty first (a portrait phone cut the end of it).
+  - Hel's tithe runs only in Helheim and counts on legend souls; Helheim fleets keep their own colours (the armada showed
+    two fleets' names); "draugr" ships in Helheim's fleet messages; DROP returns a bounty to the harbour it came from; the
+    ballista weak spot grows to VIII (clamp 0.5); the save-code summary counts levels past V; rune glow colours past V
+    (VI Muspel orange, VII Yggdrasil green, VIII Bifrost ice) on shield bosses, plate rivets and bolt tips.
+  - Verified working by that tester: rune VI-VIII locks, prices and effects (no NaN), cleanSave caps and save-code round
+    trips, old saves getting legend designs, design locks and perks, the tithe, the trials, the armada, the barge orbs,
+    bounties, the sunstone, the saga, the undead and legend fights, and the leak fix (geometry flat over 60 cycles).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
@@ -593,7 +628,7 @@ disagree with this file, this file wins.
   LOAD needs a second tap within 4 s on the same text, then reloads the page.
 - src/tornado.js: Dead City twisters + `waterspout` and `seastorm` skins. fullscreen.js, perf.js: from Dead City.
 
-## Controls (current, v0.8.4)
+## Controls (current, v0.8.6)
 - Ship's wheel: a big half-wheel centred across the bottom (hub just below the screen edge; layoutHelm sizes it: phone
   R = clamp(min(W*0.24, H*0.15), 64, 105), tablet R = clamp(min(W*0.3, H*0.28), 100, 240)); swipe along it to turn,
   rudder = sign*|angle/HMAX|^1.4, HMAX 2.4. Only the wheel takes touches. It stays where you leave it; double-tap centres
