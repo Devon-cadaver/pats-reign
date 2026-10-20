@@ -10,7 +10,7 @@ export function install(extraButtons) {
     const vi = {};
     for (const key of Object.keys(SPECIES)) btn('subj', ICON[key] || key, () => { vi[key] = (vi[key] ?? -1) + 1; show(key, vi[key]); });
     function show(key, v) {
-      const RO = window.__roster || {}, m = makeMonster(key, v, RO.scale || 1);
+      const RO = window.__roster || {}, m = makeMonster(key, v, RO.scale || 1, window.__undead || null);
       // roster: a ship beside a giant, for scale
       if (RO.ship != null) { const s = buildShip(RO.ship, { shields: 2, armor: 0, ballista: 1, fire: 0, ram: 0, sail: RO.ship }, undefined, 3); s.g.position.set(m.size * 0.07, 0, m.size * 0.25 + 12); s.g.rotation.y = Math.PI / 2 + 0.25; m.g.add(s.g); } const st = { t: 0, speed: 0.4, attack: 0, dive: 0, hurt: 0, rise: 1 }; let t = 0, ang = 0;
       const R = key === 'leviathan' ? 20 : key === 'porpoise' ? 0 : key === 'jormungandr' ? 34 : key === 'serpent' ? 16 : key === 'eel' ? 9 : 0;

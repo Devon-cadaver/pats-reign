@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { createOcean, createFoam } from './ocean.js';
 import { createEnv } from './env.js';
-import { buildShip, SHIP_TIERS, RAIDER_PALS, GHOST_PAL, TREASURE_PAL, addCargo } from './ship.js';
+import { buildShip, SHIP_TIERS, RAIDER_PALS, GHOST_PAL, TREASURE_PAL, HEL_PALS, addCargo } from './ship.js';
 import { createTwisters } from './tornado.js';
 
 const canvas = document.getElementById('c');
@@ -16,8 +16,8 @@ const TOD = { Day: 0.3, Sunset: 0.63, Night: 0.8, Dawn: 0.03 };
 let subject = null, extra = [];
 function clearSubject() { if (subject) scene.remove(subject.g); for (const e of extra) scene.remove(e.g); subject = null; extra = []; }
 function showShip(tier, pal = null, up = null) {
-  clearSubject(); const lv = Math.min(3, tier); const u = up || { shields: tier === 0 ? 0 : Math.min(3, tier), armor: tier >= 3 ? tier - 2 : 0, ballista: tier >= 2 ? Math.min(3, tier - 1) : 0, fire: tier >= 3 ? tier - 2 : 0, ram: tier >= 4 ? 2 : 0, sail: lv + (tier >= 4 ? 1 : 0) };
-  subject = buildShip(tier, u, pal || undefined, 3); scene.add(subject.g); S.dist = SHIP_TIERS[tier].L * 1.55 + 6; setLabel(pal ? pal.name : SHIP_TIERS[tier].name, pal ? (pal.ghost ? 'Haunts the night sea' : 'Raider longship') : 'Ship size ' + (tier + 1) + ' of 5');
+  clearSubject(); const lv = Math.min(3, tier); const u = up || (tier >= 5 ? { shields: tier - 1, armor: tier - 2, ballista: tier - 2, fire: tier - 2, ram: 3, sail: 5, lights: 3 } : { shields: tier === 0 ? 0 : Math.min(3, tier), armor: tier >= 3 ? tier - 2 : 0, ballista: tier >= 2 ? Math.min(3, tier - 1) : 0, fire: tier >= 3 ? tier - 2 : 0, ram: tier >= 4 ? 2 : 0, sail: lv + (tier >= 4 ? 1 : 0) });
+  subject = buildShip(tier, u, pal || undefined, 3); scene.add(subject.g); S.dist = SHIP_TIERS[tier].L * 1.55 + 6; setLabel(pal ? pal.name : SHIP_TIERS[tier].name, pal ? (pal.ghost ? 'Haunts the night sea' : 'Raider longship') : 'Ship size ' + (tier + 1) + ' of ' + SHIP_TIERS.length);
 }
 const label = document.getElementById('label'); function setLabel(a, b) { label.innerHTML = a + '<small>' + b + '</small>'; }
 // buttons
@@ -26,10 +26,13 @@ function btn(group, text, fn) { const b = document.createElement('button'); b.te
 SHIP_TIERS.forEach((t, i) => btn('subj', '⛵' + (i + 1), () => showShip(i)));
 RAIDER_PALS.forEach((p, i) => btn('subj', '☠' + (i + 1), () => showShip(Math.min(4, 1 + i), p, { shields: 2, armor: i > 1 ? 1 : 0, ballista: 1, fire: 0, ram: 0 })));
 btn('subj', '👻', () => showShip(3, GHOST_PAL, { shields: 2, armor: 0, ballista: 0, fire: 0, ram: 0 }));
+// Helheim's undead fleets
+Object.values(HEL_PALS).forEach((p, i) => btn('subj', '💀' + (i + 1), () => showShip(Math.min(7, 3 + i), p, { shields: 3, armor: 1, ballista: 1, fire: 0, ram: 0 })));
 btn('subj', '💰', () => { showShip(2, TREASURE_PAL, { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 2 }); addCargo(subject); setLabel(TREASURE_PAL.name, 'Runs from you, dumping cargo'); });
 export const extraButtons = (fn) => fn(btn, { scene, ocean, foam, setLabel, clearSubject, setSubject: (s, d, a, b) => { clearSubject(); subject = s; scene.add(s.g); S.dist = d; setLabel(a, b); } });
 const sep = () => { const d = document.createElement('div'); d.style.width = '100%'; d.style.height = '0'; bar.appendChild(d); };
 sep(); for (const [k, v] of Object.entries(TOD)) btn('tod', k, () => { S.tod = v; });
+btn('realm', '🌍 Midgard', () => env.setRealm('mid')); btn('realm', '🔥 Helheim', () => env.setRealm('hel'));
 btn('wx', 'Calm', () => { S.wx = { type: 'calm', k: 1 }; }); btn('wx', 'Normal', () => { S.wx = { type: null, k: 0 }; }); btn('wx', 'Rain', () => { S.wx = { type: 'rain', k: 1 }; }); btn('wx', 'Storm', () => { S.wx = { type: 'storm', k: 1 }; }); btn('wx', 'Fog', () => { S.wx = { type: 'fog', k: 1 }; });
 const twisters = createTwisters(scene, { onBolt: () => { flash = Math.max(flash, 0.5); } }); const spouts = [];
 function spout(skin) { const g = twisters.make(true, [], skin); g.scale.setScalar(skin === 'seastorm' ? 2.6 : 2.0); g.position.set(focus.x + 14, 0, focus.z - 10); scene.add(g); spouts.push({ g, t: 0 }); if (spouts.length > 2) { twisters.remove(spouts[0].g); spouts.shift(); } }
@@ -37,7 +40,7 @@ function rogueWave() { const R = ocean.rogue, a = S.yaw + Math.PI; R.dx = Math.s
 let rogueT = -1;
 sep(); btn('fx', '🌊 Rogue wave', rogueWave); btn('fx', '💧 Waterspout', () => spout('waterspout')); btn('fx', '🌪 Sea tornado', () => spout('seastorm')); btn('fx', '🦈 Sharknado', () => spout('shark'));
 sep(); btn('cam', '🎥 low', () => { S.pitch = 0.16; }); btn('cam', '🎥 high', () => { S.pitch = 0.42; }); btn('cam', '🎥 top', () => { S.pitch = 1.1; });
-groups.subj[0].classList.add('on'); groups.tod[0].classList.add('on'); groups.wx[1].classList.add('on'); groups.cam[1].classList.add('on');
+groups.subj[0].classList.add('on'); groups.tod[0].classList.add('on'); groups.realm[0].classList.add('on'); groups.wx[1].classList.add('on'); groups.cam[1].classList.add('on');
 // orbit: drag to turn, pinch / wheel to zoom
 const pts = new Map(); let pinch = 0;
 canvas.addEventListener('pointerdown', (e) => { pts.set(e.pointerId, [e.clientX, e.clientY]); S.spin = false; canvas.setPointerCapture(e.pointerId); });
@@ -53,7 +56,7 @@ function frame(now, manual) { const dt = Math.min(0.05, (now - last) / 1000); la
   if (S.spin) S.yaw += dt * 0.12;
   // the subject rides the waves
   if (subject) { const g = subject.g, len = subject.len || 6, beam = subject.beam || 2; const tl = ocean.tiltAt(0, 0, g.rotation.y, len, beam); g.position.y += (tl.y - g.position.y) * Math.min(1, dt * 5); subject.body.rotation.x = -tl.pitch * 0.8; subject.body.rotation.z = -tl.roll * 0.8;
-    if (subject.anim) subject.anim(dt, { speed: SHIP_TIERS[Math.min(4, subject.tier ?? 0)].speed * 0.6, time, night: S.tod > 0.66 && S.tod < 0.97 });
+    if (subject.anim) subject.anim(dt, { speed: SHIP_TIERS[Math.min(SHIP_TIERS.length - 1, subject.tier ?? 0)].speed * 0.6, time, night: S.tod > 0.66 && S.tod < 0.97 });
     for (const e of extra) e.anim && e.anim(dt, time);
     wakeT -= dt; if (wakeT <= 0 && subject.len) { wakeT = 0.12; const L = subject.len; for (const s of [-1, 1]) foam.add(s * subject.beam * 0.45, L * 0.45, { vx: s * 1.2, vz: -0.6, s: 0.7, grow: 0.9, life: 2.6, a: 0.55 }); } }
   if (rogueT >= 0) { const R = ocean.rogue; rogueT += dt; R.x += R.dx * 15 * dt; R.z += R.dz * 15 * dt; R.k = Math.min(1, rogueT / 2) * Math.min(1, Math.max(0, (16 - rogueT) / 3)); if (rogueT > 16) { R.k = 0; rogueT = -1; } }
