@@ -1,6 +1,6 @@
 # Pats Reign: project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 0.8.1. Where older notes or memory
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 0.8.4. Where older notes or memory
 disagree with this file, this file wins.
 
 ## Where things are
@@ -58,7 +58,10 @@ disagree with this file, this file wins.
   4 and 5, the Busse / Ormen Lange / Naglfar, the shipwright (9 hulls, 12 sails with perks, ship names), bounties, Pat's
   saga (deeds and titles), Pat's Hall (gold sink), reborn legends, ordinary octopus grabs and serpent coils, plus the
   tester fixes (spawns follow the ship at every size, fire pots take a shot, legends only die in their fights, many UI,
-  save and memory fixes). Deployed as v0.8.0, later fixes as v0.8.1 (see below).
+  save and memory fixes). Deployed as v0.8.0, later fixes as v0.8.1 to v0.8.3 (see below). v0.8.4 (the end-game tester:
+  the end game was about 1.5 bot-hours) added rune levels VI-VIII (one per great ship), 13 more designs (34 in all), harder undead
+  with their own fight moves, tougher Helheim legends, Hel's tithe, lair trials, Hel's armada, and fixed old saves
+  never getting their legend designs and a geometry leak.
 - Sean has played none of it yet. Expect balance feedback. The knobs: lair waves and rebirths (lairSpawn), souls per
   kill (killMon: 2 + 2 x (level - size)), rune level prices (UPG), TIER_COST 5-7, HALL, bounty pay (makeBounty), monster
   hull x1.3 (spawnMon), DELTA (spawn levels), pots (potK, 1 + floor(level / 2) a battle), Jormungandr's lock 1.9 s.
@@ -337,7 +340,7 @@ disagree with this file, this file wins.
 - Tested: a Drakkar bot (perfect runes, Space every 0.27 s) after 90 s had the Elder at 2% and 472 of 938 hull left
   (5 ward breaks, 5 lifts: 2 drops, 2 slams).
 
-## v0.8.0 and v0.8.1: Helheim, the end game (Sean, 2026-10-20 overnight)
+## v0.8.0 to v0.8.4: Helheim, the end game (Sean, 2026-10-20 overnight)
 - Sean: "put a few agents from opus and sonnet on bug testing and exploit testing ... create larger ships ... ship
   upgrades and designing with new hulls and sails ... a second map ... the underworld where every ship is a version of
   undead and so are the monsters. Burning sky at day, purple swirling abyss at night. All mobs are slightly harder."
@@ -485,6 +488,58 @@ disagree with this file, this file wins.
   - The sunstone (Compass II) also points to your nearest treasure map's ✕ and your wreck.
   - Name your ship: ✎ NAME HER on the shipwright sheet (prompt, markup stripped, 20 letters), shown in the HUD; saved
     as shipName.
+- v0.8.2 (hotfix after the Helheim tester): Helheim's treasure event (the soul barge) threw inside tick() because
+  HEL_PALS had no 'barge' entry, and the frame loop died (the game froze until a reload, about a 75% chance within 10
+  minutes in Helheim). HEL_PALS.barge added (gold glow), spawnMon falls back to HEL_PALS.home, and frame() now asks for
+  the next frame first and wraps tick() in try/catch (an error is logged; the game runs on). UND() merges GH0 before
+  reading colours (Gjöll ships had undefined shield colours). Also: the Bestiary deed (P.st.v counts each Midgard variant
+  'type:v' and each undead kind 'u:type'; ranks at 10 / 25 / 40), the phone HUD's second line wraps clear of the right
+  column, a named ship shows only its name in the HUD, an empty fish count hides, CONTINUE VOYAGE shows the saved ship and
+  realm, Midgard raiders of Naglfar size get the wyrm head (the skull is Naglfar's alone).
+- v0.8.3 (the Helheim tester's other findings): HUD numbers shorten (12k, 1.2M) and the counters shrink on phones under
+  430 px wide so five fit beside the hull bar; sailOut(h) picks where a ship leaves a harbour (and rises after sinking):
+  a fan of spots out from the dock, clear of land for the whole hull, on the heading with the most open water (big ships
+  used to start inside Frostvik's channel and crawl); the HELHEIM / MIDGARD banner is no longer overwritten by the sea's
+  banner (curSea set after crossing); #gate and #paused scroll from the top on short screens; names ("The Rime-dead
+  Dreamer", no "Drowned Drowned God", "Warlord of the Bone Fleet", "an Ormen Lange", "Nail-hull", the young legends'
+  own names in their fight warnings, NÁSTROND); treasure dug up in Helheim pays 10 + 3 x size souls and Helheim's maps
+  use Helheim landmarks (LANDMARK_HEL: grave-stone, black ice, smoking rock, skull on a stake, great rib-bone); F does
+  the round context button's job on PC; no context actions (the gate included) while the ship is in the air.
+- v0.8.4 (the end-game tester's report; it had tested a v0.8.0 build from before the wave-1 fixes, so its fire pot, defence
+  and price numbers were partly out of date):
+  - Leak: every spear and ballista bolt made a new tip cone, every fire pot a sphere, every fishing spot and loot float new
+    shapes, none ever freed; they now share cached geometry (geom.js geo(), imported as sharedGeo). Far fishing spots go
+    through removeSpot (frees their cloned ring materials); pods and the wreck are freed with disposeTree. A soak test now
+    holds flat (~200 geometries over three long runs). The 525 "arrows" seen in an earlier soak were only arrows launched
+    by setTimeout while the test froze the clock (timeScale 0); they clear as soon as frames run.
+  - Rune levels VI, VII and VIII (shields, plates, ballista, fire pots, sail, oars; UPG max 8): an upgrade can go one level
+    past your ship size, so the Busse opens VI, the Ormen Lange VII and the Naglfar VIII. Souls: V 90-110, VI 170-220, VII
+    300-380, VIII 500-600 (plus timber, iron and up to 6,000 gold). Effects: SH_DEF .47/.50/.52, AR_DEF .29/.30/.31, the
+    defence cap 0.7 + 0.02 a shield level past V (0.76), speed +5% a level past V, turning +6%, mending 48/54/60% a minute,
+    fire pots 3.2/3.4/3.6x (4, 4, 5 pots). The ship card says which rune level a new ship opens and shows her real hull.
+  - Ships: Busse 4,000 gold; Ormen Lange 8,000 gold + 400 souls; Naglfar 14,000 gold + 1,000 souls.
+  - Designs (34 now, 13 new): soul-priced with a ship size (got.need; "Needs a Busse" until then): Rime-hull, Valkyrie wings
+    (Busse); Muspel-forged, Draugr-wood, Yggdrasil, Draugr's banner (Ormen Lange); World-ash, Ragnarok (Naglfar); and
+    gold-only dyed ones: Walrus-ivory, Royal purple, Blood-red, Jade and gold, Northern lights (6,000-12,000 gold). Hel-bone
+    150 souls, Hel's shroud 200. New sail paintings in ship.js (valkyrie, ygg, draugr, aurora, ragnarok). Master Shipwright
+    rank IV at 31 designs; Soul Reaper rank IV at 8,000 souls.
+  - Old saves (no owned list) are given the designs of the legends they have slain (cleanSave): Sean's v0.7.2 voyage could
+    never get Dragon-scale, Kraken ink or Elder sign.
+  - Helheim is harder: undead beasts 1.4x hull and 1.2x damage (draugr ships 1.2x / 1.1x) on top of their half level; the
+    undead have their own fight moves (30% of a first attack): burning crabs and eels set the deck ablaze (DOUSE THE FLAMES),
+    undead sharks, megalodons and anglers feed on you (DRIVE IT OFF, or it heals by what it took); undead sharks and
+    megalodons dive under the black water and burst up behind your stern.
+  - Helheim's legends: 1.6x more hull, 1.8x damage (Nidhogg 2.4x), they rage at 70% hull (Nidhogg from the start); a papa
+    legend (your ship too small) is a level stronger.
+  - The great ships hit harder in a broadside: +12% a size past the Drakkar.
+  - Hel's tithe (Helheim harbours): 2,500 x (size - 4) gold for +25% souls for 10 minutes (P.tithe, saved, ticks only at sea).
+  - Lair trials: holding a lair to its 5th and 10th wave pays once each (Helheim 100 / 300 souls; Midgard gold and iron;
+    P.trials).
+  - Hel's armada: once Helheim's legends are slain, on a Naglfar in Helheim a fleet of six comes every 17-23 minutes, led
+    by Hel's Admiral, for three times the war chest and 60 souls more.
+  - The soul barge throws soul orbs worth 3 (and gold) instead of cargo. Hel's bounties pay souls v x 3. DROP leaves the
+    bounty offered at that harbour (TAKE IT / DROP used to reroll it). The saga pays every rank a deed has reached at once.
+  - The sunstone points at Hel's Gate (🌀) until you have been to Helheim; the full chart names "Hel's Gate".
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
@@ -538,7 +593,7 @@ disagree with this file, this file wins.
   LOAD needs a second tap within 4 s on the same text, then reloads the page.
 - src/tornado.js: Dead City twisters + `waterspout` and `seastorm` skins. fullscreen.js, perf.js: from Dead City.
 
-## Controls (current, v0.8.1)
+## Controls (current, v0.8.4)
 - Ship's wheel: a big half-wheel centred across the bottom (hub just below the screen edge; layoutHelm sizes it: phone
   R = clamp(min(W*0.24, H*0.15), 64, 105), tablet R = clamp(min(W*0.3, H*0.28), 100, 240)); swipe along it to turn,
   rudder = sign*|angle/HMAX|^1.4, HMAX 2.4. Only the wheel takes touches. It stays where you leave it; double-tap centres
