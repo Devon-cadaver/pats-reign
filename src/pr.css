@@ -127,6 +127,17 @@ button:disabled { opacity: .45; filter: grayscale(.6); }
 #compass { width: 78px; height: 78px; border-radius: 50%; box-shadow: 0 2px 10px #000a; }
 #compTxt { font: 700 11px Georgia, serif; color: var(--gold2); text-shadow: 0 1px 3px #000; }
 /* v0.8.0: crossing between the realms, the gate screen, the shipwright sheet */
+#saga { justify-content: flex-start; background: linear-gradient(#050b10ee, #0b1a26f4); padding-top: calc(16px + env(safe-area-inset-top, 0)); }
+.sagaName { color: var(--gold2); font: italic 700 15px Georgia, serif; }
+#sagaList { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 6px; width: 100%; max-width: 820px; }
+.deed { display: flex; align-items: center; gap: 8px; text-align: left; background: linear-gradient(#3a2616, #22160c); border: 1.5px solid #6a4a1a; border-radius: 10px; padding: 6px 9px; }
+.deed.full { border-color: var(--gold); }
+.deed .di { font-size: 22px; width: 28px; text-align: center; }
+.deed .dt { flex: 1; min-width: 0; position: relative; padding-bottom: 6px; font-size: 13px; }
+.deed .dt b { color: var(--gold2); } .deed .stars { color: var(--gold); font-size: 12px; letter-spacing: 1px; }
+.deed .dt i { position: absolute; left: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, #c8962a, #ffe08a); border-radius: 2px; }
+.deed .dn { font-size: 12px; opacity: .85; white-space: nowrap; }
+#saga:not(.hidden) ~ .fsBtn { display: none !important; }
 #fade { position: fixed; inset: 0; z-index: 40; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 45%, #4a1070, #0a0010 72%); transition: opacity .9s ease; }
 #fade.on { opacity: 1; pointer-events: auto; }
 #gate { background: radial-gradient(ellipse at 50% 40%, #2a0a3acc, #050008f0 80%); }
