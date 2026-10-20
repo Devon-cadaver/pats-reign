@@ -260,6 +260,12 @@ function updateSpawns(dt) { spawnT -= dt; if (spawnT > 0 || (battle && battle.le
   const a = Math.random() * 6.28, d = rnd(95, 170), x = boat.x + Math.sin(a) * d, z = boat.z + Math.cos(a) * d; if (Math.abs(x) > HALF - 30 || Math.abs(z) > HALF - 30 || world.blockAt(x, z, 12) || Math.hypot(x, z + 40) < 70) return;
   const table = spawnTable(world.regionAt(x, z), isNight()); if (!table.length) return; let sum = table.reduce((s, e) => s + e.w, 0), pick = Math.random() * sum; let e = table[0]; for (const t of table) { pick -= t.w; if (pick <= 0) { e = t; break; } } e = levelled(e);
   if (e.type === 'jelly') { for (let k = 0; k < 3; k++) spawnMon(e, x + rnd(-8, 8), z + rnd(-8, 8)); } else spawnMon(e, x, z); }
+// collisions (v1.1.0): a monster inside land is pushed out at once; ships and beasts never pass through your hull or each
+// other (a fight's own placing is left alone: the beast beside you in a classic fight, the lanes of a battle line)
+function unstick(mon) { for (let k = 0; k < 3; k++) { const bl = world.blockAt(mon.x, mon.z, mon.size * 0.4); if (!bl) break; const push = bl.r - bl.d + 0.2; mon.x += bl.nx * push; mon.z += bl.nz * push; } }
+function separateMons() { const t = T(), rad = (m) => (m.naval ? m.size * 0.85 : m.size * 0.5), live = mons.filter((m) => !m.dead && !m.air && m.rise >= 1);
+  if (state === 'play' && !boat.air) for (const m of live) { if (inFight(m)) continue; const dx = m.x - boat.x, dz = m.z - boat.z, d = Math.hypot(dx, dz) || 0.01, minD = rad(m) + t.L * 0.33; if (d < minD) { const k = minD - d; m.x += (dx / d) * k; m.z += (dz / d) * k; if (m.naval) boat.v *= 0.9; unstick(m); } }
+  for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) { const a = live[i], b = live[j]; if (!a.naval && !b.naval) continue; const fa = inFight(a), fb = inFight(b); if (fa && fb) continue; const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz) || 0.01, minD = rad(a) + rad(b); if (d < minD) { const k = (minD - d) * (fa || fb ? 1 : 0.5), ux = dx / d, uz = dz / d; if (!fa) { a.x -= ux * k; a.z -= uz * k; unstick(a); } if (!fb) { b.x += ux * k; b.z += uz * k; unstick(b); } } } }
 function isNight() { return P.tod > 0.68 && P.tod < 0.97; }
 function sightRange(mon) { let r = (34 + Math.min(6, mon.lv) * 6) * (1 - perk('sight')); if (wx.type === 'fog') r *= 0.45; if (isNight()) r *= P.skin === 'ghost' ? 0.5 : 0.8; return r; }
 function updateMons(dt) {
@@ -288,7 +294,7 @@ function updateMons(dt) {
     const ax = mon.x + Math.sin(want) * (mon.size + 8), az = mon.z + Math.cos(want) * (mon.size + 8); if (world.blockAt(ax, az, 2)) want += 1.2;
     mon.yaw += clamp(angDiff(want, mon.yaw), -dt * 1.6, dt * 1.6); let sp = mon.speed * spd * (mon.state === 'chase' ? 1 : 0.5); if (mon.state === 'chase' && mon.lv > P.tier + 0.5 && !mon.boss) sp = Math.min(sp, topSpeed() * 0.86); if (mon.enrage > 0) { mon.enrage -= dt; if (mon.state === 'chase') sp = Math.max(sp, topSpeed() * 1.1); } if (mon.treasure) sp = topSpeed() * (mon.flee <= 0 ? 1.3 : d < 25 ? 0.7 : 0.8);
     if (mon.state === 'chase') { mon.chaseT = (mon.chaseT || 0) + dt; if (mon.chaseT > 24 && d > 22 && !mon.boss && !mon.hunt) { mon.state = 'wander'; mon.chaseT = 0; mon.stun = 10; } } else mon.chaseT = 0;
-    let nx = mon.x + Math.sin(mon.yaw) * sp * dt, nz = mon.z + Math.cos(mon.yaw) * sp * dt; const bl = world.blockAt(nx, nz, mon.size * 0.4); if (bl) { nx = mon.x + bl.nx * dt * 3; nz = mon.z + bl.nz * dt * 3; mon.yaw += dt * 2; } mon.x = nx; mon.z = nz;
+    let nx = mon.x + Math.sin(mon.yaw) * sp * dt, nz = mon.z + Math.cos(mon.yaw) * sp * dt; const bl = world.blockAt(nx, nz, mon.size * 0.4); if (bl) { nx = mon.x + bl.nx * dt * 3; nz = mon.z + bl.nz * dt * 3; mon.yaw += dt * 2; } mon.x = nx; mon.z = nz; unstick(mon);
     st.speed = spd; animMon(mon, dt, st); if (mon.undead && Math.random() < dt * 3 && d < 140) soulFx.add(mon.x + rnd(-1, 1) * mon.size * 0.5, mon.z + rnd(-1, 1) * mon.size * 0.5, { spray: true, y: mon.g.position.y + mon.top * rnd(0.2, 0.7), vx: rnd(-0.3, 0.3), vz: rnd(-0.3, 0.3), vy: rnd(0.8, 1.8), g: -0.3, s: rnd(0.25, 0.5), grow: 0.4, life: 1.8, a: 0.85 });
     // contact
     if (state === 'play' && !battle && !fishing && !boat.air && boat.grace <= 0 && mon.stun <= 0 && mon.rise >= 1 && d < mon.size * 0.7 + T().L * 0.42) contact(mon);
@@ -1556,7 +1562,7 @@ function tick(dt) { time += dt;
   if (state === 'chart' && tut && tut.target) drawMap(chartEl, chartCtx, true);
   if (state === 'play' || state === 'title' || state === 'harbor' || state === 'chart') {
     if (state === 'play') { P.tod = (P.tod + dt / 420) % 1; updateWeather(dt); updateEvents(dt); updateSpawns(dt); updatePods(dt); updateLairs(); updateTut(dt); updateAuto(dt); boat.fireCd = Math.max(0, boat.fireCd - dt); saveT += dt; if (saveT > 30 && !battle && !fishing) { saveT = 0; save(); } if (P.hp <= 0 && !battle) sink(); }
-    if (state !== 'harbor') updateBoat(dt); updateMons(dt); if (battle && state !== 'title') updateBattle(dt); updateSea(dt); updateProjs(dt); minis.update(dt);
+    if (state !== 'harbor') updateBoat(dt); updateMons(dt); separateMons(); if (battle && state !== 'title') updateBattle(dt); updateSea(dt); updateProjs(dt); minis.update(dt);
     if (fishing) { const s = fishing.s, a = V(boat.x, boat.y + T().mast * 0.5, boat.z), b = V(s.x, ocean.heightAt(s.x, s.z), s.z); line.geometry.setFromPoints([a, b]); }
   }
   for (const s of world.harbors) { const f = s.g.userData.fire; if (f) f.scale.set(0.9 + Math.sin(time * 9) * 0.15, 1.4 + Math.sin(time * 13) * 0.3, 0.9); const b = s.g.userData.banner; if (b) b.rotation.y = Math.sin(time * 2) * 0.3; }
