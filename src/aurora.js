@@ -1,4 +1,4 @@
-// Pats Reign: the northern lights over the Frost Sea. Curtains of green and violet light low in the northern sky (seen
+// Valhalla's Tide: the northern lights over the Frost Sea. Curtains of green and violet light low in the northern sky (seen
 // from the chase camera and the title), and the Bifröst: a rainbow pillar of light where the lights touch the sea. Sail
 // into it for the gods' blessing. The light on the water itself is drawn by the ocean shader (uAur).
 import * as THREE from 'three';

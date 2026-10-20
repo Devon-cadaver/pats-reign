@@ -1,4 +1,4 @@
-// Pats Reign music, synthesized live (no audio files). Every sea has its own song: crossing into a sea changes the song at
+// Valhalla's Tide music, synthesized live (no audio files). Every sea has its own song: crossing into a sea changes the song at
 // the next bar line while the drone glides into the new key.
 // HOME WATERS: a slow Nordic ballad in D Dorian, a lilting 6/8 at 66 bpm. A hurdy-gurdy style drone on D and A, a frame
 //   drum on the strong beats, a plucked lyre singing long modal phrases, a lur horn swelling every few bars and a

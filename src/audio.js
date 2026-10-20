@@ -179,7 +179,7 @@ export function setStormLevel(l) { storm.level = Math.max(0, Math.min(5, l | 0))
 export function stormBoost(secs = 3) { if (!ctx || !storm.on) return; const t = ctx.currentTime; storm.boostUntil = t + secs; riser(t, 0.6); crash(t + 0.6); kick(t + 0.6, 1.2); crash(t + secs); }
 export function stormMusicState() { return { on: storm.on, level: storm.level, boost: ctx ? storm.boostUntil > ctx.currentTime : false }; }
 
-// ---------- Pats Reign: horn, sea sounds, thunder ----------
+// ---------- Valhalla's Tide: horn, sea sounds, thunder ----------
 sfx.horn = () => { tone(98, 1.4, 'sawtooth', 0.06, 8); tone(147, 1.3, 'triangle', 0.05, 6); setTimeout(() => tone(110, 0.9, 'sawtooth', 0.05, 4), 500); };
 sfx.splash = (v = 1) => noise(0.55, 0.16 * v, 520, 0.5);
 sfx.thunder = () => { noise(1.8, 0.5, 80, 0.3); setTimeout(() => noise(1.2, 0.3, 190, 0.4), 140); };

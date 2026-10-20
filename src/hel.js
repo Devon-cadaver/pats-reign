@@ -1,4 +1,4 @@
-// Pats Reign: the gates between the realms (v0.8.0). Hel's Gate stands in Midgard's Mist Sea: a ring of black standing
+// Valhalla's Tide: the gates between the realms (v0.8.0). Hel's Gate stands in Midgard's Mist Sea: a ring of black standing
 // stones cut with glowing violet runes around a whirl of purple light sinking into the sea, a pale beam rising from it.
 // Helheim's gate home is the same ring in bone-pale stone with a golden whirl: the light of the living. Sealed (k low) it
 // only smoulders; open, it spins bright and lights the water.

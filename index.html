@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Pats Reign" />
+  <meta name="apple-mobile-web-app-title" content="Valhalla's Tide" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="apple-touch-icon" href="./icon-180.png" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0b1a26" />
-  <title>Pats Reign</title>
+  <title>Valhalla's Tide</title>
   <link rel="stylesheet" href="./src/pr.css" />
 </head>
 <body>
@@ -47,7 +47,7 @@
   <div id="mini" class="hidden"></div>
 
   <div id="title" class="screen">
-    <div class="logo"><div class="rune">ᚱ ᛖ ᛁ ᚷ ᚾ</div><h1>PATS<br>REIGN</h1><div class="sub">A Viking saga of the monster sea</div></div>
+    <div class="logo"><img class="emblem" src="logo.svg" alt="" width="200" height="200"><div class="rune">ᚢ ᚨ ᛚ ᚺ ᚨ ᛚ ᛚ ᚨ</div><h1>VALHALLA'S<br>TIDE</h1><div class="sub">A Viking saga of the monster sea</div></div>
     <div class="menu">
       <button id="playBtn">SET SAIL</button>
       <button id="contBtn" class="hidden">CONTINUE VOYAGE</button>
@@ -84,13 +84,13 @@
   </div>
   <div id="prize" class="screen hidden"><h2>⚔ PRIZE! ⚔</h2><p id="prizeText"></p><button id="prizePlunder">PLUNDER HER HOLD</button><button id="prizeClaim" class="ghost">CLAIM HER</button></div>
   <div id="chart" class="screen hidden"><h2>SEA CHART</h2><p class="small">Pinch to zoom, drag to look around, tap to set your course.</p><canvas id="chartCv"></canvas><button id="chartClose" class="ghost">CLOSE</button></div>
-  <div id="paused" class="screen hidden"><h2>PAUSED</h2><p id="pauseName" class="sagaName"></p><p id="pauseText" class="small"></p><button id="resumeBtn">RESUME</button><button id="sagaBtn" class="ghost">📜 PAT'S SAGA</button><button id="pauseCode" class="ghost">💾 SAVE CODE</button><button id="saveQuit" class="ghost">SAVE &amp; QUIT TO TITLE</button></div>
+  <div id="paused" class="screen hidden"><h2>PAUSED</h2><p id="pauseName" class="sagaName"></p><p id="pauseText" class="small"></p><button id="resumeBtn">RESUME</button><button id="sagaBtn" class="ghost">📜 THE SAGA</button><button id="pauseCode" class="ghost">💾 SAVE CODE</button><button id="saveQuit" class="ghost">SAVE &amp; QUIT TO TITLE</button></div>
   <div id="sunk" class="screen hidden"><h1>VALHALLA<br>CALLS</h1><p id="sunkText"></p><button id="sunkBtn">RISE AGAIN</button></div>
-  <div id="saga" class="screen hidden"><h2>PAT'S SAGA</h2><p id="sagaName" class="sagaName"></p><div id="sagaList"></div><button id="sagaBack" class="ghost">BACK</button></div>
+  <div id="saga" class="screen hidden"><h2>THE SAGA</h2><p id="sagaName" class="sagaName"></p><div id="sagaList"></div><button id="sagaBack" class="ghost">BACK</button></div>
   <div id="gate" class="screen hidden"><h2 id="gateTitle">HEL'S GATE</h2><p id="gateText"></p><button id="gateGo">DESCEND</button><button id="gateNo" class="ghost">NOT YET</button></div>
   <div id="wright" class="hidden"><div class="wrHead"><b>🎨 SHIPWRIGHT</b><div class="wrTabs"><button id="wrHull" class="on">HULL</button><button id="wrSail">SAIL</button><button id="wrName" class="ghost">✎ NAME HER</button></div><button id="wrDone" class="ghost">DONE</button></div><p id="wrNote"></p><p id="wrRes"></p><div id="wrList"></div></div>
   <div id="fade"></div>
-  <div id="won" class="screen hidden"><h1 id="wonTitle">PAT'S<br>REIGN</h1><p id="wonText"></p><button id="wonBtn">SAIL ON</button></div>
+  <div id="won" class="screen hidden"><h1 id="wonTitle">LORD OF<br>THE SEA</h1><p id="wonText"></p><button id="wonBtn">SAIL ON</button></div>
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>

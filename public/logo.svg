@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Valhalla's Tide: a longship riding a curling wave beneath the sun -->
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3c0"/><stop offset=".5" stop-color="#e6b43a"/><stop offset="1" stop-color="#9a5e12"/></linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fd8e8"/><stop offset=".45" stop-color="#2a8fb0"/><stop offset="1" stop-color="#0f3a5c"/></linearGradient>
+    <linearGradient id="sail" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c8322a"/><stop offset=".5" stop-color="#f2e6c8"/><stop offset="1" stop-color="#c8322a"/></linearGradient>
+    <radialGradient id="sky" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="#2a4a7a"/><stop offset="1" stop-color="#070b16"/></radialGradient>
+    <clipPath id="disc"><circle cx="100" cy="100" r="98"/></clipPath>
+  </defs>
+  <g id="bg"><circle cx="100" cy="100" r="98" fill="url(#sky)"/><circle cx="100" cy="100" r="96" fill="none" stroke="url(#gold)" stroke-width="3"/></g>
+  <g id="art" clip-path="url(#disc)">
+    <circle cx="124" cy="62" r="26" fill="url(#gold)"/>
+    <g fill="none" stroke="url(#gold)" stroke-width="3" stroke-linecap="round" opacity=".9">
+      <path d="M124 22v-10M124 112v-10M84 62h-10M174 62h-10M96 34l-7-7M159 97l-7-7M152 34l7-7M89 97l7-7"/>
+    </g>
+    <!-- the ship: hull, stems, shields, mast and sail -->
+    <g id="ship">
+      <path d="M38 118c6 18 20 26 62 26s56-8 62-26c-18 6-38 9-62 9s-44-3-62-9z" fill="#3a2410"/>
+      <path d="M44 118c8 12 24 18 56 18s48-6 56-18c-16 4-36 6-56 6s-40-2-56-6z" fill="#6a4426"/>
+      <path d="M42 120c-10-8-14-22-8-38 2-6 6-10 12-12" fill="none" stroke="#3a2410" stroke-width="7" stroke-linecap="round"/>
+      <path d="M46 70c8-2 12 4 10 10-2 5-8 6-12 2 4 0 7-3 6-6-1-3-4-4-7-3z" fill="#e6b43a"/>
+      <path d="M158 120c10-8 14-22 8-38-2-6-6-10-12-12" fill="none" stroke="#3a2410" stroke-width="7" stroke-linecap="round"/>
+      <path d="M154 70c-8-2-12 4-10 10 2 5 8 6 12 2-4 0-7-3-6-6 1-3 4-4 7-3z" fill="#e6b43a"/>
+      <g fill="#c8322a" stroke="#f2e6c8" stroke-width="1.5">
+        <circle cx="62" cy="120" r="5"/><circle cx="76" cy="122" r="5"/><circle cx="90" cy="123" r="5"/><circle cx="104" cy="123" r="5"/><circle cx="118" cy="122" r="5"/><circle cx="132" cy="120" r="5"/>
+      </g>
+      <g fill="#e6b43a"><circle cx="62" cy="120" r="1.6"/><circle cx="76" cy="122" r="1.6"/><circle cx="90" cy="123" r="1.6"/><circle cx="104" cy="123" r="1.6"/><circle cx="118" cy="122" r="1.6"/><circle cx="132" cy="120" r="1.6"/></g>
+      <rect x="98" y="46" width="4" height="74" fill="#3a2410"/>
+      <path d="M68 56h64" stroke="#3a2410" stroke-width="4" stroke-linecap="round"/>
+      <path d="M72 58h56v44c-10-6-18-8-28-8s-18 2-28 8z" fill="url(#sail)"/>
+      <path d="M72 58h56v44c-10-6-18-8-28-8s-18 2-28 8z" fill="none" stroke="#3a2410" stroke-width="2"/>
+      <path d="M86 58v40M114 58v40" stroke="#c8322a" stroke-width="6" opacity=".55"/>
+    </g>
+    <!-- the tide: a great curling wave -->
+    <path d="M-10 150c20-16 34-34 26-54 18 2 30 18 30 36 10-18 24-26 40-22-8 6-12 16-10 26 20-14 44-16 66-6 24 10 44 8 70-6v74H-10z" fill="url(#sea)"/>
+    <path d="M-10 150c20-16 34-34 26-54 18 2 30 18 30 36" fill="none" stroke="#dff6ff" stroke-width="3" stroke-linecap="round"/>
+    <path d="M46 132c10-18 24-26 40-22M78 136c20-14 44-16 66-6 24 10 44 8 70-6" fill="none" stroke="#dff6ff" stroke-width="2.5" stroke-linecap="round" opacity=".9"/>
+    <g fill="#f4fbff"><circle cx="20" cy="94" r="3"/><circle cx="30" cy="108" r="2"/><circle cx="12" cy="112" r="2.2"/><circle cx="48" cy="130" r="2"/><circle cx="60" cy="148" r="1.8"/></g>
+    <path d="M-10 176c30-8 60-6 90 2s60 8 90-2 40-6 40 0v30H-10z" fill="#0f3a5c" opacity=".7"/>
+  </g>
+</svg>

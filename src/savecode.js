@@ -12,7 +12,7 @@ const check = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { 
 const pipe = async (bytes, stream) => new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
 // unpacking stops past cap bytes, so a small code that expands to hundreds of megabytes is refused (the exploit tester)
 const pipeCapped = async (bytes, stream, cap) => { const rd = new Blob([bytes]).stream().pipeThrough(stream).getReader(), parts = []; let n = 0;
-  for (;;) { const { done, value } = await rd.read(); if (done) break; n += value.length; if (n > cap) { try { await rd.cancel(); } catch { /* ignore */ } throw new Error('That code is too big to be a Pats Reign save code.'); } parts.push(value); }
+  for (;;) { const { done, value } = await rd.read(); if (done) break; n += value.length; if (n > cap) { try { await rd.cancel(); } catch { /* ignore */ } throw new Error("That code is too big to be a Valhalla's Tide save code."); } parts.push(value); }
   const out = new Uint8Array(n); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; } return out; };
 
 export async function makeCode() {
@@ -23,12 +23,12 @@ export async function makeCode() {
 }
 // reads a code and returns { data, summary } or throws an Error with a message for the player
 export async function readCode(code) {
-  const txt = String(code).replace(/\s+/g, '').trim(); if (txt.length > 20000) throw new Error('That code is far too long to be a Pats Reign save code.');
-  const m = /^(PR[01])-([A-Za-z0-9_-]+)-([0-9A-Z]{4})$/.exec(txt); if (!m) throw new Error("That doesn't look like a Pats Reign save code.");
+  const txt = String(code).replace(/\s+/g, '').trim(); if (txt.length > 20000) throw new Error("That code is far too long to be a Valhalla's Tide save code.");
+  const m = /^(PR[01])-([A-Za-z0-9_-]+)-([0-9A-Z]{4})$/.exec(txt); if (!m) throw new Error("That doesn't look like a Valhalla's Tide save code.");
   if (check(m[2]) !== m[3]) throw new Error('That code has a typo in it. Copy it again, all of it.');
-  let bytes = unb64(m[2]); if (m[1] === 'PR1') { if (typeof DecompressionStream === 'undefined') throw new Error('This browser is too old to read save codes.'); bytes = await pipeCapped(bytes, new DecompressionStream('deflate-raw'), 262144); } if (bytes.length > 262144) throw new Error('That code is too big to be a Pats Reign save code.');
+  let bytes = unb64(m[2]); if (m[1] === 'PR1') { if (typeof DecompressionStream === 'undefined') throw new Error('This browser is too old to read save codes.'); bytes = await pipeCapped(bytes, new DecompressionStream('deflate-raw'), 262144); } if (bytes.length > 262144) throw new Error("That code is too big to be a Valhalla's Tide save code.");
   const data = JSON.parse(new TextDecoder().decode(bytes)); const clean = {}; for (const k in data) if (KEEP.test(k) && typeof data[k] === 'string') clean[k] = data[k];
-  if (!clean.pr_save) throw new Error('That code has no voyage in it.'); if (clean.pr_save.length > 100000) throw new Error('That code is too big to be a Pats Reign save code.');
+  if (!clean.pr_save) throw new Error('That code has no voyage in it.'); if (clean.pr_save.length > 100000) throw new Error("That code is too big to be a Valhalla's Tide save code.");
   return { data: clean, summary: summarize(clean.pr_save) };
 }
 // replaces this device's voyage; if the new one cannot be stored, the old one is put back and it returns false
@@ -76,7 +76,7 @@ export function initSaveCodes() {
   async function open() { box.classList.remove('hidden'); say('saveOutMsg', ''); say('saveInMsg', ''); $('saveIn').value = ''; pending = null; disarm();
     let raw = null; try { raw = localStorage.getItem('pr_save'); } catch { /* ignore */ } $('saveSum').textContent = summarize(raw);
     code = raw ? await makeCode() : ''; $('saveOut').value = code || 'Set sail first: there is no voyage to save yet.';
-    $('saveMail').href = 'mailto:?subject=' + encodeURIComponent('My Pats Reign save code') + '&body=' + encodeURIComponent(code + '\n\nTo load it: Pats Reign title screen → SAVE CODE → paste it under LOAD A CODE → LOAD.'); }
+    $('saveMail').href = 'mailto:?subject=' + encodeURIComponent("My Valhalla's Tide save code") + '&body=' + encodeURIComponent(code + "\n\nTo load it: the Valhalla's Tide title screen → SAVE CODE → paste it under LOAD A CODE → LOAD."); }
   $('saveOut').addEventListener('focus', (e) => e.target.select());
   $('saveCopy').addEventListener('click', async () => { if (!code) return; const sel = () => { const t = $('saveOut'); t.focus(); t.select(); t.setSelectionRange(0, t.value.length); };
     try { await navigator.clipboard.writeText(code); say('saveOutMsg', '✓ Copied! Paste it somewhere safe.', 'good'); }

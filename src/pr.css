@@ -9,13 +9,14 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 #5a3a12; }
 button.ghost { background: #2a1c12d8; color: var(--ink); border: 1.5px solid var(--gold); box-shadow: none; padding: 7px 14px; font-size: 13px; }
 button:disabled { opacity: .45; filter: grayscale(.6); }
 .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0)); text-align: center; z-index: 20; overflow-y: auto; background: radial-gradient(ellipse at 50% 40%, #0b1a2600, #050b10cc 80%); }
-.screen h1 { font-size: clamp(44px, 14vw, 84px); line-height: .92; margin: 0; letter-spacing: 4px; background: linear-gradient(#fff3c0, #e0b040 55%, #8a5a12); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 3px 0 #3a2208) drop-shadow(0 8px 18px #000c); }
+.screen h1 { font-size: clamp(36px, 10.5vw, 84px); line-height: .92; margin: 0; letter-spacing: 4px; background: linear-gradient(#fff3c0, #e0b040 55%, #8a5a12); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 3px 0 #3a2208) drop-shadow(0 8px 18px #000c); }
 .screen h2 { margin: 0; font-size: 28px; letter-spacing: 3px; color: var(--gold2); text-shadow: 0 2px 6px #000; }
 .screen p { margin: 0; max-width: 380px; text-shadow: 0 1px 4px #000; line-height: 1.35; }
 .small { font-size: 13px; opacity: .85; }
 #title { justify-content: space-between; padding-top: calc(10vh + env(safe-area-inset-top, 0)); background: linear-gradient(#050b1088, #0000 35%, #0000 60%, #050b10cc); }
 #title .logo { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-#title .rune { letter-spacing: 10px; color: var(--gold); opacity: .8; font-size: 15px; }
+#title .emblem { width: min(150px, 34vw); height: auto; filter: drop-shadow(0 6px 10px #000c); margin-bottom: 2px; }
+#title .rune { letter-spacing: 8px; color: var(--gold); opacity: .8; font-size: 15px; }
 #title .sub { font-style: italic; color: #e8dcc0; text-shadow: 0 2px 6px #000; }
 #title .menu { display: flex; flex-direction: column; gap: 12px; align-items: center; margin-bottom: 4vh; }
 #title .menu button { min-width: 230px; }

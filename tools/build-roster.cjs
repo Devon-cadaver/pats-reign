@@ -1,4 +1,4 @@
-// Builds release/pats-reign-roster.html: every monster and enemy ship with pictures (release/roster-img, captured from
+// Builds release/valhallas-tide-bestiary.html: every monster and enemy ship with pictures (release/roster-img, captured from
 // showcase.html with window.__roster set), what it does, and a notes box per monster. Notes live in the artifact's db
 // (collection "notes", doc per id: { text, redesign, at }) so Claude can read them back; localStorage is the fallback.
 // Run: node tools/build-roster.cjs
@@ -93,7 +93,7 @@ for (const L of LEGENDS) {
   });
   leg += `<div class="legend" id="sp-${L.key}"><header><h3 class="lh">${L.name}</h3><span class="count">${esc(L.lair)} · needs a ${L.need}</span></header><div class="about"><ul><li>${esc(L.does)}</li><li>Speed ${L.speed}. Attacks three times a turn: ${L.atk.map((a) => '<em>' + esc(a.toLowerCase()) + '</em>').join(', ').replace(/, ([^,]*)$/, ' or $1')}.</li></ul>${noteBox('sp-' + L.key, 'Notes for ' + L.name)}</div><div class="grid">${vs}</div></div>`;
 }
-sections += `<section class="species" id="legends"><header><h2>Legends</h2><span class="count">3 bosses</span></header><div class="about"><ul><li>They never appear at random. Each sleeps in its lair, marked on the map, and rises when you sail in with a big enough ship.</li><li>Slay all three for the PAT'S REIGN ending.</li></ul></div>${leg}</section>`;
+sections += `<section class="species" id="legends"><header><h2>Legends</h2><span class="count">3 bosses</span></header><div class="about"><ul><li>They never appear at random. Each sleeps in its lair, marked on the map, and rises when you sail in with a big enough ship.</li><li>Slay all three for the LORD OF THE SEA ending.</li></ul></div>${leg}</section>`;
 let sh = '';
 for (const s of SHIPFOES) sh += variantCard('ship-' + s.id, s.name, [[s.lv, 'lv']], [esc(s.what)], img(s.img), '');
 sections += `<section class="species" id="ships"><header><h2>Ships at sea</h2><span class="count">6 kinds</span></header><div class="about"><ul><li>Raider longships come in every ship size (a raider's level is its size). They shoot four-arrow volleys from 12 to 34 away, then fight a ship battle. Half again as common in the Mist Sea.</li><li>Raider fleets (a sea event) bring two to four ships of one clan, led by a Warlord one size bigger. Sink them all for their war chest.</li><li>Winning a ship battle pays timber, iron and gold.</li></ul>${noteBox('sp-ships', 'Notes for all ships')}</div><div class="grid">${sh}</div></section>`;
@@ -204,7 +204,7 @@ const JS = `
   document.getElementById('onlyFlag').addEventListener('click', function () { var on = document.body.classList.toggle('onlyflag'); this.setAttribute('aria-pressed', on ? 'true' : 'false'); });
   document.getElementById('copyAll').addEventListener('click', function () { var lines = [];
     Object.keys(boxes).forEach(function (id) { var n = notes[id]; if (!n || (!(n.text && n.text.trim()) && !n.redesign)) return; lines.push(nameOf(id) + ' [' + id + ']' + (n.redesign ? ' (REDESIGN)' : '') + ': ' + (n.text || '').trim()); });
-    var text = lines.length ? 'Pats Reign roster notes\\n' + lines.join('\\n') : 'No notes yet.'; var out = document.getElementById('copyOut'); var msg = document.getElementById('copyMsg');
+    var text = lines.length ? 'Valhalla's Tide notes\\n' + lines.join('\\n') : 'No notes yet.'; var out = document.getElementById('copyOut'); var msg = document.getElementById('copyMsg');
     function shown() { out.hidden = false; out.value = text; out.focus(); out.select(); }
     try { navigator.clipboard.writeText(text).then(function () { msg.textContent = 'Copied ' + lines.length + ' notes'; }, function () { shown(); msg.textContent = 'Press and hold the box below, then Copy'; }); } catch (e) { shown(); msg.textContent = 'Press and hold the box below, then Copy'; } });
   // notes live in the artifact's store so Claude can read them back; this device keeps a copy
@@ -221,13 +221,13 @@ const JS = `
 `;
 
 const total = SPECIES.reduce((s, sp) => s + sp.v.length, 0) + LEGENDS.reduce((s, l) => s + l.v.length, 0);
-const html = `<title>Pats Reign Bestiary</title>
+const html = `<title>Valhalla's Tide Bestiary</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,700;1,400&family=Alegreya+Sans+SC:wght@400;700&family=Grenze+Gotisch:wght@700&display=swap">
 <style>${CSS}</style>
 <div class="wrap">
-<div class="intro"><h1>Pats Reign Bestiary</h1>
+<div class="intro"><h1>Valhalla's Tide Bestiary</h1>
 <p>Every creature and enemy ship in the game: ${total} kinds in 13 families (one of them friendly), plus 6 ships, and now (v0.8.7) <a href="#mechanics" style="color:var(--gold-hi)">every game mechanic</a> at the end, each with its own notes box. Each one has a picture in the sea (how you meet it) and a full-body picture with the sea taken away, so you can judge the whole model.</p>
 <p>Write what you would change in any box and tap <b>Needs a redesign</b> to flag it. There is a box for each kind and one for each whole family (use that for changes to the shared body, like the eel's neck).</p></div>
 <div class="rules"><div><b>Level.</b> The name tag shows Lv. Its colour compares it with your ship: <span class="tags"><span style="color:#7dff3a">green</span> weaker, <span style="color:#fff">white</span> even, <span style="color:#ffb03a">orange</span> stronger, <span style="color:#ff4a3a">red</span> much stronger, <span style="color:#d06aff">purple</span> deadly.</span></div>
@@ -239,5 +239,5 @@ ${sections}
 <footer>Pictures captured from the game's showcase page. Levels, hull and hits follow the game's formulas (hull 45 × 1.65 per level, a hit 9 × 1.5 per level; legends at 80% hull).</footer>
 </div>
 <script>${JS}</script>`;
-const out = path.join(ROOT, 'release', 'pats-reign-roster.html'); fs.writeFileSync(out, html);
+const out = path.join(ROOT, 'release', 'valhallas-tide-bestiary.html'); fs.writeFileSync(out, html);
 console.log('wrote', out, (html.length / 1024).toFixed(0) + ' KB,', cards.length, 'cards');

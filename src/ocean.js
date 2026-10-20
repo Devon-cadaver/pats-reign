@@ -1,4 +1,4 @@
-// Pats Reign: the ocean. A grid of water that follows the camera, moved on the GPU by four Gerstner waves (rolling swells
+// Valhalla's Tide: the ocean. A grid of water that follows the camera, moved on the GPU by four Gerstner waves (rolling swells
 // with sharp crests), with fine ripples from a scrolling normal texture, foam on the breaking crests and around islands,
 // sun glints, sky reflection and light glowing through the crests. The same wave maths runs in JS (heightAt), so ships,
 // monsters and floating loot ride the exact surface you see. Wave size, colours, sun and lightning flashes are uniforms

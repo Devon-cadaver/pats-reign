@@ -1,6 +1,6 @@
-// Pats Reign: the sea of Pat. A 1200 x 1200 ocean (Megacity in Tornado Alley is about 140 across) split into five
+// Valhalla's Tide: the sea of the Jarl. A 1200 x 1200 ocean (Megacity in Tornado Alley is about 140 across) split into five
 // waters that look nothing alike:
-//   Home Waters (centre): green pine islands around Patsholm.
+//   Home Waters (centre): green pine islands around Valholm.
 //   Frost Sea (north): towering snow peaks, snow-laden pines, icebergs and drifting ice floes.
 //   Storm Sea (east): black volcanic islands with glowing lava and smoking craters, charred trees, basalt columns.
 //   Mist Sea (west): low mossy marsh islands, dead trees, standing stones and ruined arches, ghost lights.
@@ -38,7 +38,7 @@ const STACK_PAL_MID = {
   warm: { stone: [0xc89a66, 0xb8885a, 0xd8aa74, 0xa87a50], top: 0x4ab83a, wet: 0x6a5038, algae: 0x4a8a5a },
 };
 
-export const HARBOR_NAMES = ['Patsholm', 'Ravenfjord', 'Frostvik', 'Thunderhaven', 'Mistmere', 'Sunstrand'];
+export const HARBOR_NAMES = ['Valholm', 'Ravenfjord', 'Frostvik', 'Thunderhaven', 'Mistmere', 'Sunstrand'];
 // ---------- Helheim (v0.8.0): the realm of the dead, the end-game map. The same five seas, the dead's own version of each:
 //   Gjoll (centre): the river of the dead, black stone isles and dead trees round Gjallarhofn.
 //   Niflhel (north): frozen mist, pale frost and dead white trees.  Muspelheim (east): fire, lava and burnt black rock.

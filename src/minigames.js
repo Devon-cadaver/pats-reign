@@ -1,4 +1,4 @@
-// Pats Reign mini-games, drawn as an overlay over the live 3D scene.
+// Valhalla's Tide mini-games, drawn as an overlay over the live 3D scene.
 //  BATTLE (monsters and enemy ships): your volley (a marker sweeps a bar; tap FIRE on the weak spot: CRITICAL, HIT,
 //    GRAZE or MISS; fire pots hit hard), then the foe's attacks (it winds up from one side: swipe or tap the way it shows
 //    to dodge, or raise shields to block half). Flee any time. Lightning (Thor's Fury) doubles damage and widens the weak spot.

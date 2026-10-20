@@ -1,4 +1,4 @@
-// Pats Reign: the sea monsters. Every creature is built from smooth shapes and live "spine tubes" (bodies that bend every
+// Valhalla's Tide: the sea monsters. Every creature is built from smooth shapes and live "spine tubes" (bodies that bend every
 // frame), with teeth, slit eyes, fins, suckers, horns and glowing markings, in several colour variants each:
 // sharks, sea serpents (and the winged sea dragon), lightning eels, giant octopus, the kraken, iron crabs, abyssal anglers,
 // storm jellyfish, leviathan whales, the Elder One rising from the deep, and Jormungandr the world serpent.

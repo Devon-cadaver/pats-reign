@@ -1,4 +1,4 @@
-// Pats Reign: Viking ships. Five sizes from a little faering to Pat's great drakkar. The hull is lofted from cross-sections
+// Valhalla's Tide: Viking ships. Five sizes from a little faering to the Jarl's great drakkar. The hull is lofted from cross-sections
 // and built clinker-style (each plank overlaps the one below, tarred below the waterline, a painted top strake), with
 // curved stem and stern posts, a deck of planks, rowing benches and oars that row, a striped woollen sail that fills,
 // rigging, a crew of horned Vikings, a steering oar, and the upgrades you buy shown on the ship: shield rows, iron plates,
@@ -121,7 +121,7 @@ function sailTexture(kind, tier) {
       else if (tier === 4) { stripes('#4a1f6a', '#e6b43a', 6); }
       else { x.fillStyle = '#140c24'; x.fillRect(0, 0, w, h); x.strokeStyle = '#e6b43a'; x.lineWidth = 3; for (let i = 0; i < 2; i++) { x.beginPath(); x.arc(w / 2, h / 2 + 8, 92 + i * 14, 0, 6.28); x.stroke(); }
         x.fillStyle = '#b48aff'; x.font = 'bold 18px serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; const R = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ'; for (let i = 0; i < 24; i++) { const a = (i / 24) * 6.28; x.fillText(R[i], w / 2 + Math.cos(a) * 99, h / 2 + 8 + Math.sin(a) * 99); } }
-      if (tier >= 2) { // Pat's crest: crossed axes under a crown on a shield-round
+      if (tier >= 2) { // The Jarl's crest: crossed axes under a crown on a shield-round
         x.save(); x.translate(w / 2, h / 2); x.fillStyle = tier >= 4 ? '#2a0f3a' : '#1c1a1a'; x.beginPath(); x.arc(0, 8, 62, 0, 6.28); x.fill(); x.strokeStyle = '#e6b43a'; x.lineWidth = 7; x.stroke();
         x.strokeStyle = '#d8d8d8'; x.lineWidth = 8; for (const s of [-1, 1]) { x.beginPath(); x.moveTo(s * -34, 44); x.lineTo(s * 30, -26); x.stroke(); x.fillStyle = '#d8d8d8'; x.beginPath(); x.moveTo(s * 30, -26); x.quadraticCurveTo(s * 52, -26, s * 46, 2); x.lineTo(s * 22, -14); x.closePath(); x.fill(); }
         x.fillStyle = '#e6b43a'; x.beginPath(); x.moveTo(-30, -18); x.lineTo(-30, -44); x.lineTo(-15, -30); x.lineTo(0, -52); x.lineTo(15, -30); x.lineTo(30, -44); x.lineTo(30, -18); x.closePath(); x.fill(); x.restore(); }
