@@ -43,6 +43,7 @@
       <button id="playBtn">SET SAIL</button>
       <button id="contBtn" class="hidden">CONTINUE VOYAGE</button>
       <button id="howBtn" class="ghost">HOW TO PLAY</button>
+      <button id="codeBtn" class="ghost">💾 SAVE CODE</button>
     </div>
     <p class="small" id="ver"></p>
   </div>
@@ -55,6 +56,9 @@
       <p><b>🎣 Fish.</b> Slow down at bubbling water. Cast in the gold band, then hold REEL to keep the catch in the net. Crates give timber and iron, glints give gold.</p>
       <p><b>⚓ Upgrade.</b> Dock at a harbour to sell fish, repair, and buy shields, iron plates, ballistas, fire pots, sails and a bigger ship.</p>
       <p><b>⚡ Weather.</b> In storms, sail into a blue lightning ring to catch the bolt: Thor's Fury doubles your damage for a while. Turn your bow into rogue waves. Keep clear of waterspouts and tornadoes.</p>
+      <p><b>🌀 Sea events.</b> Out at sea anything can happen: a maelstrom that drags you round and in (full sail to break free, or dive in for the gold it swallowed), a serpent bursting up beside the ship, a raider fleet hunting you (sink them all for their war chest), a treasure knarr to run down and board, and on some Frost Sea nights the northern lights: sail into the Bifröst to mend your hull and fill your sails.</p>
+      <p><b>☠ Sinking.</b> Half your cargo goes down with your wreck. Sail back to the ☠ on the map and SALVAGE it to get it all back, or pay a harbour salvage crew to raise it. Your upgrades are never lost.</p>
+      <p><b>💾 Save codes.</b> Your voyage saves in this browser. Tap SAVE CODE (title screen or pause menu) for a code you can keep, email to yourself, or load on another device.</p>
       <p><b>👑 Reign.</b> Slay the three legends, the Kraken, Jormungandr and the Elder One, to rule the sea.</p>
     </div>
     <button id="howBack">BACK</button>
@@ -67,7 +71,7 @@
     <button id="hbSail">SET SAIL</button>
   </div>
   <div id="chart" class="screen hidden"><h2>SEA CHART</h2><p class="small">Pinch to zoom, drag to look around, tap to set your course.</p><canvas id="chartCv"></canvas><button id="chartClose" class="ghost">CLOSE</button></div>
-  <div id="paused" class="screen hidden"><h2>PAUSED</h2><p id="pauseText" class="small"></p><button id="resumeBtn">RESUME</button><button id="saveQuit" class="ghost">SAVE &amp; QUIT TO TITLE</button></div>
+  <div id="paused" class="screen hidden"><h2>PAUSED</h2><p id="pauseText" class="small"></p><button id="resumeBtn">RESUME</button><button id="pauseCode" class="ghost">💾 SAVE CODE</button><button id="saveQuit" class="ghost">SAVE &amp; QUIT TO TITLE</button></div>
   <div id="sunk" class="screen hidden"><h1>VALHALLA<br>CALLS</h1><p id="sunkText"></p><button id="sunkBtn">RISE AGAIN</button></div>
   <div id="won" class="screen hidden"><h1>PAT'S<br>REIGN</h1><p id="wonText"></p><button id="wonBtn">SAIL ON</button></div>
   <script type="module" src="./src/main.js"></script>

@@ -39,7 +39,7 @@ button:disabled { opacity: .45; filter: grayscale(.6); }
 #chartBtn { position: absolute; left: 8px; bottom: calc(124px + env(safe-area-inset-bottom, 0)); pointer-events: auto; padding: 4px 9px; font-size: 16px; }
 #viewBtn { position: absolute; left: 52px; bottom: calc(124px + env(safe-area-inset-bottom, 0)); pointer-events: auto; padding: 4px 9px; font-size: 11px; }
 #msg { position: absolute; left: 50%; top: 27%; transform: translateX(-50%); width: 86vw; text-align: center; font-weight: 700; font-size: 17px; text-shadow: 0 2px 6px #000, 0 0 2px #000; transition: opacity .4s; }
-#warn { position: absolute; left: 50%; top: 32%; transform: translateX(-50%); font-weight: 800; font-size: 15px; color: #ffd24a; text-shadow: 0 2px 6px #000; text-align: center; width: 90vw; }
+#warn { position: absolute; left: 50%; top: 16%; transform: translateX(-50%); font-weight: 800; font-size: 15px; color: #ffd24a; text-shadow: 0 2px 6px #000; text-align: center; width: 90vw; }
 #stick { position: absolute; left: calc(50% - 46px); bottom: calc(24px + env(safe-area-inset-bottom, 0)); width: 130px; height: 130px; border-radius: 50%; background: radial-gradient(#d8b04a22, #d8b04a10 60%, #0000 61%); border: 2px solid #d8b04a88; }
 #stick::after { content: 'ᛏ'; position: absolute; left: 50%; top: 6px; transform: translateX(-50%); color: #d8b04a99; font-size: 14px; }
 #knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #f2d27a, #a8781a); box-shadow: 0 0 14px #d8b04a88; transform: translate(-50%, -50%); }

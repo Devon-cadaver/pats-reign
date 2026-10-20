@@ -1,6 +1,6 @@
 # Pats Reign: project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.2.1. Where older notes or memory
+READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.3.0. Where older notes or memory
 disagree with this file, this file wins.
 
 ## Where things are
@@ -10,7 +10,8 @@ disagree with this file, this file wins.
   .github/workflows/deploy.yml, about 1 minute.
 - Built on the Dead City stack (D:\ClaudeCode\010_2026-10-16_newgame, repo Devon-cadaver/office-outbreak):
   Three.js 0.170 + Vite 6, plain JS, synthesized audio, no image or sound files.
-- Screenshots sent to Sean live in previews/ (01-11 first art pass, 20-27 first gameplay, 30-31 rocks, 40-46 v0.2.0).
+- Screenshots sent to Sean live in previews/ (01-11 first art pass, 20-27 first gameplay, 30-31 rocks, 40-46 v0.2.0,
+  50-56 v0.3.0 sea events, wreck, save code).
 
 ## Who the user is and how they work
 - Sean (GitHub Devon-cadaver). Plays on an iPhone through Remote Control, so the live site is how they try things.
@@ -26,7 +27,9 @@ disagree with this file, this file wins.
   pulling the lever back is how you stop auto sailing); Lanterns upgrade; Compass as a bought upgrade; pinch zoom on
   the big chart (tap still sets a course); Viking ballad music and dramatic battle music; wheel less sensitive and
   only touchable on the wheel itself; corner minimap still sets a course on tap (the big chart is the same map,
-  bigger and zoomable).
+  bigger and zoomable); v0.3.0: more random sea events (maelstrom, serpent ambush, raider fleet, treasure ship,
+  Frost Sea aurora buff), Dead City-style save codes, and sinking leaves a wreck you can salvage (Sean chose "cargo
+  only": upgrades are never lost).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
@@ -62,6 +65,12 @@ disagree with this file, this file wins.
 - src/music.js: synthesized saga. Sailing: D Dorian 6/8 ballad at 66 bpm (drone, frame drum, lyre, lur horn, choir).
   Battle: 138 bpm war drums, ostinato, horn calls, "HU!" war cries, choir. `startSaga()`, `setBattle(on)`.
 - src/audio.js: Dead City sfx + horn, splash, thunder, zap, coins, creak, `setSea` surf, `audioNodes()`.
+- src/aurora.js: northern lights. Additive curtain ribbons low in the northern sky (only seen in chase view and the
+  title; the top view never sees the sky) and the Bifröst rainbow pillar + rings. The visible part in top view is the
+  ocean shader's `uAur` term (green/violet bands of light on the water) plus a green tint on hemi light and fog.
+- src/savecode.js: save codes (ported from Dead City). PR1-<base64url deflate-raw JSON>-<4-char FNV check>; carries
+  `pr_save` and `oo_mute`. `initSaveCodes()` returns { open }; buttons: title SAVE CODE, pause SAVE CODE (saves first).
+  LOAD needs a second tap within 4 s on the same text, then reloads the page.
 - src/tornado.js: Dead City twisters + `waterspout` and `seastorm` skins. fullscreen.js, perf.js: from Dead City.
 
 ## Controls (v0.2.1)
@@ -89,13 +98,29 @@ disagree with this file, this file wins.
   3.5 s grace after a battle. Win = gold/iron (ships also timber). Flee = hull hit, foe stunned, lever to FULL.
 - Fishing spots (fish / crates / treasure), floating barrels, wrecks to salvage (8 min respawn). Harbours sell fish,
   repair, upgrade, save.
+- Sea events (EV in main.js, `updateEvents`): one every 60-115 s (first at ~80 s), weighted per sea (EVW), never
+  during battle/fishing. `__pr.startEvent(kind)` forces one ('whirl', 'ambush', 'fleet', 'treasure', 'aurora').
+  - Maelstrom: ocean.whirl {x,z,R,D,k} sinks a funnel into the sea (shader + JS heightAt match) with spiral foam arms
+    and a dark eye; `swirlAt` drags the ship, monsters and floats round and in; the eye grinds 4.5% hull / 0.8 s.
+    Full sail escapes from halfway in. 3 gold floats circle inside; when it closes it spits up 6 floats.
+  - Serpent ambush: water boils beside the ship 1.6 s, then a region serpent (level near your tier) bursts up (fast
+    rise), hits 6%, and battles you if you stay close; ×1.5 gold.
+  - Raider fleet: 2-4 ships of one clan (a Warlord one size up) in formation 150 away, hunting 80 s (`mon.hunt`,
+    `fleetOff`); sinking all gives a war chest (25/12/60 × (tier+1)).
+  - Treasure knarr (TREASURE_PAL, golden sail, glowing chests, no weapons): flees at 0.8× your top speed, dumps cargo
+    floats when you're within 75, escapes after 75 s; contact = boarding battle where you strike first; ×3 gold.
+  - Aurora: 75% of nights (rolled at nightfall) in the Frost Sea; a Bifröst pillar 55-105 away; touching it =
+    `boat.bifrost` 30 s: +25% top speed, 2% hull/s, green sail glow; a new pillar 60 s later.
 - Weather (region-biased): calm, rain, storm, fog, waterspouts, sea tornado, rogue waves. Storms drop blue rings; a
   bolt on your ship = Thor's Fury 22 s (x2 damage, +0.3 defence). Rogue wave: bow into it = bonus, side-on = heavy
   damage + spin. Spouts spin and damage, and rain fish. The Storm Sea flickers and rumbles all the time.
 - Each sea: own water/sky/fog/light, minimap colour, entry banner, particles (snow north, ash east), props.
 - Night: day cycle 420 s; lanterns light the ship and sea and push the night fog back.
 - Legends: Kraken (needs Snekkja), Jormungandr (Skeid), Elder One (Drakkar). All three = "PAT'S REIGN" ending.
-- Sinking: half cargo lost, respawn at last harbour. Save in localStorage `pr_save` (dock, every 30 s, pause menu).
+- Sinking: half the cargo goes down in your wreck (`P.wreck` {x,z,res}, saved; red-beacon wreck model, ☠ on the maps).
+  SALVAGE it (salvage mini-game: hauled up = all, rope snaps = part) or hire a harbour salvage crew (gold = 15 + 10×tier
+  + 15% of its value). Only one wreck: sinking again loses the older one. Upgrades are never lost. Respawn at the last
+  harbour. Save in localStorage `pr_save` (dock, every 30 s, pause menu).
 
 ## Workflow and gotchas
 - Patch with node .cjs scripts in the scratchpad; normalise CRLF; anchors must match exactly. Long multi-file bash
@@ -113,7 +138,10 @@ disagree with this file, this file wins.
   calls use the git credential manager token (`git credential fill`), never printed.
 - After pushing, wait for the Pages run (Actions API, head_sha) and check the live JS bundle contains the version.
 - Version lives in src/version.js and package.json (bump both).
+- `setTimeout` messages (fleet kills, war chest) run in real time, so `__pr.step` alone won't show them: wait ~1.5 s.
+- `cat > file` with no heredoc waits on stdin forever; long heredocs still break here, so write patch files with Write.
+- A test that calls `minis.close()` mid-battle leaves `battle` set and blocks events; use `boat.grace = 99` instead.
 
 ## Ideas not built yet
-- Crew management, ship naming, quests from harbour jarls, trade routes between harbours, co-op raids, an aurora
-  over the Frost Sea at night, more boss phases, sea birds over the Warm Sea, itch.io zip like Dead City.
+- Crew management, ship naming, quests from harbour jarls, trade routes between harbours, co-op raids, more boss
+  phases, sea birds over the Warm Sea, itch.io zip like Dead City.

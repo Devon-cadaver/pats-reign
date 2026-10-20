@@ -27,7 +27,7 @@ function detailTexture(S = 256) {
 const VERT = `
 uniform float uTime, uAmp; uniform vec4 uW[${NW}]; uniform vec2 uWA[${NW}];
 uniform sampler2D uShore; uniform vec3 uWorld;
-uniform vec4 uHA[6]; uniform vec4 uHB[6]; uniform vec4 uHC[6]; uniform vec4 uRA; uniform vec4 uRB;
+uniform vec4 uHA[6]; uniform vec4 uHB[6]; uniform vec4 uHC[6]; uniform vec4 uRA; uniform vec4 uRB; uniform vec4 uWP; uniform float uWK;
 varying vec3 vWorld; varying float vJ; varying float vH; varying float vShore; varying vec3 vN; varying float vHull; varying float vRogue;
 float sech2(float x) { float c = cosh(clamp(x, -9.0, 9.0)); return 1.0 / (c * c); }
 #include <common>
@@ -36,6 +36,7 @@ void main() {
   vec4 wp = modelMatrix * vec4(position, 1.0); vec2 p = wp.xz;
   float shore = texture2D(uShore, (p - uWorld.xy) / uWorld.z).r;
   float damp = 1.0 - 0.8 * smoothstep(0.15, 0.85, shore);
+  if (uWK > 0.0) { float wr = length(p - uWP.xy) / uWP.z; damp *= 1.0 - 0.75 * uWK * exp(-wr * wr * 1.2); }
   float amp = uAmp * damp, steep = min(uAmp, 1.25) / 1.25 * damp;
   vec3 disp = vec3(0.0); vec3 n = vec3(0.0, 1.0, 0.0); float J = 1.0;
   for (int i = 0; i < ${NW}; i++) {
@@ -50,6 +51,9 @@ void main() {
     float cr = sech2(al / uRB.y) * lat; float tr = sech2((al - 1.9 * uRB.y) / (1.3 * uRB.y)) * lat;
     disp.y += uRB.x * (cr - 0.35 * tr); disp.xz += rd * uRB.x * 0.45 * cr * clamp(1.0 - al / uRB.y, -1.0, 1.0); vRogue = cr;
     n.xz -= rd * uRB.x * cr * tanh(al / uRB.y) * 2.0 / uRB.y; J -= cr * 0.5; }
+  // whirlpool: a funnel sinks into the sea at uWP.xy (radius uWP.z, depth uWP.w)
+  if (uWK > 0.0) { vec2 q = p + disp.xz - uWP.xy; float lq = length(q), r = lq / uWP.z; float e1 = exp(-r * r * 2.5), e2 = exp(-r * r * 10.0);
+    disp.y -= uWP.w * (0.6 * e1 + 0.4 * e2); n.xz -= (q / max(lq, 0.001)) * uWP.w * r * (3.0 * e1 + 8.0 * e2) / uWP.z; }
   vec3 pos = vec3(p.x + disp.x, disp.y, p.y + disp.z);
   // ships: near each hull the sea settles onto that hull's waterline plane, so crests can't cut through the planks
   vHull = 0.0;
@@ -63,7 +67,7 @@ void main() {
 const FRAG = `
 uniform vec3 uDeep, uMid, uShallow, uSky, uHorizon, uSunDir, uSunCol, uFoamCol;
 uniform float uTime, uFlash, uAmbient, uSunK, uFoamK, uAmp;
-uniform sampler2D uDetail; uniform vec4 uLamp; uniform vec3 uLampCol;
+uniform sampler2D uDetail; uniform vec4 uLamp; uniform vec3 uLampCol; uniform vec4 uWP; uniform float uWK; uniform float uAur;
 varying vec3 vWorld; varying float vJ; varying float vH; varying float vShore; varying vec3 vN; varying float vHull; varying float vRogue;
 #include <common>
 #include <fog_pars_fragment>
@@ -93,10 +97,17 @@ void main() {
   float band = smoothstep(0.42, 0.66, vShore) * (1.0 - smoothstep(0.86, 0.97, vShore));
   float shoreD = band * (0.55 + 0.45 * sin(vShore * 70.0 - uTime * 2.4));
   float rogueD = smoothstep(0.3, 0.95, vRogue);
-  float D = max(max(crestD * 0.9, shoreD * 0.8), max(vHull * 0.7, rogueD * 0.95));
+  float whirlD = 0.0, eye = 0.0;
+  if (uWK > 0.0) { vec2 q = vWorld.xz - uWP.xy; float r = length(q) / uWP.z; if (r < 1.9) { float arms = sin(atan(q.y, q.x) * 4.0 - log(r + 0.04) * 13.0 + uTime * 3.4);
+    whirlD = pow(max(0.0, arms), 2.0) * smoothstep(1.8, 0.8, r) * smoothstep(0.03, 0.2, r) * uWK * 0.8; eye = exp(-r * r * 2.2) * uWK; } }
+  float D = max(max(crestD * 0.9, shoreD * 0.8), max(max(vHull * 0.7, rogueD * 0.95), whirlD));
   float foam = smoothstep(1.0 - D, 1.2 - D, nz) * min(1.0, D * 3.0) + smoothstep(0.9, 0.96, vShore);
   foam = clamp(foam, 0.0, 1.0);
   col = mix(col, uFoamCol * (uAmbient + diff * uSunK * 0.7 + 0.25), foam * 0.92);
+  col *= 1.0 - eye * 0.5;
+  if (uAur > 0.0) { float b1 = sin(vWorld.x * 0.055 + sin(vWorld.z * 0.03 + uTime * 0.2) * 2.2 + uTime * 0.35), b2 = sin(vWorld.x * 0.02 - vWorld.z * 0.04 + uTime * 0.15);
+    float band = pow(max(0.0, b1 * 0.65 + b2 * 0.35), 1.6) * (0.6 + 0.4 * lace); vec3 aCol = mix(vec3(0.1, 1.0, 0.5), vec3(0.55, 0.3, 1.0), smoothstep(-0.4, 0.8, b2));
+    col += aCol * uAur * (band * (0.42 + fres * 1.6) + 0.05); }
   if (uLamp.w > 0.0) { float ld = length(vWorld.xz - uLamp.xy), lk = uLamp.w * smoothstep(uLamp.z, 0.0, ld); vec3 Ld = normalize(vec3(uLamp.x, 4.0, uLamp.y) - vWorld); float ls = pow(max(dot(R, Ld), 0.0), 36.0);
     col += uLampCol * lk * (0.22 + 0.5 * foam + ls * 2.2) + uLampCol * pow(max(dot(R, Ld), 0.0), 8.0) * 0.14 * uLamp.w * smoothstep(uLamp.z * 1.6, 0.0, ld); }
   col += vec3(0.75, 0.85, 1.0) * uFlash * (0.4 + fres);
@@ -129,7 +140,7 @@ export function createOcean(scene, { size = 420, seg = 170, world = 1000, shore 
     uSky: { value: C(0x5aa8e0) }, uHorizon: { value: C(0xcfe6f2) }, uSunDir: { value: new THREE.Vector3(0.4, 0.6, -0.7).normalize() }, uSunCol: { value: C(0xfff1d0) },
     uHA: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) }, uHB: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) }, uHC: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) },
     uLamp: { value: new THREE.Vector4(0, 0, 20, 0) }, uLampCol: { value: new THREE.Color(0xffa850) },
-    uRA: { value: new THREE.Vector4(0, 0, 1, 0) }, uRB: { value: new THREE.Vector4(0, 10, 60, 0) },
+    uRA: { value: new THREE.Vector4(0, 0, 1, 0) }, uRB: { value: new THREE.Vector4(0, 10, 60, 0) }, uWP: { value: new THREE.Vector4(0, 0, 30, 0) }, uWK: { value: 0 }, uAur: { value: 0 },
     uShore: { value: null }, uDetail: { value: null }, uWorld: { value: new THREE.Vector3(-world / 2, -world / 2, world) },
   }]);
   uniforms.uShore.value = shoreTex; uniforms.uDetail.value = detailTexture();
@@ -152,24 +163,28 @@ export function createOcean(scene, { size = 420, seg = 170, world = 1000, shore 
   const ss = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   // surface height under world point (x, z): undo the crests' sideways push first, then sum the waves
   function heightAt(x, z, t = time) {
-    const sh = shoreAt(x, z), damp = 1 - 0.8 * ss(0.15, 0.85, sh), A0 = uniforms.uAmp.value, amp = A0 * damp, steep = (Math.min(A0, 1.25) / 1.25) * damp;
+    const W = whirl; let wd = 1, wr2 = 99; if (W.k > 0) { const rx = (x - W.x) / W.R, rz = (z - W.z) / W.R; wr2 = rx * rx + rz * rz; wd = 1 - 0.75 * W.k * Math.exp(-wr2 * 1.2); }
+    const sh = shoreAt(x, z), damp = (1 - 0.8 * ss(0.15, 0.85, sh)) * wd, A0 = uniforms.uAmp.value, amp = A0 * damp, steep = (Math.min(A0, 1.25) / 1.25) * damp;
     let px = x, pz = z;
     for (let it = 0; it < 3; it++) { let dx = 0, dz = 0; for (const w of WV) { const f = w.k * (w.dx * px + w.dz * pz - w.c * t), c = Math.cos(f), qa = (w.s * steep) / (w.k * NW); dx += qa * w.dx * c; dz += qa * w.dz * c; } px = x - dx; pz = z - dz; }
     let y = 0; for (const w of WV) y += w.A * amp * Math.sin(w.k * (w.dx * px + w.dz * pz - w.c * t));
     const R = rogue; if (R.k > 0) { const rx = x - R.x, rz = z - R.z, al = rx * R.dx + rz * R.dz, la = -rx * R.dz + rz * R.dx, lat = Math.exp(-Math.pow(la / R.Lc, 2)) * R.k; y += R.H * (sech2(al / R.w) - 0.35 * sech2((al - 1.9 * R.w) / (1.3 * R.w))) * lat; }
+    if (W.k > 0) y -= W.D * W.k * (0.6 * Math.exp(-wr2 * 2.5) + 0.4 * Math.exp(-wr2 * 10));
     return y;
   }
   // rogue wave state: crest centre (x, z), travel direction (dx, dz), height H, width w, crest half-length Lc, strength k (0 = none)
   const rogue = { x: 0, z: 0, dx: 1, dz: 0, H: 0, w: 9, Lc: 70, k: 0 };
+  // whirlpool state: eye (x, z), radius R, funnel depth D, strength k (0 = none)
+  const whirl = { x: 0, z: 0, R: 30, D: 5, k: 0 };
   // hulls: [{ x, z, yaw, hl, hb, y0, ps, rs, foam }] (up to 6); the sea hugs each hull's waterline
   function setHulls(list) { const A = uniforms.uHA.value, B = uniforms.uHB.value, Cc = uniforms.uHC.value; for (let i = 0; i < 6; i++) { const h = list[i]; if (!h) { B[i].w = 0; continue; } A[i].set(h.x, h.z, Math.sin(h.yaw), Math.cos(h.yaw)); B[i].set(h.hl, h.hb, h.y0, 1); Cc[i].set(h.ps || 0, h.rs || 0, h.foam ?? 0.6, 0); } }
   // pitch / roll for a hull of the given length and beam, heading yaw (radians, 0 = +z)
   function tiltAt(x, z, yaw, len, beam) { const fx = Math.sin(yaw), fz = Math.cos(yaw), h = len * 0.4, b = beam * 0.5;
     const bow = heightAt(x + fx * h, z + fz * h), stern = heightAt(x - fx * h, z - fz * h), port = heightAt(x - fz * b, z + fx * b), star = heightAt(x + fz * b, z - fx * b);
     return { y: (bow + stern + port + star) / 4, pitch: Math.atan2(bow - stern, h * 2), roll: Math.atan2(port - star, b * 2) }; }
-  function update(dt, center, camera) { time += dt; uniforms.uTime.value = time; uniforms.uRA.value.set(rogue.x, rogue.z, rogue.dx, rogue.dz); uniforms.uRB.value.set(rogue.H, rogue.w, rogue.Lc, rogue.k); mesh.position.set(Math.round(center.x / step) * step, 0, Math.round(center.z / step) * step); far.position.x = center.x; far.position.z = center.z; if (camera) sky.position.copy(camera.position); }
+  function update(dt, center, camera) { time += dt; uniforms.uTime.value = time; uniforms.uRA.value.set(rogue.x, rogue.z, rogue.dx, rogue.dz); uniforms.uRB.value.set(rogue.H, rogue.w, rogue.Lc, rogue.k); uniforms.uWP.value.set(whirl.x, whirl.z, whirl.R, whirl.D * whirl.k); uniforms.uWK.value = whirl.k; mesh.position.set(Math.round(center.x / step) * step, 0, Math.round(center.z / step) * step); far.position.x = center.x; far.position.z = center.z; if (camera) sky.position.copy(camera.position); }
   function setShore(data) { shoreData.set(data); for (let i = 0; i < data.length; i++) { const v = Math.round(Math.min(1, data[i]) * 255); sb[i * 4] = sb[i * 4 + 1] = sb[i * 4 + 2] = v; } shoreTex.needsUpdate = true; }
-  return { mesh, far, sky, uniforms, skyU, heightAt, tiltAt, shoreAt, update, setShore, setHulls, rogue, get time() { return time; }, set time(v) { time = v; } };
+  return { mesh, far, sky, uniforms, skyU, heightAt, tiltAt, shoreAt, update, setShore, setHulls, rogue, whirl, get time() { return time; }, set time(v) { time = v; } };
 }
 
 // ---------- foam, spray and splashes: one instanced mesh of soft white discs lying on (or flying above) the water ----------
