@@ -331,3 +331,8 @@ body.legendOn #warn, body.broadOn #warn { top: calc(150px + env(safe-area-inset-
 body.legendOn #msg, body.broadOn #msg { top: calc(190px + env(safe-area-inset-top, 0px)); }
 html.tabletHud body.legendOn #warn, html.tabletHud body.broadOn #warn { top: calc(176px + var(--padTop)); }
 html.tabletHud body.legendOn #msg, html.tabletHud body.broadOn #msg { top: calc(218px + var(--padTop)); }
+/* very short screens (a landscape phone with Safari's bars showing): DOCK moves beside the view button, off the telegraph */
+@media (max-height: 360px) {
+  html:not(.tabletHud) #dockBtn { top: calc(96px + env(safe-area-inset-top, 0px)); right: calc(max(8px, env(safe-area-inset-right, 0px)) + 74px); }
+  html.leftHand:not(.tabletHud) #dockBtn { right: auto; left: calc(max(8px, env(safe-area-inset-left, 0px)) + 74px); }
+}
