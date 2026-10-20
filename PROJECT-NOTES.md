@@ -227,6 +227,15 @@ disagree with this file, this file wins.
 - keydown (not e.repeat) of W / S / up / down calls thrKeyStep(+-1): the next THR_LV notch (STOP, ROW, HALF, FULL). Held, the
   tick steps again after 0.4 s and then every 0.22 s (thrHold). Works while sailing and in a ship battle (thrKeyOk).
 
+## v0.6.6: start in CHASE zoomed out, BACK on the telegraph, keys in the mini-games (Sean)
+- The game now starts in the CHASE view at zoom 1.6 (was TOP at 1).
+- BACK: THR_LV = [-0.22, 0, 0.3, 0.6, 1], a fifth telegraph button (data-n 0, red) under STOP. setThrottle allows -0.22; any
+  throttle <= 0 cancels a course; the sail furls; steering reverses while backing (like a car). Tutorial step 1 points at
+  data-n 3 (HALF). Action buttons and the phone battle strip moved up for the taller telegraph.
+- Keys in the mini-games (minigames.js, one keydown/keyup listener, never while typing in a text box): battle Space = FIRE
+  / THROW / the middle block, A and D = left and right (W too for the block), F = fire pot, B = board; fishing Space = cast,
+  hold Space = reel; salvage A / D = pull. Space never presses the last clicked button (main.js blurs it and fires).
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster

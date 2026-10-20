@@ -277,3 +277,8 @@ html.leftHand #broad .bSide { left: auto; right: max(10px, env(safe-area-inset-r
 html.leftHand #broad .bStrip span { right: auto; left: 4px; }
 html.leftHand #hud .row2 { justify-content: flex-end; } /* the ship and sea names move clear of the chart button */
 html:not(.tabletHud) #broad .bSide { max-width: 106px; } html:not(.tabletHud) #broad .bStrip { bottom: calc(170px + env(safe-area-inset-bottom, 0)); }
+/* BACK: a fifth notch under STOP (a slow reverse), in red; the action buttons and the battle strip move up to make room */
+#throttle button.back { color: #ffb8a0; } #throttle button.back.on { background: linear-gradient(#f0a070, #b0502a); color: #1a0a06; }
+html:not(.tabletHud) #acts { bottom: calc(208px + env(safe-area-inset-bottom, 0)); }
+html.tabletHud #acts { bottom: calc(260px + env(safe-area-inset-bottom, 0)); }
+html:not(.tabletHud) #broad .bStrip { bottom: calc(204px + env(safe-area-inset-bottom, 0)); }

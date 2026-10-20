@@ -79,7 +79,7 @@ let ship = null;
 function rebuildShip() { if (ship) scene.remove(ship.g); ship = buildShip(P.tier, P.up, palOf(P.skin), 7); scene.add(ship.g); ship.g.position.set(boat.x, 0, boat.z); hud(); }
 
 // ---------- state ----------
-let state = 'title', time = 0, zoom = 1, viewMode = 'top', camYaw = Math.PI, camPos = new THREE.Vector3(0, 40, 40), camTgt = new THREE.Vector3();
+let state = 'title', time = 0, zoom = 1.6, viewMode = 'chase', camYaw = Math.PI, camPos = new THREE.Vector3(0, 40, 40), camTgt = new THREE.Vector3();
 const mons = [], floats = [], spots = [], projs = [], rings = [], bolts = [], pops = [], spouts = [];
 const wx = { type: 'clear', k: 0, t: 30, next: 45, fading: false };
 let battle = null, fishing = null, rogueT = -1, rogueHit = false, spawnT = 0, floatT = 0, spotT = 0, saveT = 0, boltT = 3, msgT = 0, warnT = 0;
@@ -125,9 +125,9 @@ function drawHelm() { if (!helmEl.clientWidth) return; const dpr = Math.min(2, d
   g.fillStyle = '#4a2e18'; g.beginPath(); g.arc(0, 0, hub, 0, 6.2832); g.fill(); g.strokeStyle = '#e6b43a'; g.lineWidth = 2 * k; g.stroke();
   // the mark at the top: where the king spoke sits when the rudder is straight
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#f2d27a'; g.strokeStyle = '#2a1608'; g.lineWidth = 1.5 * dpr; g.beginPath(); g.moveTo(cx - 7 * dpr, 1 * dpr); g.lineTo(cx + 7 * dpr, 1 * dpr); g.lineTo(cx, 10 * dpr); g.closePath(); g.fill(); g.stroke(); }
-const thrEl = $('throttle'), THR_LV = [0, 0.3, 0.6, 1];
-function setThrottle(v, quiet) { v = clamp(v, 0, 1); if (v < 0.06) v = 0; if (v > 0.95) v = 1; const was = boat.throttle || 0; boat.throttle = v; if (v === 0 && was > 0 && boat.wp) { boat.wp = null; courseMark.visible = false; if (!quiet) say('Sails furled. Course cancelled.'); } drawThrottle(); }
-function drawThrottle() { const v = boat.throttle || 0, n = v === 0 ? 0 : v < 0.4 ? 1 : v < 0.75 ? 2 : 3; thrEl.querySelectorAll('button').forEach((b, i) => { if (b.classList.contains('on') !== (i === n)) b.classList.toggle('on', i === n); }); }
+const thrEl = $('throttle'), THR_LV = [-0.22, 0, 0.3, 0.6, 1]; // BACK (a slow reverse), STOP, ROW, HALF, FULL
+function setThrottle(v, quiet) { v = clamp(v, THR_LV[0], 1); if (Math.abs(v) < 0.06) v = 0; if (v > 0.95) v = 1; const was = boat.throttle || 0; boat.throttle = v; if (v <= 0 && was > 0 && boat.wp) { boat.wp = null; courseMark.visible = false; if (!quiet) say('Sails furled. Course cancelled.'); } drawThrottle(); }
+function drawThrottle() { const v = boat.throttle || 0, n = v < -0.05 ? 0 : v === 0 ? 1 : v < 0.4 ? 2 : v < 0.75 ? 3 : 4; thrEl.querySelectorAll('button').forEach((b, i) => { if (b.classList.contains('on') !== (i === n)) b.classList.toggle('on', i === n); }); }
 // tap a notch, or slide sideways along the row
 function thrPick(e) { const el = document.elementFromPoint(e.clientX, e.clientY), b = el && el.closest && el.closest('#throttle button'); if (b) setThrottle(THR_LV[+b.dataset.n]); }
 let thrId = null; thrEl.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); if (state !== 'play') return; unlockAudio(); thrId = e.pointerId; try { thrEl.setPointerCapture(e.pointerId); } catch { /* ignore */ } thrPick(e); });
@@ -138,7 +138,7 @@ canvas.addEventListener('wheel', (e) => { zoom = clamp(zoom * Math.exp(e.deltaY 
 const thrKeyOk = () => state === 'play' && !fishing && (!battle || !!battle.broad);
 function thrKeyStep(dir) { if (!thrKeyOk()) return; const cur = boat.throttle || 0, next = dir > 0 ? THR_LV.find((l) => l > cur + 0.02) : [...THR_LV].reverse().find((l) => l < cur - 0.02); if (next != null) setThrottle(next); }
 let thrHold = 0;
-const keys = {}; addEventListener('keydown', (e) => { const k = e.key.toLowerCase(); keys[k] = true; if (e.key === ' ' && state === 'play') fire(); if (!e.repeat && (k === 'w' || k === 's' || k === 'arrowup' || k === 'arrowdown')) { thrHold = 0; thrKeyStep(k === 'w' || k === 'arrowup' ? 1 : -1); } }); addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+const keys = {}; addEventListener('keydown', (e) => { const k = e.key.toLowerCase(); keys[k] = true; if (e.key === ' ' && !/INPUT|TEXTAREA/.test(e.target.tagName || '')) { e.preventDefault(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); if (state === 'play') fire(); } if (!e.repeat && (k === 'w' || k === 's' || k === 'arrowup' || k === 'arrowdown')) { thrHold = 0; thrKeyStep(k === 'w' || k === 'arrowup' ? 1 : -1); } }); addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 const ray = new THREE.Raycaster(), seaPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 function tapSea(x, y) { ray.setFromCamera(new THREE.Vector2((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1), camera); const p = new THREE.Vector3(); if (!ray.ray.intersectPlane(seaPlane, p)) return; setCourse(p.x, p.z); }
 function setCourse(x, z) { boat.wp = { x: clamp(x, -HALF + 20, HALF - 20), z: clamp(z, -HALF + 20, HALF - 20) }; courseMark.visible = true; sfx.throw(); if ((boat.throttle || 0) < 0.3) setThrottle(0.8, true); }
@@ -789,7 +789,8 @@ function updateBoat(dt) {
         // hands off the wheel: the helmsman turns it back toward the mark (and around land)
         if (!helm.held && !kTurn) { want = steerAround(Math.atan2(dx, dz), Math.min(d, 26 + t.L)); const target = -clamp(angDiff(want, boat.yaw) * 1.8, -1, 1) * HMAX; helm.angle += clamp(target - helm.angle, -dt * 3.5, dt * 3.5); } } } }
   else thr = 0;
-  const r0 = helm.angle / HMAX, rudder = Math.sign(r0) * Math.pow(Math.abs(r0), 1.4), tr = turnRate() * (0.35 + 0.65 * Math.min(1, boat.v / (t.speed * 0.6))); boat.yaw += -rudder * tr * dt + boat.spin * dt; boat.spin *= 1 - dt * 1.2;
+  // backing water (BACK), the wheel steers like reversing a car
+  const r0 = helm.angle / HMAX, rudder = Math.sign(r0) * Math.pow(Math.abs(r0), 1.4), tr = turnRate() * (0.35 + 0.65 * Math.min(1, Math.abs(boat.v) / (t.speed * 0.6))); boat.yaw += -rudder * tr * dt * (boat.v < -0.3 ? -1 : 1) + boat.spin * dt; boat.spin *= 1 - dt * 1.2;
   boat.sailK = (boat.sailK ?? 0) + (clamp((thr - 0.3) / 0.45, 0, 1) - (boat.sailK ?? 0)) * Math.min(1, dt * 1.5);
   const top = topSpeed() * (1 - (LOOK[wx.type] === 'storm' ? 0.15 * wx.k : 0)); const acc = 3.2 * (1 + 0.15 * P.up.oars); boat.v += clamp(thr * top - boat.v, -acc * 1.2 * dt, acc * dt); boat.boost = Math.max(0, boat.boost - dt); boat.thor = Math.max(0, boat.thor - dt); boat.curse = Math.max(0, (boat.curse || 0) - dt);
   // the crew patch the hull at sea (Oars & Crew): out of battle, once nothing has hit you for 8 s
@@ -912,7 +913,7 @@ let dockShown = null; function drawDockBtn() { const on = autoOn(); if (on !== d
 const TUT_KEY = 'pr_tut', keyPad = matchMedia('(pointer: fine)').matches; let tut = null, tutForce = false;
 const tutSeen = () => { try { return !!localStorage.getItem(TUT_KEY); } catch (e) { return true; } };
 const TUT = [
-  { txt: '⛵ <b>Raise the sail.</b> Tap HALF or FULL. STOP furls it again.', keys: 'W and S', at: () => thrEl.querySelector('[data-n="2"]'), done: () => (boat.throttle || 0) > 0.4 },
+  { txt: '⛵ <b>Raise the sail.</b> Tap HALF or FULL. STOP furls it again.', keys: 'W and S', at: () => thrEl.querySelector('[data-n="3"]'), done: () => (boat.throttle || 0) > 0.4 },
   { txt: '☸ <b>Steer.</b> Swipe along the wheel to turn. It stays where you leave it; double-tap to centre it.', keys: 'A and D', at: () => 'wheel', done: () => tut.turn > 1.1 },
   { txt: '👁 <b>Change the view.</b> Tap TOP to switch the camera: TOP looks down from above, CHASE follows the ship, HELM puts you at the wheel. Try all three.', at: () => $('viewBtn'), done: () => tut.views.size >= 3 },
   { txt: '🔍 <b>Zoom.</b> Pinch the sea with two fingers to zoom in and out.', keys: 'the mouse wheel', at: () => 'pinch', done: () => Math.abs(zoom - tut.zoom0) > 0.15 },

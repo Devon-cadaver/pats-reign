@@ -15,6 +15,9 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export function createMinis({ sfx, hooks }) {
   const root = $('mini'); let cur = null;
   function open(cls) { root.className = cls; root.innerHTML = ''; root.classList.remove('hidden'); }
+  const keyOf = (e) => (e.key === ' ' ? ' ' : e.key.toLowerCase()), typing = (e) => /INPUT|TEXTAREA/.test((e.target && e.target.tagName) || '');
+  addEventListener('keydown', (e) => { if (cur && cur.key && !typing(e) && cur.key(keyOf(e), true, e.repeat)) e.preventDefault(); });
+  addEventListener('keyup', (e) => { if (cur && cur.key && !typing(e) && cur.key(keyOf(e), false)) e.preventDefault(); });
   function close() { root.className = 'hidden'; root.innerHTML = ''; cur = null; }
   const banner = (txt, color = '#ffd24a') => { const b = el('div', 'mgBanner', txt); b.style.color = color; root.appendChild(b); setTimeout(() => b.remove(), 1100); };
 
@@ -80,7 +83,13 @@ export function createMinis({ sfx, hooks }) {
       cue.innerHTML = ''; side.className = 'mgSide'; banner(result === 'boarded' ? 'SHE IS YOURS!' : result === 'win' ? (foe.naval ? 'SHIP TAKEN!' : 'SLAIN!') : result === 'flee' ? 'ESCAPED' : 'SINKING!', result === 'win' || result === 'boarded' ? '#7dff3a' : '#ff5a3a'); S.phase = 'over'; S.t = 0; S.result = result; }
     // swipes anywhere on the overlay answer a dodge
     let sw = null; root.onpointerdown = (e) => { sw = [e.clientX, e.clientY]; }; root.onpointerup = (e) => { if (!sw || (S.phase !== 'defend' && S.phase !== 'clash')) return; const dx = e.clientX - sw[0], dy = e.clientY - sw[1]; sw = null; if (Math.hypot(dx, dy) < 40) return; (S.phase === 'clash' ? clash : answer)(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'L' : 'R') : 'U'); };
-    cur = { update(dt) { S.t += dt;
+    // keys: Space = the main action (FIRE, THROW, or the middle block when dodging), A / D = left / right, W = the middle block too, F = fire pot, B = board
+    function battleKey(k, down) { if (!down) return k === ' '; const L = k === 'a' || k === 'arrowleft', R = k === 'd' || k === 'arrowright', U = k === ' ' || k === 'w' || k === 'arrowup';
+      if (S.phase === 'aim') { if (k === ' ') shoot(); else if (k === 'f') firePot(); else if (k === 'b') { const bb = root.querySelector('.mgBoard'); if (bb) bb.click(); } else return false; return true; }
+      if (S.phase === 'grapple' && k === ' ') { throwHook(); return true; }
+      if ((S.phase === 'defend' || S.phase === 'clash') && (L || R || U)) { (S.phase === 'clash' ? clash : answer)(L ? 'L' : R ? 'R' : 'U'); return true; }
+      return k === ' '; }
+    cur = { key: battleKey, update(dt) { S.t += dt;
       if (S.phase === 'intro' && S.t > (o.firstStrike === false ? 0.2 : 1.0)) { if (o.board) boardStart(); else if (o.firstStrike === false) { S.phase = 'defend'; S.maxAtk = foe.attacks || 1; S.attacks = 0; defendUI(); } else { S.phase = 'aim'; aimUI(); } }
       else if (S.phase === 'aim') { const sp = (0.75 + foe.lv * 0.1) * (foe.boss ? 1.25 : 1); S.mark += S.dir * sp * dt; if (S.mark > 1) { S.mark = 2 - S.mark; S.dir = -1; } if (S.mark < 0) { S.mark = -S.mark; S.dir = 1; } const n = $('mgNeedle'); if (n) n.style.left = S.mark * 100 + '%'; }
       else if (S.phase === 'shotFx' && S.t > 0.55) { if (foe.hp <= 0) end('win'); else if (S.shots >= S.maxShots) { S.shots = 0; S.phase = 'defend'; S.maxAtk = foe.attacks || 1; S.attacks = 0; defendUI(); } else { S.phase = 'aim'; aimUI(); } }
@@ -110,7 +119,9 @@ export function createMinis({ sfx, hooks }) {
       btns.innerHTML = ''; const rb = el('button', 'mgBig', 'REEL'); const on = (e) => { e.preventDefault(); S.hold = true; }, off = () => { S.hold = false; }; rb.onpointerdown = on; rb.onpointerup = off; rb.onpointerleave = off; rb.onpointercancel = off; btns.appendChild(rb);
       $('fsReel').onpointerdown = on; $('fsReel').onpointerup = off; }
     function end(result) { if (S.ended) return; S.ended = true; S.phase = 'over'; S.t = 0; S.result = result; if (result === 'catch') { banner('CAUGHT!', '#7dff3a'); sfx.pickup(); } else if (result === 'lost') banner('IT GOT AWAY', '#c8c8c8'); }
-    cur = { update(dt) { S.t += dt;
+    // keys: Space casts, then hold Space to reel
+    function fishKey(k, down) { if (k !== ' ') return false; if (down) { if (S.phase === 'cast') cast(); else S.hold = true; } else S.hold = false; return true; }
+    cur = { key: fishKey, update(dt) { S.t += dt;
       if (S.phase === 'cast') { S.p += S.dir * dt * 0.9; if (S.p > 1) { S.p = 2 - S.p; S.dir = -1; } if (S.p < 0) { S.p = -S.p; S.dir = 1; } const n = $('fsNeedle'); if (n) n.style.left = S.p * 100 + '%'; }
       else if (S.phase === 'wait' && S.t > 0.8 + Math.random() * 0.6) { S.phase = 'reel'; S.t = 0; banner('BITE!', '#ffd24a'); sfx.help && sfx.help(); reelUI(); }
       else if (S.phase === 'bite' && S.t > 1.1) { close(); done({ result: 'bite' }); }
@@ -131,7 +142,7 @@ export function createMinis({ sfx, hooks }) {
     const quit = el('button', 'ghost mgFlee', 'STOP'); quit.onclick = () => end('stop'); root.appendChild(quit);
     function pull(k) { if (S.phase !== 'haul') return; if (k === S.last) { S.tension = Math.max(0, S.tension - 0.15); banner('SLIP', '#c8c8c8'); return; } S.last = k; S.tension += 0.26; if (S.tension > 1) { end('snap'); return; } S.pulls++; hooks.pull && hooks.pull(S.pulls / S.need); sfx.step && sfx.step(); $('svC').textContent = S.pulls + ' / ' + S.need; if (S.pulls >= S.need) end('done'); }
     function end(result) { if (S.ended) return; S.ended = true; S.phase = 'over'; S.t = 0; S.result = result; banner(result === 'done' ? 'HAULED UP!' : result === 'snap' ? 'THE ROPE SNAPS!' : 'STOPPED', result === 'done' ? '#7dff3a' : '#ff8a3a'); (result === 'done' ? sfx.pickup : sfx.hurt)(); }
-    cur = { update(dt) { S.t += dt; if (S.phase === 'haul') { S.tension = Math.max(0, S.tension - dt * 0.55); const tt = $('svT'), tm = $('svTime'); if (tt) { tt.style.width = clamp(S.tension, 0, 1) * 100 + '%'; tt.style.background = S.tension > 0.8 ? '#ff5a3a' : '#7dff3a'; } if (tm) tm.style.width = clamp(1 - S.t / 11, 0, 1) * 100 + '%'; if (S.t > 11) end(S.pulls >= S.need * 0.5 ? 'done' : 'stop'); }
+    cur = { key: (k, down) => { if (!down) return false; if (k === 'a' || k === 'arrowleft') pull('L'); else if (k === 'd' || k === 'arrowright') pull('R'); else return false; return true; }, update(dt) { S.t += dt; if (S.phase === 'haul') { S.tension = Math.max(0, S.tension - dt * 0.55); const tt = $('svT'), tm = $('svTime'); if (tt) { tt.style.width = clamp(S.tension, 0, 1) * 100 + '%'; tt.style.background = S.tension > 0.8 ? '#ff5a3a' : '#7dff3a'; } if (tm) tm.style.width = clamp(1 - S.t / 11, 0, 1) * 100 + '%'; if (S.t > 11) end(S.pulls >= S.need * 0.5 ? 'done' : 'stop'); }
       else if (S.phase === 'over' && S.t > 1.0) { close(); done({ result: S.result, frac: S.pulls / S.need }); } } };
   }
   // ---------- treasure dig ----------
