@@ -151,6 +151,11 @@ export function createMinis({ sfx, hooks }) {
     root.innerHTML = `<div class="mgTitle">⛏ ${m.kind === 'relic' ? "The Drowned King's bone map" : 'Treasure map'}</div><div class="mgHint mgClue">“${m.clue}”</div><div class="digGrid" id="dgGrid"></div><div class="mgHint" id="dgInfo">Tap the sand to dig · ${S.shovels} digs before the tide turns</div>`;
     const quit = el('button', 'ghost mgFlee', 'BACK TO SHIP'); quit.onclick = () => end('gaveup'); root.appendChild(quit);
     const grid = $('dgGrid'); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const mk = m.marks.find((q) => q.c[0] === x && q.c[1] === y); const c = el('button', 'digCell' + (mk ? ' mark' : ''), mk ? mk.icon : ''); if (!mk) c.onclick = () => dig1(x, y, c); grid.appendChild(c); }
+    // keys: arrows or WASD move a marker over the sand, Space or Enter digs there
+    const cells = [...grid.children]; S.cx = 2; S.cy = 1; const sel = () => cells.forEach((c, i) => c.classList.toggle('sel', i === S.cy * W + S.cx)); if (matchMedia('(pointer: fine)').matches) { sel(); $('dgInfo').textContent += ' · keys: arrows and Space'; }
+    function digKey(k, down) { if (!down || S.phase !== 'dig') return false; const dx = k === 'a' || k === 'arrowleft' ? -1 : k === 'd' || k === 'arrowright' ? 1 : 0, dy = k === 'w' || k === 'arrowup' ? -1 : k === 's' || k === 'arrowdown' ? 1 : 0;
+      if (dx || dy) { S.cx = Math.max(0, Math.min(W - 1, S.cx + dx)); S.cy = Math.max(0, Math.min(H - 1, S.cy + dy)); sel(); return true; }
+      if (k === ' ' || k === 'enter') { const c = cells[S.cy * W + S.cx]; if (!c.classList.contains('mark')) dig1(S.cx, S.cy, c); return true; } return false; }
     function dig1(x, y, c) { if (S.phase !== 'dig' || c.classList.contains('dug')) return; c.classList.add('dug'); S.shovels--; sfx.step && sfx.step(); const d = Math.abs(m.cell[0] - x) + Math.abs(m.cell[1] - y);
       if (d === 0) { c.textContent = m.kind === 'relic' ? '🗝' : '💰'; c.classList.add('gold'); end('found'); return; }
       c.textContent = d === 1 ? '🔥' : d === 2 ? '♨' : '❄'; c.classList.add(d === 1 ? 'hot' : d === 2 ? 'warm' : 'cold'); banner(d === 1 ? 'HOT!' : d === 2 ? 'WARM' : 'COLD', d === 1 ? '#ff8a3a' : d === 2 ? '#ffd24a' : '#9fd6ff');
@@ -158,7 +163,7 @@ export function createMinis({ sfx, hooks }) {
       if (S.shovels <= 0) { end('gaveup'); return; } $('dgInfo').textContent = S.shovels + ' digs before the tide turns'; }
     function end(result) { if (S.ended) return; S.ended = true; S.phase = 'over'; S.t = 0; S.result = result;
       banner(result === 'found' ? (m.kind === 'relic' ? "DRAUGR'S BANE!" : 'TREASURE!') : result === 'guardian' ? 'SOMETHING STIRS…' : 'THE TIDE TURNS', result === 'found' ? '#7dff3a' : result === 'guardian' ? '#ff5a3a' : '#c8c8c8'); (result === 'found' ? sfx.pickup : sfx.hurt)(); }
-    cur = { update(dt) { S.t += dt; if (S.phase === 'over' && S.t > 1.3) { close(); done({ result: S.result }); } } };
+    cur = { key: digKey, update(dt) { S.t += dt; if (S.phase === 'over' && S.t > 1.3) { close(); done({ result: S.result }); } } };
   }
   return { battle, fish, salvage, dig, update(dt) { if (cur) cur.update(dt); }, get active() { return !!cur; }, close };
 }
