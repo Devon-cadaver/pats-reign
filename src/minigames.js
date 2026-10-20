@@ -81,7 +81,7 @@ export function createMinis({ sfx, hooks }) {
     // swipes anywhere on the overlay answer a dodge
     let sw = null; root.onpointerdown = (e) => { sw = [e.clientX, e.clientY]; }; root.onpointerup = (e) => { if (!sw || (S.phase !== 'defend' && S.phase !== 'clash')) return; const dx = e.clientX - sw[0], dy = e.clientY - sw[1]; sw = null; if (Math.hypot(dx, dy) < 40) return; (S.phase === 'clash' ? clash : answer)(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'L' : 'R') : 'U'); };
     cur = { update(dt) { S.t += dt;
-      if (S.phase === 'intro' && S.t > (o.firstStrike === false ? 0.2 : 1.0)) { if (o.firstStrike === false) { S.phase = 'defend'; S.maxAtk = foe.attacks || 1; S.attacks = 0; defendUI(); } else { S.phase = 'aim'; aimUI(); } }
+      if (S.phase === 'intro' && S.t > (o.firstStrike === false ? 0.2 : 1.0)) { if (o.board) boardStart(); else if (o.firstStrike === false) { S.phase = 'defend'; S.maxAtk = foe.attacks || 1; S.attacks = 0; defendUI(); } else { S.phase = 'aim'; aimUI(); } }
       else if (S.phase === 'aim') { const sp = (0.75 + foe.lv * 0.1) * (foe.boss ? 1.25 : 1); S.mark += S.dir * sp * dt; if (S.mark > 1) { S.mark = 2 - S.mark; S.dir = -1; } if (S.mark < 0) { S.mark = -S.mark; S.dir = 1; } const n = $('mgNeedle'); if (n) n.style.left = S.mark * 100 + '%'; }
       else if (S.phase === 'shotFx' && S.t > 0.55) { if (foe.hp <= 0) end('win'); else if (S.shots >= S.maxShots) { S.shots = 0; S.phase = 'defend'; S.maxAtk = foe.attacks || 1; S.attacks = 0; defendUI(); } else { S.phase = 'aim'; aimUI(); } }
       else if (S.phase === 'defend' && S.prompt) { S.prompt.t += dt; const k = 1 - S.prompt.t / S.prompt.win, tm = $('mgTimer'); if (tm) tm.style.width = clamp(k, 0, 1) * 100 + '%'; if (k <= 0 && !S.prompt.done) answer('-'); }

@@ -146,6 +146,30 @@ disagree with this file, this file wins.
 - Next (Sean asked): an action ship battle (circle each other, broadside timing with a trajectory arrow, side camera,
   they fire back) and visible ship damage (torn sails, holes, cracks, fire).
 
+## v0.6.0: the action ship battle (broadside) (Sean: circle each other, time the shot at the right angle, a trajectory arrow, side view, they fire back)
+- main.js section "ACTION SHIP BATTLE (broadside)" (before fishing spots). startBattle(mon, firstStrike, opts): a naval
+  foe with BROAD.on and not opts.classic goes to startBroadside(mon) (returns false when there is no open water for the
+  rings, then the classic battle runs). Pause menu button #broadToggle: SHIP FIGHTS ACTION / CLASSIC (localStorage
+  pr_broad, '0' = classic).
+- Rings: you on rIn = 11 + 0.55 L, she on rOut = rIn + gap (gap = 9 + 1.1 (B + her B)), centre found with open water all
+  round (13 tries). You circle at 0.42 rad/s x throttle^0.6 (the telegraph sets it; STOP stops you), she at
+  0.3 + 0.03 lv the other way, so you pass broadside every ~7-9 s. Ships blend into place over 1.4 s (k).
+- Your gold arrow (ShapeGeometry, depthTest off, renderOrder 6) points out of the side facing her; broadFire() (FIRE
+  button, Space) launches 3 + ballista bolts along it; reload 2.4 - 0.3 ballista s. A shot resolves after the flight time
+  (gap / 34 s, as launch() flies): hit if her angle is within (L/2 + 1.5) / rOut of the shot's line; PERFECT (x1.6) in the
+  middle 35%. Damage attack() x 1.15; fire pots set her burning (3 + level s, embers).
+- Her aim: per pass a random error within hlP x clamp(2.2 - 0.3 lv, 0.8, 2.2); she fires when her prediction of where you
+  will be (at your current speed) crosses it; her red arrow flashes while she aims; changing speed spoils it. Her volley:
+  mon.dmg x (1.25 in her perfect middle) x (1 - defense). Treasure knarrs never fire.
+- Timing strip above FIRE (#broad .bStrip): her angle from your arrow (+-1.1 rad), the green zone where she must be when
+  you fire (lead = her angular speed x flight time), its PERFECT middle, ⚠ SHE AIMS. Camera: inside the rings behind you,
+  looking out across hers (dist from the needed width, pitch 0.32); viewOff 'broad' lifts the action to 40% of the screen
+  (the classic battle keeps 25%).
+- Ends: her hull 0 -> killMon, STOP; FLEE -> half a hit, she is stunned 7 s, FULL; BOARD HER (below 40%, boardInfo) ->
+  the classic mini-game straight into the grapple (minis.battle o.board -> boardStart). sink() clears it first.
+- Tested: on-time PERFECT 21, late 0; she hit 2 of 2 passes at first (34 each), so her damage went x1.5 -> x1 and her aim
+  error wider; win, flee and board end cleanly with no arrows left; phone and tablet layouts.
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster

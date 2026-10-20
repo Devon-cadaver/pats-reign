@@ -227,3 +227,19 @@ html:not(.tabletHud) #dockBtn { left: auto; right: max(8px, env(safe-area-inset-
 html.tabletHud #dockBtn { bottom: calc(218px + env(safe-area-inset-bottom, 0)); flex-direction: row; gap: 6px; padding: 5px 12px; } html.tabletHud #dockBtn b { font-size: 20px; } html.tabletHud #dockBtn small { font-size: 13px; }
 body.busy #dockBtn { display: none; }
 #tutHand.pinch { animation: tutPinch 1.1s ease-in-out infinite; } @keyframes tutPinch { 50% { transform: scale(1.3); } }
+/* the action ship battle: her hull at the top, a big FIRE in the middle at the bottom (the wheel is away), BOARD and FLEE at the side */
+#broad { position: absolute; inset: 0; pointer-events: none; }
+#broad .bFoe { position: absolute; left: 50%; transform: translateX(-50%); top: calc(64px + env(safe-area-inset-top, 0px)); width: min(70vw, 340px); text-align: center; font-size: 13px; text-shadow: 0 1px 3px #000; }
+#broad .bFoe .hp { height: 10px; border: 1.5px solid var(--gold); border-radius: 6px; background: #0008; overflow: hidden; margin-top: 3px; } #broad .bFoe .hp i { display: block; height: 100%; width: 100%; background: linear-gradient(#ff7a5a, #c23b2a); transition: width .2s; }
+#broad .bHint { position: absolute; left: 50%; transform: translateX(-50%); top: calc(104px + env(safe-area-inset-top, 0px)); width: 86vw; text-align: center; font-weight: 700; font-size: 14px; color: #ffe9a8; text-shadow: 0 2px 5px #000; }
+#broad .bFire { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom, 0)); width: 124px; height: 124px; border-radius: 50%; padding: 0; font-size: 24px; letter-spacing: 2px; pointer-events: auto; overflow: hidden; filter: grayscale(.7) brightness(.75); touch-action: none; }
+#broad .bFire.ready { filter: none; animation: pulse 1s infinite; } #broad .bFire i { position: absolute; left: 0; bottom: 0; height: 7px; width: 0; background: #fff9; }
+#broad .bSide { position: absolute; right: max(10px, env(safe-area-inset-right, 0px)); bottom: calc(40px + env(safe-area-inset-bottom, 0)); display: flex; flex-direction: column; gap: 10px; align-items: flex-end; pointer-events: auto; } #broad .bSide button { padding: 8px 12px; font-size: 13px; }
+html.tabletHud #broad .bFire { width: 160px; height: 160px; font-size: 30px; } html.tabletHud #broad .bFoe { top: calc(72px + var(--padTop)); font-size: 16px; } html.tabletHud #broad .bHint { top: calc(118px + var(--padTop)); font-size: 18px; }
+#broad .bStrip { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(160px + env(safe-area-inset-bottom, 0)); width: min(84vw, 420px); height: 30px; border: 2px solid var(--gold); border-radius: 15px; background: #0a1418cc; box-shadow: 0 3px 10px #000a; }
+#broad .bStrip b { position: absolute; top: 0; bottom: 0; background: #3fae4a88; } #broad .bStrip #bPerf { background: #9fe86acc; }
+#broad .bStrip em { position: absolute; left: 50%; top: -14px; transform: translateX(-50%); color: var(--gold2); font-style: normal; font-size: 13px; text-shadow: 0 1px 3px #000; } #broad .bStrip em::after { content: ""; position: absolute; left: 50%; top: 14px; width: 2px; height: 30px; background: var(--gold2); }
+#broad .bStrip i { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: #ff4a3a; border: 2px solid #fff; box-shadow: 0 0 8px #ff4a3a; }
+#broad .bStrip span { position: absolute; left: 50%; top: 34px; transform: translateX(-50%); white-space: nowrap; font-size: 12px; font-weight: 800; color: #ff7a5a; text-shadow: 0 1px 3px #000; transition: opacity .15s; }
+html.tabletHud #broad .bStrip { bottom: calc(200px + env(safe-area-inset-bottom, 0)); height: 36px; }
+#broad .bStrip span { left: auto; right: 4px; top: auto; bottom: 36px; transform: none; }
