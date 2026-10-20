@@ -49,7 +49,22 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21 morning, v0.8.x, after the overnight end-game build)
+## Where we left off (2026-10-21, v1.1.2: Sean is playtesting and sending one-line requests; itch.io release in progress)
+- The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
+  batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
+  memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
+  C:/Windows/System32/tar.exe (not PowerShell) and send it with SendUserFile. The itch page settings and text are in
+  release/itch/itch-page.md; the trailer song, clip prompts, six 540x960 clips, banners, cover and background GIFs are in
+  release/itch (the wide-sides background GIF render and a fight-tester rerun were parked when his PC pegged at 99%).
+- Test scripts for this round live in the session scratchpad (C:Userssean_AppDataLocalTempclaudeD--ClaudeCode-012-2026-10-19-PatsVikingd01531f-c96e-4dff-94e8-3102c3aaf357scratchpad):
+  tutend.cjs (the whole 13-step tutorial), parrytest.cjs (perfect shots), switchtest.cjs (mid-fight mode switch),
+  beasttest.cjs / beasttest2.cjs (action beast fights), colltest.cjs (collisions), feel.cjs (helm camera, wreck slow-down,
+  status line), thrshot.cjs (telegraph colours). The regression is the older scratchpad's regress.cjs / layout.cjs (see
+  the v0.8.0 section) run with URL=http://localhost:4183/ against a vite preview of dist.
+- Open from Sean, not yet asked for: nothing pending; the v0.8.x whirlpool-escape tweak (halve the heading twist at FULL
+  sail) was offered and not taken up.
+
+## Where we left off before that (2026-10-21 morning, v0.8.x, after the overnight end-game build)
 - Sean's overnight request (2026-10-20): put Opus and Sonnet agents on bug and exploit testing, play every part, judge the
   loop's fun; build what a long end game needs: bigger ships, upgrades, hull and sail designs, and a second map, the
   Underworld (every ship and monster undead and slightly harder; a burning sky by day, a purple swirling abyss by night).
