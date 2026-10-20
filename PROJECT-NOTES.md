@@ -1,6 +1,7 @@
-# Pats Reign: project notes and session handoff
+# Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 0.8.6. Where older notes or memory
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.0.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
 ## Where things are
@@ -575,6 +576,15 @@ disagree with this file, this file wins.
   - Verified working by that tester: rune VI-VIII locks, prices and effects (no NaN), cleanSave caps and save-code round
     trips, old saves getting legend designs, design locks and perks, the tithe, the trials, the armada, the barge orbs,
     bounties, the sunstone, the saga, the undead and legend fights, and the leak fix (geometry flat over 60 cycles).
+- v0.8.7: the action battle's line search tries a shorter run-up, more centres and fewer foes before giving up near land
+  (it went classic a quarter of the time for a big ship with a fleet) and says "close quarters" when it must; the pause
+  switch reads ACTION BATTLES: ON / OFF. The Bestiary artifact gained a Game mechanics section (tools/roster-mechanics.cjs,
+  44 cards with notes boxes).
+- v1.0.0 (the rename and the itch.io release): Valhalla's Tide; logo public/logo.svg (a longship on a curling wave
+  beneath the sun), rendered to the icons and release/itch (cover 630x500, banner 960x400, social 1200x630, icon 1024,
+  nine 1920x1080 screenshots, an 8 s 9:16 gameplay clip, video-prompts.md) by scratchpad logo-render.cjs / itchshots.cjs /
+  clip.cjs; the itch zip is the plain vite build (base ./, index.html at the root): release/itch/valhallas-tide-v1.0.0-html5.zip.
+  The repo and the Pages URL keep the pats-reign name. The Bestiary is release/valhallas-tide-bestiary.html (same artifact URL).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
