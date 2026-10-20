@@ -336,3 +336,7 @@ html.tabletHud body.legendOn #msg, html.tabletHud body.broadOn #msg { top: calc(
   html:not(.tabletHud) #dockBtn { top: calc(96px + env(safe-area-inset-top, 0px)); right: calc(max(8px, env(safe-area-inset-right, 0px)) + 74px); }
   html.leftHand:not(.tabletHud) #dockBtn { right: auto; left: calc(max(8px, env(safe-area-inset-left, 0px)) + 74px); }
 }
+/* the shipwright header on a narrow phone: title and DONE on top, the tabs and the name below */
+#wright .wrHead { flex-wrap: wrap; }
+#wrName { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 560px) { #wright .wrTabs { order: 3; flex-basis: 100%; } }
