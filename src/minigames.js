@@ -1,0 +1,105 @@
+// Pats Reign mini-games, drawn as an overlay over the live 3D scene.
+//  BATTLE (monsters and enemy ships): your volley (a marker sweeps a bar; tap FIRE on the weak spot: CRITICAL, HIT,
+//    GRAZE or MISS; fire pots hit hard), then the foe's attacks (it winds up from one side: swipe or tap the way it shows
+//    to dodge, or raise shields to block half). Flee any time. Lightning (Thor's Fury) doubles damage and widens the weak spot.
+//  FISHING: cast (stop the power meter in the gold band), then reel (hold REEL to lift the net box and keep the fish in it
+//    until the catch bar fills). Sometimes something big takes the line.
+//  SALVAGE: haul the wreck's rope with alternating left / right pulls; pull too fast and it snaps.
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+export function createMinis({ sfx, hooks }) {
+  const root = $('mini'); let cur = null;
+  function open(cls) { root.className = cls; root.innerHTML = ''; root.classList.remove('hidden'); }
+  function close() { root.className = 'hidden'; root.innerHTML = ''; cur = null; }
+  const banner = (txt, color = '#ffd24a') => { const b = el('div', 'mgBanner', txt); b.style.color = color; root.appendChild(b); setTimeout(() => b.remove(), 1100); };
+
+  // ---------- battle ----------
+  function battle(o, done) {
+    open('battle'); const foe = o.foe, you = o.you; const S = { phase: 'intro', t: 0, shots: 0, maxShots: you.shots || 3, mark: 0, dir: 1, zone: 0.5, attacks: 0, maxAtk: 1, prompt: null, fire: you.fire || 0, ended: false, taken: 0 };
+    const top = el('div', 'mgTop'); top.innerHTML = `<div class="hpRow"><b>${o.youName}</b><div class="hp you"><i id="mgYouHp"></i></div><span id="mgYouTxt"></span></div><div class="vs">⚔</div><div class="hpRow"><b>${foe.name} <small>Lv ${foe.lvShow ?? foe.lv}</small></b><div class="hp foe"><i id="mgFoeHp"></i></div><span id="mgFoeTxt"></span></div>`; root.appendChild(top);
+    const stage = el('div', 'mgStage'); root.appendChild(stage); const btns = el('div', 'mgBtns'); root.appendChild(btns);
+    const flee = el('button', 'ghost mgFlee', 'FLEE'); flee.onclick = () => end('flee'); root.appendChild(flee);
+    const hpDraw = () => { $('mgYouHp').style.width = clamp(you.hp / you.maxHp, 0, 1) * 100 + '%'; $('mgFoeHp').style.width = clamp(foe.hp / foe.maxHp, 0, 1) * 100 + '%'; $('mgYouTxt').textContent = Math.ceil(Math.max(0, you.hp)) + ' / ' + Math.round(you.maxHp); $('mgFoeTxt').textContent = Math.ceil(Math.max(0, foe.hp)) + ' / ' + Math.round(foe.maxHp); };
+    hpDraw(); banner(o.intro || (foe.naval ? 'SHIP BATTLE!' : 'BATTLE!'), '#ff6a3a'); sfx.horn && sfx.horn();
+    function aimUI() { stage.innerHTML = ''; btns.innerHTML = ''; S.zone = 0.18 + Math.random() * 0.64; S.mark = Math.random(); S.dir = Math.random() < 0.5 ? 1 : -1;
+      const zw = clamp((you.zone || 0.16) * (you.thor ? 1.5 : 1), 0.08, 0.4);
+      stage.innerHTML = `<div class="mgHint">${foe.naval ? 'Aim at their hull' : 'Aim for the weak spot'} · shot ${S.shots + 1} of ${S.maxShots}</div><div class="track" id="mgTrack"><div class="zone" id="mgZone"></div><div class="zone crit" id="mgCrit"></div><div class="needle" id="mgNeedle"></div></div>`;
+      const z = $('mgZone'), c = $('mgCrit'); z.style.left = (S.zone - zw / 2) * 100 + '%'; z.style.width = zw * 100 + '%'; c.style.left = (S.zone - zw * 0.17) * 100 + '%'; c.style.width = zw * 34 + '%'; S.zw = zw;
+      const fb = el('button', 'mgBig', you.weapon || 'FIRE'); fb.onclick = shoot; btns.appendChild(fb); $('mgTrack').onpointerdown = (e) => { e.preventDefault(); shoot(); };
+      if (S.fire > 0) { const fp = el('button', 'mgFire', '🔥 FIRE POT ×' + S.fire); fp.onclick = firePot; btns.appendChild(fp); } }
+    function dmgRoll(mult) { return Math.max(1, Math.round(you.atk * mult * (you.thor ? 2 : 1) * (0.85 + Math.random() * 0.3))); }
+    function shoot() { if (S.phase !== 'aim') return; const d = Math.abs(S.mark - S.zone) / (S.zw / 2); let mult, txt, col;
+      if (d < 0.34) { mult = 2; txt = 'CRITICAL!'; col = '#ffd24a'; } else if (d < 1) { mult = 1; txt = 'HIT'; col = '#ffffff'; } else if (d < 2) { mult = 0.4; txt = 'GRAZE'; col = '#c8c8c8'; } else { mult = 0; txt = 'MISS'; col = '#8a9aa8'; }
+      const dmg = mult ? dmgRoll(mult) : 0; foe.hp -= dmg; hooks.shoot(mult, dmg, txt); banner(txt + (dmg ? ' −' + dmg : ''), col); (mult >= 1 ? sfx.hit : sfx.throw)(); hpDraw(); S.shots++; S.phase = 'shotFx'; S.t = 0; }
+    function firePot() { if (S.phase !== 'aim' || S.fire <= 0) return; S.fire--; you.fireUsed = (you.fireUsed || 0) + 1; const dmg = dmgRoll(2.6); foe.hp -= dmg; hooks.shoot(2.6, dmg, 'FIRE', true); banner('🔥 BURN −' + dmg, '#ff8a2a'); sfx.boom(); hpDraw(); S.phase = 'shotFx'; S.t = 0; }
+    const DIRS = { L: '⬅', R: '➡', U: '⬆' };
+    function defendUI() { stage.innerHTML = ''; btns.innerHTML = ''; const naval = foe.naval; const opts = naval ? ['L', 'R', 'U'] : foe.moves || ['L', 'R', 'U']; const d = opts[(Math.random() * opts.length) | 0];
+      const what = naval ? { L: 'Ram from port!', R: 'Ram from starboard!', U: 'Arrow volley!' }[d] : (foe.attackNames || { L: 'swings from the right', R: 'swings from the left', U: 'rears up to slam' })[d];
+      const win = Math.max(0.55, (foe.boss ? 1.05 : 1.35) - foe.lv * 0.08) * (you.thor ? 1.25 : 1);
+      S.prompt = { d, t: 0, win, done: false }; hooks.foeAct(d);
+      stage.innerHTML = `<div class="mgWarn">${foe.name} ${what}</div><div class="mgPrompt">${d === 'U' ? '⬆ BRACE ⬆' : 'DODGE ' + DIRS[d]}</div><div class="timer"><i id="mgTimer"></i></div>`;
+      for (const k of ['L', 'U', 'R']) { const b = el('button', 'mgDir' + (k === d ? ' lit' : ''), k === 'U' ? '🛡' : DIRS[k]); b.onpointerdown = (e) => { e.preventDefault(); answer(k); }; btns.appendChild(b); } }
+    function answer(k) { const P = S.prompt; if (S.phase !== 'defend' || !P || P.done) return; P.done = true;
+      let dmg = foe.dmg * (1 - you.def) * (0.85 + Math.random() * 0.3);
+      if (k === P.d) { dmg = P.d === 'U' ? dmg * 0.25 : 0; banner(P.d === 'U' ? 'BRACED!' : 'DODGED!', '#7dff3a'); sfx.pickup(); }
+      else if (k === 'U') { dmg *= 0.5; banner('BLOCKED −' + Math.round(dmg), '#9fd6ff'); sfx.hit(); }
+      else { banner('HIT −' + Math.round(dmg), '#ff5a3a'); sfx.hurt(); }
+      dmg = Math.round(dmg); if (dmg > 0) { you.hp -= dmg; S.taken += dmg; hooks.hurt(dmg); } hpDraw(); S.attacks++; S.phase = 'defFx'; S.t = 0; }
+    function end(result) { if (S.ended) return; S.ended = true; if (result === 'flee') { const dmg = Math.round(foe.dmg * (1 - you.def) * 0.5); you.hp -= dmg; S.taken += dmg; hooks.hurt(dmg); }
+      banner(result === 'win' ? (foe.naval ? 'SHIP TAKEN!' : 'SLAIN!') : result === 'flee' ? 'ESCAPED' : 'SINKING!', result === 'win' ? '#7dff3a' : '#ff5a3a'); S.phase = 'over'; S.t = 0; S.result = result; }
+    // swipes anywhere on the overlay answer a dodge
+    let sw = null; root.onpointerdown = (e) => { sw = [e.clientX, e.clientY]; }; root.onpointerup = (e) => { if (!sw || S.phase !== 'defend') return; const dx = e.clientX - sw[0], dy = e.clientY - sw[1]; sw = null; if (Math.hypot(dx, dy) < 40) return; answer(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'L' : 'R') : (dy < 0 ? 'U' : 'U')); };
+    cur = { update(dt) { S.t += dt;
+      if (S.phase === 'intro' && S.t > (o.firstStrike === false ? 0.2 : 1.0)) { if (o.firstStrike === false) { S.phase = 'defend'; S.maxAtk = foe.attacks || 1; S.attacks = 0; defendUI(); } else { S.phase = 'aim'; aimUI(); } }
+      else if (S.phase === 'aim') { const sp = (0.75 + foe.lv * 0.1) * (foe.boss ? 1.25 : 1); S.mark += S.dir * sp * dt; if (S.mark > 1) { S.mark = 2 - S.mark; S.dir = -1; } if (S.mark < 0) { S.mark = -S.mark; S.dir = 1; } const n = $('mgNeedle'); if (n) n.style.left = S.mark * 100 + '%'; }
+      else if (S.phase === 'shotFx' && S.t > 0.55) { if (foe.hp <= 0) end('win'); else if (S.shots >= S.maxShots) { S.shots = 0; S.phase = 'defend'; S.maxAtk = foe.attacks || 1; S.attacks = 0; defendUI(); } else { S.phase = 'aim'; aimUI(); } }
+      else if (S.phase === 'defend' && S.prompt) { S.prompt.t += dt; const k = 1 - S.prompt.t / S.prompt.win, tm = $('mgTimer'); if (tm) tm.style.width = clamp(k, 0, 1) * 100 + '%'; if (k <= 0 && !S.prompt.done) answer('-'); }
+      else if (S.phase === 'defFx' && S.t > 0.6) { if (you.hp <= 0) end('sunk'); else if (S.attacks >= S.maxAtk) { S.phase = 'aim'; aimUI(); } else { S.phase = 'defend'; defendUI(); } }
+      else if (S.phase === 'over' && S.t > 1.2) { close(); done({ result: S.result, taken: S.taken, foeHp: foe.hp, fireUsed: you.fireUsed || 0 }); } } };
+  }
+
+  // ---------- fishing ----------
+  function fish(o, done) {
+    open('fishing'); const S = { phase: 'cast', t: 0, p: 0, dir: 1, q: 0, fishY: 0.5, fishV: 0, boxY: 0.3, boxV: 0, hold: false, prog: 0.3, tt: 0, ended: false };
+    const kind = o.kind; const title = { fish: '🐟 Fish shoal', flotsam: '📦 Sunken crates', treasure: '💰 Glinting treasure' }[kind] || 'Fishing';
+    root.innerHTML = `<div class="mgTitle">${title}</div><div class="mgStage" id="fsStage"></div><div class="mgBtns" id="fsBtns"></div>`;
+    const stage = $('fsStage'), btns = $('fsBtns'); const quit = el('button', 'ghost mgFlee', 'STOP'); quit.onclick = () => end('lost'); root.appendChild(quit);
+    stage.innerHTML = `<div class="mgHint">Cast: stop the meter in the gold band</div><div class="track" id="fsTrack"><div class="zone" style="left:68%;width:20%"></div><div class="zone crit" style="left:75%;width:6%"></div><div class="needle" id="fsNeedle"></div></div>`;
+    const cb = el('button', 'mgBig', 'CAST'); cb.onclick = cast; btns.appendChild(cb); $('fsTrack').onpointerdown = (e) => { e.preventDefault(); cast(); };
+    function cast() { if (S.phase !== 'cast') return; const d = Math.abs(S.p - 0.78); S.q = d < 0.03 ? 1 : d < 0.1 ? 0.7 : d < 0.2 ? 0.4 : 0.15; hooks.cast && hooks.cast(S.q); sfx.throw();
+      banner(S.q >= 1 ? 'PERFECT CAST!' : S.q >= 0.7 ? 'GOOD CAST' : S.q >= 0.4 ? 'OK CAST' : 'POOR CAST', S.q >= 0.7 ? '#ffd24a' : '#ffffff');
+      if (Math.random() < (o.biteChance ?? 0.08)) { S.phase = 'bite'; S.t = 0; banner('SOMETHING HUGE BITES!', '#ff5a3a'); sfx.boom(); return; }
+      S.phase = 'wait'; S.t = 0; stage.innerHTML = '<div class="mgHint">Waiting for a bite…</div>'; btns.innerHTML = ''; }
+    const boxH = () => clamp(0.2 + (o.nets || 0) * 0.055 + S.q * 0.06, 0.18, 0.42);
+    function reelUI() { stage.innerHTML = `<div class="mgHint">Hold REEL to lift the net · keep the ${kind === 'fish' ? 'fish' : 'catch'} inside</div><div class="reelWrap"><div class="reel" id="fsReel"><div class="box" id="fsBox"></div><div class="fishI" id="fsFish">${kind === 'fish' ? '🐟' : kind === 'treasure' ? '💰' : '📦'}</div></div><div class="prog"><i id="fsProg"></i></div></div>`;
+      btns.innerHTML = ''; const rb = el('button', 'mgBig', 'REEL'); const on = (e) => { e.preventDefault(); S.hold = true; }, off = () => { S.hold = false; }; rb.onpointerdown = on; rb.onpointerup = off; rb.onpointerleave = off; rb.onpointercancel = off; btns.appendChild(rb);
+      $('fsReel').onpointerdown = on; $('fsReel').onpointerup = off; }
+    function end(result) { if (S.ended) return; S.ended = true; S.phase = 'over'; S.t = 0; S.result = result; if (result === 'catch') { banner('CAUGHT!', '#7dff3a'); sfx.pickup(); } else if (result === 'lost') banner('IT GOT AWAY', '#c8c8c8'); }
+    cur = { update(dt) { S.t += dt;
+      if (S.phase === 'cast') { S.p += S.dir * dt * 0.9; if (S.p > 1) { S.p = 2 - S.p; S.dir = -1; } if (S.p < 0) { S.p = -S.p; S.dir = 1; } const n = $('fsNeedle'); if (n) n.style.left = S.p * 100 + '%'; }
+      else if (S.phase === 'wait' && S.t > 0.8 + Math.random() * 0.6) { S.phase = 'reel'; S.t = 0; banner('BITE!', '#ffd24a'); sfx.help && sfx.help(); reelUI(); }
+      else if (S.phase === 'bite' && S.t > 1.1) { close(); done({ result: 'bite' }); }
+      else if (S.phase === 'reel') { S.tt += dt; const jumpy = (kind === 'treasure' ? 1.6 : kind === 'flotsam' ? 0.8 : 1.2) * (1 + (o.tier || 0) * 0.08);
+        if (Math.random() < dt * 1.6 * jumpy) S.fishV = (Math.random() - 0.5) * 1.8 * jumpy; S.fishY = clamp(S.fishY + S.fishV * dt, 0.03, 0.97); if (S.fishY <= 0.03 || S.fishY >= 0.97) S.fishV *= -1;
+        S.boxV += (S.hold ? 1.9 : -1.6) * dt; S.boxV *= 1 - dt * 1.4; const H = boxH(); S.boxY = clamp(S.boxY + S.boxV * dt, 0, 1 - H); if (S.boxY <= 0 || S.boxY >= 1 - H) S.boxV *= -0.3;
+        const inside = S.fishY >= S.boxY && S.fishY <= S.boxY + H; S.prog = clamp(S.prog + (inside ? 0.32 + S.q * 0.1 : -0.17) * dt, 0, 1);
+        const bx = $('fsBox'), fi = $('fsFish'), pr = $('fsProg'); if (bx) { bx.style.bottom = S.boxY * 100 + '%'; bx.style.height = H * 100 + '%'; bx.classList.toggle('in', inside); } if (fi) fi.style.bottom = S.fishY * 100 + '%'; if (pr) pr.style.height = S.prog * 100 + '%';
+        if (S.prog >= 1) end('catch'); else if (S.prog <= 0 || S.tt > 18) end('lost'); }
+      else if (S.phase === 'over' && S.t > 1.0) { close(); done({ result: S.result, q: S.q }); } } };
+  }
+
+  // ---------- salvage ----------
+  function salvage(o, done) {
+    open('salvage'); const S = { t: 0, pulls: 0, need: 14, last: null, tension: 0, ended: false, phase: 'haul' };
+    root.innerHTML = `<div class="mgTitle">🪝 Salvage the wreck</div><div class="mgStage"><div class="mgHint">Pull left, right, left, right… not too fast or the rope snaps</div><div class="tension"><div class="zone"></div><i id="svT"></i></div><div class="mgCount" id="svC">0 / 14</div><div class="timer"><i id="svTime"></i></div></div><div class="mgBtns" id="svBtns"></div>`;
+    const btns = $('svBtns'); for (const k of ['L', 'R']) { const b = el('button', 'mgDir', k === 'L' ? '⬅ PULL' : 'PULL ➡'); b.onpointerdown = (e) => { e.preventDefault(); pull(k); }; btns.appendChild(b); }
+    const quit = el('button', 'ghost mgFlee', 'STOP'); quit.onclick = () => end('stop'); root.appendChild(quit);
+    function pull(k) { if (S.phase !== 'haul') return; if (k === S.last) { S.tension = Math.max(0, S.tension - 0.15); banner('SLIP', '#c8c8c8'); return; } S.last = k; S.tension += 0.26; if (S.tension > 1) { end('snap'); return; } S.pulls++; hooks.pull && hooks.pull(S.pulls / S.need); sfx.step && sfx.step(); $('svC').textContent = S.pulls + ' / ' + S.need; if (S.pulls >= S.need) end('done'); }
+    function end(result) { if (S.ended) return; S.ended = true; S.phase = 'over'; S.t = 0; S.result = result; banner(result === 'done' ? 'HAULED UP!' : result === 'snap' ? 'THE ROPE SNAPS!' : 'STOPPED', result === 'done' ? '#7dff3a' : '#ff8a3a'); (result === 'done' ? sfx.pickup : sfx.hurt)(); }
+    cur = { update(dt) { S.t += dt; if (S.phase === 'haul') { S.tension = Math.max(0, S.tension - dt * 0.55); const tt = $('svT'), tm = $('svTime'); if (tt) { tt.style.width = clamp(S.tension, 0, 1) * 100 + '%'; tt.style.background = S.tension > 0.8 ? '#ff5a3a' : '#7dff3a'; } if (tm) tm.style.width = clamp(1 - S.t / 11, 0, 1) * 100 + '%'; if (S.t > 11) end(S.pulls >= S.need * 0.5 ? 'done' : 'stop'); }
+      else if (S.phase === 'over' && S.t > 1.0) { close(); done({ result: S.result, frac: S.pulls / S.need }); } } };
+  }
+  return { battle, fish, salvage, update(dt) { if (cur) cur.update(dt); }, get active() { return !!cur; }, close };
+}
