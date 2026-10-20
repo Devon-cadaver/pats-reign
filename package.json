@@ -1,6 +1,6 @@
 {
   "name": "pats-viking",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "description": "Viking ocean game (Three.js + Vite)",
   "scripts": {
     "dev": "vite",
