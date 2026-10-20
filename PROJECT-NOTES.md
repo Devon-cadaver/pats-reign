@@ -91,6 +91,25 @@ disagree with this file, this file wins.
 - HOW TO PLAY is now ten one- or two-line entries; BACK and TUTORIAL sit side by side; the screen scrolls from the top when
   it is taller than the phone, and the full screen pill is hidden there.
 
+## v0.5.2: iPad sound crackle, safe save codes, the crew mend the hull (Sean, 2026-10-19)
+- Crackling on the iPad (speakers and headphones). Measured in the browser: never clipping (peak 0.15 sailing, 0.38 in a
+  battle with thunder, boom and horn), so it was the audio thread running short. Fixes: AudioContext latencyHint 'playback'
+  (bigger output buffer); navigator.audioSession.type set once, before the context; setSea only sends a change (it was 2
+  automation events a frame); saga music schedules 0.5 s ahead and SKIPS notes whose time has passed (`late`) instead of
+  firing a pile of late notes after a hitch; mono 1.8 s reverb (was stereo 2.6 s); choir 2 voices per note with one shared
+  vibrato (was 3 voices, each with its own vibrato); lyre drops its saw layer. Battle went from 56 to 45 new nodes a second.
+  If Sean still hears it: try a master DynamicsCompressor, fewer drones, or drop the convolver on iOS.
+- Save codes cannot reach the git repo (no server; the site cannot write to GitHub; github.io is a separate site from
+  github.com). Hardening anyway: cleanSave(s) in main.js runs on every load (so on every pasted code): numbers clamped,
+  skins / regions / marker icons only from the game's lists, legends only real lair keys, relics only bane: true, map clues
+  stripped of < > & " ' `, at most 3 prizes and 3 maps. The built site also carries a Content-Security-Policy meta (added by
+  a build-only plugin in vite.config.js): only the game's own scripts run, no inline handlers. Tested: an injected
+  onerror handler is blocked, and a doctored save with markup in the skin, clue and icons loads clean.
+  `.claude/launch.json` has "built" (vite preview on 4173) for testing the real build with the CSP.
+- Oars & Crew now also mend the hull at sea: MEND = [0, 0.0012, 0.0025, 0.004] of max hull a second (about 7%, 15%, 24% a
+  minute), only while sailing (state play), out of battle, not during Bifröst, and 8 s after the last hit (damage() and a
+  battle's end set boat.lastHit). The HUD buff line shows "🔨 Crew mending".
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster

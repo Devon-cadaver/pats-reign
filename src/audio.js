@@ -5,15 +5,17 @@ export function isMuted() { return muted; }
 export function audioState() { return ctx ? ctx.state : "none"; }
 try { muted = localStorage.getItem("oo_mute") === "1"; } catch { /* ignore */ }
 export function unlockAudio() {
+  // iPad/iPhone: play as a game ('playback'), not as page sound that the silent setting mutes. Set it once, before the sound starts:
+  // switching the audio session under a running context can make iOS crackle
+  try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch { /* ignore */ }
   if (!ctx) {
-    try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { ctx = null; return; }
+    // latencyHint 'playback' asks for a bigger output buffer, so the audio thread has time to spare while the game draws (no crackling)
+    try { const AC = window.AudioContext || window.webkitAudioContext; try { ctx = new AC({ latencyHint: 'playback' }); } catch { ctx = new AC(); } } catch { ctx = null; return; }
     master = ctx.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(ctx.destination);
     musicGain = ctx.createGain(); musicGain.gain.value = 0.35; musicGain.connect(master);
     const len = ctx.sampleRate * 0.5; noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
   }
-  // iPad/iPhone: play as a game ('playback'), not as page sound that the silent setting mutes; the in-game toggle is the mute
-  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* ignore */ }
   if (ctx.state !== 'running') ctx.resume().catch(() => {});
 }
 // Safari can pause the sound mid-game ('suspended' or 'interrupted', e.g. around full screen changes); any tap wakes it
@@ -178,11 +180,12 @@ sfx.thunder = () => { noise(1.8, 0.5, 80, 0.3); setTimeout(() => noise(1.2, 0.3,
 sfx.zap = () => { tone(1400, 0.3, 'sawtooth', 0.05, -1100); noise(0.35, 0.18, 3200, 1); };
 sfx.creak = () => tone(70 + Math.random() * 30, 0.4, 'triangle', 0.03, -20);
 sfx.coins = () => { for (let i = 0; i < 4; i++) setTimeout(() => tone(1200 + i * 180, 0.09, 'square', 0.035), i * 60); };
-let sea = null;
+let sea = null, seaKey = '';
 // rolling surf: looped filtered noise swelling slowly; storm opens the filter and raises it
 export function setSea(level, storm = 0) { if (!ctx || !noiseBuf) return;
   if (!sea) { const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 450; const g = ctx.createGain(); g.gain.value = 0; s.connect(f).connect(g).connect(master); s.start();
     const lfo = ctx.createOscillator(); lfo.frequency.value = 0.11; const lg = ctx.createGain(); lg.gain.value = 0.025; lfo.connect(lg).connect(g.gain); lfo.start(); sea = { g, f }; }
+  const key = level.toFixed(2) + '|' + storm.toFixed(2); if (key === seaKey) return; seaKey = key; // called every frame: only send a change, not 60 automation events a second
   sea.g.gain.setTargetAtTime(level * 0.05, ctx.currentTime, 0.6); sea.f.frequency.setTargetAtTime(380 + storm * 900, ctx.currentTime, 0.6); }
 // for the saga music engine (music.js): the shared context, master volume and noise buffer
 export function audioNodes() { return { ctx, master, noiseBuf }; }

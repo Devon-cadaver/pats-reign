@@ -46,7 +46,7 @@ const UPG = {
   fire: { name: 'Fire Pots', icon: '🔥', max: 3, desc: ['Two fire pots', 'Three fire pots', 'Four fire pots'], eff: 'Big burning hits in battle', cost: [[10, 10, 80], [20, 25, 190], [35, 55, 400]] },
   ram: { name: 'Iron Ram', icon: '🐏', max: 2, desc: ['An iron ram at the bow', 'A great beaked ram'], eff: 'Ram monsters at speed for free damage', cost: [[25, 40, 110], [45, 110, 320]] },
   sail: { name: 'Sail', icon: '⛵', max: 3, desc: ['Striped war sail', 'Fine wool sail', 'Royal sail'], eff: '+10% speed each', cost: [[30, 0, 60], [60, 10, 150], [90, 30, 330]] },
-  oars: { name: 'Oars & Crew', icon: '🚣', max: 3, desc: ['More rowers', 'Strong rowers', 'Berserker rowers'], eff: 'Faster turns and acceleration', cost: [[25, 5, 40], [50, 20, 120], [80, 50, 280]] },
+  oars: { name: 'Oars & Crew', icon: '🚣', max: 3, desc: ['More rowers, who patch the hull at sea', 'Strong rowers: they patch it twice as fast', 'Berserker rowers: the hull mends quickly'], eff: 'Faster turns and acceleration; the crew mend the hull at sea when no one is hitting you', cost: [[25, 5, 40], [50, 20, 120], [80, 50, 280]] },
   lights: { name: 'Lanterns', icon: '🏮', max: 3, desc: ['A stern lantern', 'Bow and mast lanterns', 'Great iron fire braziers'], eff: 'Light the sea around you at night and see further', cost: [[10, 10, 40], [20, 25, 110], [40, 60, 260]] },
   compass: { name: 'Compass', icon: '🧭', max: 2, desc: ['A lodestone compass shows which way you face', 'A Viking sunstone also points to the nearest harbour, even in fog'], eff: '', cost: [[5, 10, 35], [10, 25, 120]] },
   hooks: { name: 'Grappling Hooks', icon: '🪝', max: 3, desc: ['Iron grappling hooks: board a Faering or a Karvi', 'Barbed hooks and boarding planks: board a Snekkja or a Skeid', 'Rune-carved hooks: board anything, even a Drakkar'], eff: 'Board a ship in battle once her hull is below 40%', cost: [[20, 25, 70], [40, 70, 200], [80, 150, 450]] },
@@ -67,6 +67,7 @@ const REGION_BIAS = { frost: { serpent: 2, leviathan: 2, crab: 0.5 }, storm: { e
 const P = { tier: 0, up: { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 0, oars: 0, nets: 0, lights: 0, compass: 0, hooks: 0 }, res: { w: 20, i: 5, g: 40, f: 0 }, hp: 100, legends: {}, kills: 0, home: 0, won: false, tod: 0.16, wreck: null, prizes: [], maps: [], relics: {}, skin: 'pats' };
 const boat = { grace: 0, x: 0, z: -20, yaw: Math.PI, v: 0, want: Math.PI, thr: 0, wp: null, fireCd: 0, thor: 0, boost: 0, spin: 0, shake: 0, hitCd: 0, y: 0, pitch: 0, roll: 0 };
 const T = () => SHIP_TIERS[P.tier];
+const MEND = [0, 0.0012, 0.0025, 0.004]; // Oars & Crew level -> share of the hull mended per second at sea (about 7%, 15%, 24% a minute)
 const maxHp = () => Math.round(100 * Math.pow(1.75, P.tier) * (1 + 0.25 * P.up.armor));
 const topSpeed = () => T().speed * (1 + 0.1 * P.up.sail) * (boat.boost > 0 ? 1.35 : 1) * (boat.bifrost > 0 ? 1.25 : 1) * (boat.pod ? 1.1 : 1);
 const turnRate = () => T().turn * (1 + 0.14 * P.up.oars);
@@ -148,7 +149,7 @@ function toScreen(x, y, z) { tmpV.set(x, y, z).project(camera); return tmpV.z < 
 function pop(x, y, z, text, color = '#fff', life = 1.3) { const el = document.createElement('div'); el.className = 'pop'; el.textContent = text; el.style.color = color; document.body.appendChild(el); pops.push({ el, x, y, z, t: 0, life }); }
 function reward(r, x, y, z) { const parts = []; for (const [k, ic] of [['w', '🪵'], ['i', '⚙️'], ['g', '🪙'], ['f', '🐟']]) if (r[k]) { P.res[k] += r[k]; parts.push('+' + r[k] + ic); } if (parts.length) { pop(x, y, z, parts.join(' '), '#ffe27a', 1.8); sfx.coins(); } hud(); }
 function hurtFx() { const h = $('hurt'); h.classList.add('on'); setTimeout(() => h.classList.remove('on'), 120); boat.shake = 0.4; }
-const dmgLog = []; function damage(d, why) { d = Math.round(d); if (d <= 0) return; dmgLog.push([Math.round(time), d, why || '']); P.hp -= d; hurtFx(); sfx.hurt(); pop(boat.x, boat.y + 3, boat.z, '−' + d, '#ff6a4a'); if (why) say(why); hud(); if (P.hp <= 0 && state === 'play') sink(); }
+const dmgLog = []; function damage(d, why) { d = Math.round(d); if (d <= 0) return; dmgLog.push([Math.round(time), d, why || '']); P.hp -= d; boat.lastHit = time; hurtFx(); sfx.hurt(); pop(boat.x, boat.y + 3, boat.z, '−' + d, '#ff6a4a'); if (why) say(why); hud(); if (P.hp <= 0 && state === 'play') sink(); }
 
 // ---------- monsters and raiders ----------
 const danger = (lv) => { const d = lv - P.tier; return d < -0.6 ? '#7dff3a' : d < 0.6 ? '#ffffff' : d < 1.6 ? '#ffb03a' : d < 3 ? '#ff4a3a' : '#d06aff'; };
@@ -249,7 +250,7 @@ function startBattle(mon, firstStrike) {
   Object.assign(foe, { crew: mon.naval ? (mon.type === 'ghost' ? 25 : SHIP_TIERS[mon.e.v].crew) : 0, ghost: mon.type === 'ghost', boardBlock: boardInfo(mon) }); Object.assign(you, { hooks: P.up.hooks, crew: T().crew + 2 * P.up.oars });
   battle.foe = foe; battle.you = you;
   minis.battle({ foe, you, youName: T().name, firstStrike, intro: mon.boss ? mon.name.toUpperCase() + '!' : mon.treasure ? 'BOARD HER!' : mon.ambush ? 'AMBUSH!' : mon.fleet ? 'FLEET BATTLE!' : undefined }, (res) => {
-    P.hp = Math.max(0, you.hp); mon.hp = foe.hp; setBattle(false); boat.grace = 3.5; $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); const b = battle; battle = null; hud();
+    P.hp = Math.max(0, you.hp); mon.hp = foe.hp; boat.lastHit = time; setBattle(false); boat.grace = 3.5; $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); const b = battle; battle = null; hud();
     if (res.result === 'win') { killMon(mon); setThrottle(0, true); } // stop after a win so the kill is right beside you
     else if (res.result === 'boarded') { setThrottle(0, true); prizeChoice(mon); }
     if (res.cursed) { boat.curse = 60; setTimeout(() => say('☠ The draugr curse you: your defence is weakened for 60 s.', 4), 400); }
@@ -586,7 +587,27 @@ $('wonBtn').onclick = () => { $('won').classList.add('hidden'); $('hud').classLi
 const SAVE = 'pr_save';
 function homeHarbor() { return world.harbors.find((h) => h.idx === P.home) || world.harbors[0]; }
 function save() { try { localStorage.setItem(SAVE, JSON.stringify({ v: 1, tier: P.tier, up: P.up, res: P.res, hp: P.hp, legends: P.legends, kills: P.kills, home: P.home, won: P.won, tod: P.tod, x: boat.x, z: boat.z, yaw: boat.yaw, wreck: P.wreck, prizes: P.prizes, maps: P.maps, relics: P.relics, skin: P.skin })); } catch { /* ignore */ } }
-function load() { try { const s = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (!s || s.v !== 1) return false; Object.assign(P, { tier: s.tier, up: { ...P.up, ...s.up }, res: s.res, hp: s.hp, legends: s.legends || {}, kills: s.kills || 0, home: s.home || 0, won: !!s.won, tod: s.tod ?? 0.2, wreck: s.wreck && s.wreck.res ? s.wreck : null, prizes: s.prizes || [], maps: s.maps || [], relics: s.relics || {}, skin: s.skin || 'pats' }); boat.x = s.x; boat.z = s.z; boat.yaw = s.yaw; for (const L of world.lairs) if (P.legends[L.key]) L.beaten = true; return true; } catch { return false; } }
+// a save (from this browser, or from a save code someone pasted) is trusted only as numbers and names from the game's own
+// lists: anything else is clamped or dropped, so a doctored code cannot slip markup or script into the page
+function cleanSave(s) {
+  const num = (v, lo, hi, d = lo) => (typeof v === 'number' && isFinite(v) ? clamp(v, lo, hi) : d), int = (v, lo, hi, d = lo) => Math.round(num(v, lo, hi, d));
+  const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {}), arr = (v) => (Array.isArray(v) ? v : []);
+  const SKINS = ['pats', 'ghost', 'treasure', ...RAIDER_PALS.map((p) => p.name)], skin = (v) => (SKINS.includes(v) ? v : 'pats');
+  const ICONS = [...Object.values(LANDMARK).map((l) => l[0]), '🦴', '⚓', '🐚'], text = (v) => String(v ?? '').replace(/[<>&"'`]/g, '').slice(0, 200);
+  const res = (r) => { r = obj(r); return { w: int(r.w, 0, 1e7), i: int(r.i, 0, 1e7), g: int(r.g, 0, 1e7), f: int(r.f, 0, 1e7) }; };
+  const cell = (c) => [int(arr(c)[0], 0, 4), int(arr(c)[1], 0, 3)], E = HALF - 20, nIsl = world.islands.length;
+  const up = {}; for (const k in P.up) up[k] = int(obj(s.up)[k], 0, UPG[k] ? UPG[k].max : 3);
+  const legends = {}; for (const L of world.lairs) if (obj(s.legends)[L.key] === true) legends[L.key] = true;
+  const w = obj(s.wreck), h = world.harbors[int(s.home, 0, world.harbors.length - 1)];
+  const p = { tier: int(s.tier, 0, SHIP_TIERS.length - 1), up, res: res(s.res), hp: num(s.hp, 1, 1e6, 1e6), legends, kills: int(s.kills, 0, 1e7), home: h.idx, won: s.won === true, tod: num(s.tod, 0, 1, 0.2),
+    wreck: w.res ? { x: num(w.x, -E, E, 0), z: num(w.z, -E, E, 0), res: res(w.res) } : null,
+    prizes: arr(s.prizes).slice(0, 3).map((q) => ({ tier: int(obj(q).tier, 0, SHIP_TIERS.length - 1), skin: skin(obj(q).skin) })),
+    maps: arr(s.maps).slice(0, 3).filter((m) => obj(m).isl != null).map((m) => ({ isl: int(m.isl, 0, nIsl - 1), lx: num(m.lx, -E, E, 0), lz: num(m.lz, -E, E, 0), kind: m.kind === 'relic' ? 'relic' : 'gold', region: REGIONS[m.region] ? m.region : 'home',
+      cell: cell(m.cell), clue: text(m.clue), marks: arr(m.marks).slice(0, 2).map((k) => ({ c: cell(obj(k).c), icon: ICONS.includes(obj(k).icon) ? k.icon : '🪨' })) })),
+    relics: obj(s.relics).bane === true ? { bane: true } : {}, skin: skin(s.skin) };
+  const home = (a) => (a === 'x' ? h.dock.x + Math.cos(h.dir) * 12 : h.dock.z + Math.sin(h.dir) * 12);
+  return { p, x: num(s.x, -E, E, home('x')), z: num(s.z, -E, E, home('z')), yaw: num(s.yaw, -1e3, 1e3, 0) }; }
+function load() { try { const raw = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (!raw || raw.v !== 1) return false; const s = cleanSave(raw); Object.assign(P, s.p); P.hp = Math.min(P.hp, maxHp()); boat.x = s.x; boat.z = s.z; boat.yaw = s.yaw; for (const L of world.lairs) if (P.legends[L.key]) L.beaten = true; return true; } catch { return false; } }
 
 // ---------- minimap and chart ----------
 const mapEl = $('map'), mapCtx = mapEl.getContext('2d'), chartEl = $('chartCv'), chartCtx = chartEl.getContext('2d');
@@ -650,6 +671,9 @@ function updateBoat(dt) {
   const r0 = helm.angle / HMAX, rudder = Math.sign(r0) * Math.pow(Math.abs(r0), 1.4), tr = turnRate() * (0.35 + 0.65 * Math.min(1, boat.v / (t.speed * 0.6))); boat.yaw += -rudder * tr * dt + boat.spin * dt; boat.spin *= 1 - dt * 1.2;
   boat.sailK = (boat.sailK ?? 0) + (clamp((thr - 0.3) / 0.45, 0, 1) - (boat.sailK ?? 0)) * Math.min(1, dt * 1.5);
   const top = topSpeed() * (1 - (LOOK[wx.type] === 'storm' ? 0.15 * wx.k : 0)); const acc = 3.2 * (1 + 0.15 * P.up.oars); boat.v += clamp(thr * top - boat.v, -acc * 1.2 * dt, acc * dt); boat.boost = Math.max(0, boat.boost - dt); boat.thor = Math.max(0, boat.thor - dt); boat.curse = Math.max(0, (boat.curse || 0) - dt);
+  // the crew patch the hull at sea (Oars & Crew): out of battle, once nothing has hit you for 8 s
+  boat.mending = state === 'play' && !!P.up.oars && !battle && !boat.bifrost && P.hp < maxHp() && time - (boat.lastHit ?? -99) > 8;
+  if (boat.mending) { P.hp = Math.min(maxHp(), P.hp + maxHp() * MEND[P.up.oars] * dt); boat.hudT = (boat.hudT || 0) - dt; if (boat.hudT <= 0) { boat.hudT = 0.25; hud(); } }
   if (boat.bifrost > 0) { boat.bifrost = Math.max(0, boat.bifrost - dt); if (!battle && P.hp < maxHp()) { P.hp = Math.min(maxHp(), P.hp + maxHp() * 0.02 * dt); boat.hudT = (boat.hudT || 0) - dt; if (boat.hudT <= 0) { boat.hudT = 0.25; hud(); } } } boat.grace = Math.max(0, boat.grace - dt);
   let nx = boat.x + Math.sin(boat.yaw) * boat.v * dt, nz = boat.z + Math.cos(boat.yaw) * boat.v * dt;
   const bl = world.blockAt(nx, nz, t.B * 0.5 + t.L * 0.18) || world.blockAt(nx + Math.sin(boat.yaw) * t.L * 0.4, nz + Math.cos(boat.yaw) * t.L * 0.4, t.B * 0.3);
@@ -804,7 +828,7 @@ function tick(dt) { time += dt;
   if (state === 'play') { updateTags(dt); if ((mapFlip ^= 1)) drawMap(mapEl, mapCtx, false);
     ctx = actionContext(); const key = ctx ? ctx.kind + ctx.label : ''; if (key !== ctxKey) { ctxKey = key; const b = $('actBtn'); if (ctx) { b.classList.remove('hidden'); b.innerHTML = '<em>' + ctx.icon + '</em><small>' + ctx.label + '</small>'; b.style.borderColor = ctx.kind === 'fight' ? '#ff5a3a' : ctx.kind === 'slow' ? '#c8c8c8' : '#7dff3a'; } else b.classList.add('hidden'); }
     const wk = P.up.ballista ? 'b' : 's'; if (wk !== fireKey) { fireKey = wk; $('fireBtn').innerHTML = '<em>' + (P.up.ballista ? '🏹' : '🗡') + '</em><small>' + (P.up.ballista ? 'BALLISTA' : 'SPEARS') + '</small><i class="cd" id="fireCd"></i>'; } $('fireCd').style.height = (boat.fireCd > 0 ? clamp(boat.fireCd / (P.up.ballista ? 2 : 1.2), 0, 1) * 100 : 0) + '%';
-    $('region').textContent = rname(world.regionAt(boat.x, boat.z)) + (isNight() ? ' · 🌙' : ''); $('wxTxt').textContent = wx.k > 0.3 ? WXNAME[wx.type] : ''; $('buff').textContent = [boat.thor > 0 ? '⚡ Thor ' + Math.ceil(boat.thor) + 's' : '', boat.bifrost > 0 ? '🌈 Bifröst ' + Math.ceil(boat.bifrost) + 's' : '', boat.curse > 0 ? '☠ Cursed ' + Math.ceil(boat.curse) + 's' : ''].filter(Boolean).join(' · '); $('hurt').classList.toggle('thor', boat.thor > 0); }
+    $('region').textContent = rname(world.regionAt(boat.x, boat.z)) + (isNight() ? ' · 🌙' : ''); $('wxTxt').textContent = wx.k > 0.3 ? WXNAME[wx.type] : ''; $('buff').textContent = [boat.thor > 0 ? '⚡ Thor ' + Math.ceil(boat.thor) + 's' : '', boat.bifrost > 0 ? '🌈 Bifröst ' + Math.ceil(boat.bifrost) + 's' : '', boat.curse > 0 ? '☠ Cursed ' + Math.ceil(boat.curse) + 's' : '', boat.mending ? '🔨 Crew mending' : ''].filter(Boolean).join(' · '); $('hurt').classList.toggle('thor', boat.thor > 0); }
   else for (const mon of mons) mon.tag.style.display = 'none';
   msgT -= dt; if (msgT <= 0) $('msg').style.opacity = 0; warnT -= dt; if (warnT <= 0) $('warn').innerHTML = '';
   renderer.render(scene, camera); }
@@ -812,4 +836,4 @@ function tick(dt) { time += dt;
 { const h = world.harbors[0]; boat.x = h.dock.x + Math.cos(h.dir) * 12; boat.z = h.dock.z + Math.sin(h.dir) * 12; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); }
 const hadSave = load(); if (!hadSave) P.hp = maxHp(); rebuildShip(); placeWreck(); toTitle(); env.snap(P.tod, null, world.regionWeights(boat.x, boat.z, {})); camTgt.set(boat.x, 0, boat.z);
 requestAnimationFrame(frame);
-window.__pr = { giveMap, prizeChoice, startDig, boardInfo, spouts, startAir, liftK, pods, spawnPod, EV, startEvent, aur, get wreck() { return P.wreck; }, sink, get chartView() { return chartView; }, step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); }, helm, setThrottle, set timeScale(v) { timeScale = v; }, dmgLog, P, boat, mons, spots, floats, world, ocean, wx, setWeather, spawnMon, startBattle, startFishing, openHarbor, fire, get state() { return state; }, set state(v) { state = v; }, get battle() { return battle; }, minis, MLV, killMon, landBolt, warnRing, spawnSpout, rebuildShip, save, load, camera, renderer, scene, get ship() { return ship; }, setCourse };
+window.__pr = { cleanSave, giveMap, prizeChoice, startDig, boardInfo, spouts, startAir, liftK, pods, spawnPod, EV, startEvent, aur, get wreck() { return P.wreck; }, sink, get chartView() { return chartView; }, step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); }, helm, setThrottle, set timeScale(v) { timeScale = v; }, dmgLog, P, boat, mons, spots, floats, world, ocean, wx, setWeather, spawnMon, startBattle, startFishing, openHarbor, fire, get state() { return state; }, set state(v) { state = v; }, get battle() { return battle; }, minis, MLV, killMon, landBolt, warnRing, spawnSpout, rebuildShip, save, load, camera, renderer, scene, get ship() { return ship; }, setCourse };

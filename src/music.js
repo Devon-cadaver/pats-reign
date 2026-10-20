@@ -23,10 +23,11 @@ const BASS = [0, 0, 12, 0, 3, 0, 10, 0, -2, -2, 10, -2, -4, -4, 8, -2];
 const HORN = [[7, 0, 7, 12], [10, 8, 7, null], [3, 5, 7, 10], [12, 10, 7, 5]];
 
 let M = null; // { ctx, out, ... }
+let late = false; // the game stalled and this note's time has passed: skip it, never play a pile of late notes at once (that crackles)
 export function startSaga() {
   const n = audioNodes(); if (!n.ctx) return; if (M) return; const ctx = n.ctx;
   const out = ctx.createGain(); out.gain.value = 0.0; out.connect(n.master); out.gain.setTargetAtTime(0.55, ctx.currentTime, 2);
-  const verb = ctx.createConvolver(); verb.buffer = impulse(ctx, 2.6); const wet = ctx.createGain(); wet.gain.value = 0.32; verb.connect(wet).connect(out);
+  const verb = ctx.createConvolver(); verb.buffer = impulse(ctx, 1.8); const wet = ctx.createGain(); wet.gain.value = 0.32; verb.connect(wet).connect(out);
   const bus = ctx.createGain(); bus.connect(out); bus.connect(verb);
   // drone: detuned saws on D2 and A2 through a breathing lowpass (hurdy-gurdy / tagelharpa)
   const dl = ctx.createBiquadFilter(); dl.type = 'lowpass'; dl.frequency.value = 520; dl.Q.value = 2; const dg = ctx.createGain(); dg.gain.value = 0.035; dl.connect(dg).connect(bus);
@@ -38,32 +39,34 @@ export function startSaga() {
 export function setBattle(on) { if (M) M.want = !!on; }
 export function sagaState() { return M ? { battle: M.battle, bar: M.bar } : null; }
 
-function impulse(ctx, secs) { const len = Math.floor(ctx.sampleRate * secs), b = ctx.createBuffer(2, len, ctx.sampleRate); for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.4); } return b; }
+// a mono tail: a third of the reverb's work for the audio thread, which the iPad needs (a stereo 2.6 s tail made it crackle)
+function impulse(ctx, secs) { const len = Math.floor(ctx.sampleRate * secs), b = ctx.createBuffer(1, len, ctx.sampleRate); for (let c = 0; c < 1; c++) { const d = b.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.4); } return b; }
 function env(g, t, a, peak, dec, end = 0.0001) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(end, t + a + dec); }
 // plucked lyre: triangle + octave sine, quick attack, long ring
-function lyre(t, f, len, vol = 0.09) { const { ctx, bus } = M; const g = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(3200, t); lp.frequency.exponentialRampToValueAtTime(700, t + Math.min(2.5, len + 0.8)); g.connect(lp).connect(bus);
-  for (const [type, mul, v] of [['triangle', 1, 1], ['sine', 2, 0.35], ['sawtooth', 1, 0.12]]) { const o = ctx.createOscillator(); o.type = type; o.frequency.value = f * mul; const og = ctx.createGain(); og.gain.value = v; o.connect(og).connect(g); o.start(t); o.stop(t + len + 1.6); }
+function lyre(t, f, len, vol = 0.09) { if (late) return; const { ctx, bus } = M; const g = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(3200, t); lp.frequency.exponentialRampToValueAtTime(700, t + Math.min(2.5, len + 0.8)); g.connect(lp).connect(bus);
+  for (const [type, mul, v] of [['triangle', 1, 1.06], ['sine', 2, 0.35]]) { const o = ctx.createOscillator(); o.type = type; o.frequency.value = f * mul; const og = ctx.createGain(); og.gain.value = v; o.connect(og).connect(g); o.start(t); o.stop(t + len + 1.6); }
   env(g, t, 0.008, vol, Math.max(0.6, len + 1.2)); }
 // lur / war horn: saw through a slow-opening lowpass, swelling in
-function horn(t, f, len, vol = 0.07) { const { ctx, bus } = M; const g = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 3; lp.frequency.setValueAtTime(300, t); lp.frequency.linearRampToValueAtTime(1500, t + Math.min(0.5, len * 0.5)); lp.frequency.linearRampToValueAtTime(600, t + len); g.connect(lp).connect(bus);
+function horn(t, f, len, vol = 0.07) { if (late) return; const { ctx, bus } = M; const g = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 3; lp.frequency.setValueAtTime(300, t); lp.frequency.linearRampToValueAtTime(1500, t + Math.min(0.5, len * 0.5)); lp.frequency.linearRampToValueAtTime(600, t + len); g.connect(lp).connect(bus);
   for (const det of [-7, 6]) { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f * 0.97, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.12); o.detune.value = det; o.connect(g); o.start(t); o.stop(t + len + 0.4); }
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + Math.min(0.35, len * 0.4)); g.gain.setValueAtTime(vol, t + len * 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.3); }
 // wordless choir: detuned saws through two vowel formants ("ooh"), slow swell
-function choir(t, freqs, len, vol = 0.03) { const { ctx, bus } = M; const g = ctx.createGain(); const f1 = ctx.createBiquadFilter(), f2 = ctx.createBiquadFilter(); f1.type = f2.type = 'bandpass'; f1.frequency.value = 420; f2.frequency.value = 880; f1.Q.value = 5; f2.Q.value = 7; const mix = ctx.createGain(); f1.connect(mix); f2.connect(mix); mix.connect(g).connect(bus);
-  for (const f of freqs) for (const det of [-11, 0, 9]) { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det; const vib = ctx.createOscillator(); vib.frequency.value = 5 + Math.random(); const vg = ctx.createGain(); vg.gain.value = 4; vib.connect(vg).connect(o.detune); o.connect(f1); o.connect(f2); o.start(t); o.stop(t + len + 1.5); vib.start(t); vib.stop(t + len + 1.5); }
+function choir(t, freqs, len, vol = 0.03) { if (late) return; const { ctx, bus } = M; const g = ctx.createGain(); const f1 = ctx.createBiquadFilter(), f2 = ctx.createBiquadFilter(); f1.type = f2.type = 'bandpass'; f1.frequency.value = 420; f2.frequency.value = 880; f1.Q.value = 5; f2.Q.value = 7; const mix = ctx.createGain(); f1.connect(mix); f2.connect(mix); mix.connect(g).connect(bus);
+  const vib = ctx.createOscillator(); vib.frequency.value = 5 + Math.random(); const vg = ctx.createGain(); vg.gain.value = 4; vib.connect(vg); vib.start(t); vib.stop(t + len + 1.5); // one shared vibrato
+  for (const f of freqs) for (const det of [-10, 9]) { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det; vg.connect(o.detune); o.connect(f1); o.connect(f2); o.start(t); o.stop(t + len + 1.5); }
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + len * 0.35); g.gain.setValueAtTime(vol, t + len * 0.75); g.gain.exponentialRampToValueAtTime(0.0001, t + len + 1.2); }
 // drums: frame drum / war drum (pitched thump + skin noise)
-function drum(t, f = 70, vol = 0.35, len = 0.5, bright = 900) { const { ctx, bus, noise } = M; const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(f * 2.2, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.06); o.frequency.exponentialRampToValueAtTime(f * 0.7, t + len); o.connect(g).connect(bus); env(g, t, 0.004, vol, len); o.start(t); o.stop(t + len + 0.05);
+function drum(t, f = 70, vol = 0.35, len = 0.5, bright = 900) { if (late) return; const { ctx, bus, noise } = M; const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(f * 2.2, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.06); o.frequency.exponentialRampToValueAtTime(f * 0.7, t + len); o.connect(g).connect(bus); env(g, t, 0.004, vol, len); o.start(t); o.stop(t + len + 0.05);
   const s = ctx.createBufferSource(); s.buffer = noise; const bp = ctx.createBiquadFilter(); bp.type = 'lowpass'; bp.frequency.value = bright; const ng = ctx.createGain(); s.connect(bp).connect(ng).connect(bus); env(ng, t, 0.002, vol * 0.35, 0.12); s.start(t); s.stop(t + 0.2); }
-function bass(t, f, len, vol = 0.09) { const { ctx, bus } = M; const o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter(); o.type = 'sawtooth'; o.frequency.value = f; lp.type = 'lowpass'; lp.frequency.setValueAtTime(900, t); lp.frequency.exponentialRampToValueAtTime(220, t + len); o.connect(lp).connect(g).connect(bus); env(g, t, 0.01, vol, len); o.start(t); o.stop(t + len + 0.05); }
+function bass(t, f, len, vol = 0.09) { if (late) return; const { ctx, bus } = M; const o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter(); o.type = 'sawtooth'; o.frequency.value = f; lp.type = 'lowpass'; lp.frequency.setValueAtTime(900, t); lp.frequency.exponentialRampToValueAtTime(220, t + len); o.connect(lp).connect(g).connect(bus); env(g, t, 0.01, vol, len); o.start(t); o.stop(t + len + 0.05); }
 // war cry: a shouted "HU!" (noise through a vowel band with a falling pitch underneath)
-function cry(t, vol = 0.16) { const { ctx, bus, noise } = M; const s = ctx.createBufferSource(); s.buffer = noise; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 650; bp.Q.value = 3; const g = ctx.createGain(); s.connect(bp).connect(g).connect(bus); env(g, t, 0.02, vol, 0.28); s.start(t); s.stop(t + 0.4);
+function cry(t, vol = 0.16) { if (late) return; const { ctx, bus, noise } = M; const s = ctx.createBufferSource(); s.buffer = noise; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 650; bp.Q.value = 3; const g = ctx.createGain(); s.connect(bp).connect(g).connect(bus); env(g, t, 0.02, vol, 0.28); s.start(t); s.stop(t + 0.4);
   const o = ctx.createOscillator(), og = ctx.createGain(), f = ctx.createBiquadFilter(); o.type = 'sawtooth'; o.frequency.setValueAtTime(190, t); o.frequency.exponentialRampToValueAtTime(130, t + 0.3); f.type = 'bandpass'; f.frequency.value = 700; f.Q.value = 2; o.connect(f).connect(og).connect(bus); env(og, t, 0.02, vol * 0.8, 0.3); o.start(t); o.stop(t + 0.4); }
 
 function schedule() {
   const { ctx } = M; if (ctx.state !== 'running') { M.next = Math.max(M.next, ctx.currentTime + 0.1); return; }
-  while (M.next < ctx.currentTime + 0.25) {
-    const t = M.next;
+  while (M.next < ctx.currentTime + 0.5) { // half a second ahead, so a hitch in the game does not starve the music
+    const t = M.next; late = t < ctx.currentTime;
     if (!M.battle) { // ---------- ballad: 6/8, 66 bpm dotted-quarter (eighth = 0.303 s) ----------
       const E = 60 / 66 / 3, s = M.step % 6;
       if (s === 0) { if (M.want) { M.battle = true; M.step = 0; M.bar = 0; M.dl.frequency.setTargetAtTime(900, t, 1); M.dg.gain.setTargetAtTime(0.05, t, 1); continue; }
