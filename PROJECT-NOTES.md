@@ -1,6 +1,6 @@
 # Pats Reign: project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.4.0. Where older notes or memory
+READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.4.1. Where older notes or memory
 disagree with this file, this file wins.
 
 ## Where things are
@@ -87,16 +87,25 @@ disagree with this file, this file wins.
   LOAD needs a second tap within 4 s on the same text, then reloads the page.
 - src/tornado.js: Dead City twisters + `waterspout` and `seastorm` skins. fullscreen.js, perf.js: from Dead City.
 
-## Controls (v0.2.1)
-- Ship's wheel (bottom middle): drag around it to turn; it turns at half the finger's rate, gentle near centre
-  (rudder = sign * |angle/HMAX|^1.4, HMAX 2.4 rad). Only the round wheel takes touches (`clip-path: circle` + radius
-  check). It stays where you leave it; double-tap centres it.
-- Sail lever beside it: STOP / ROW / HALF / FULL (`boat.throttle` 0..1); sail reefs to match. STOP cancels a course.
+## Controls (v0.4.1)
+- Ship's wheel: a big half-wheel centred across the bottom (hub just below the screen edge; layoutHelm sizes it:
+  R = clamp(min(W*0.4 phone / W*0.3 wide, H*0.28), 100, 240)); swipe along it to turn (0.8 x the finger's angle around the
+  hub), rudder = sign*|angle/HMAX|^1.4, HMAX 2.4. Only the wheel takes touches (clip-path circle + radius check). It stays
+  where you leave it; double-tap centres it. Sean's idea after iPad testing (v0.4.1).
+- Sail telegraph above the wheel: tap STOP / ROW / HALF / FULL (0, 0.3, 0.6, 1; slide sideways too). STOP cancels a
+  course. No control needs a downward swipe (iPad Safari exits full screen on those).
+- Layout: html.wideHud (W >= 600) keeps map and buttons in the corners; phones put them above the wheel (--helmH);
+  html.tabletHud (min side >= 700) makes the telegraph, map and buttons bigger. helmLift shifts the camera view up
+  (setViewOffset) by 0.9 x the wheel height so the ship clears the controls; battles use their own offset.
+- iPad full screen: Safari's own swipe-down exits element fullscreen and a page cannot stop it. The fix is the home-screen
+  web app: public/manifest.webmanifest (display fullscreen) + icons (icon-180/192/512, a gold wheel with PR) +
+  apple-mobile-web-app tags; fullscreen.js skips the Fullscreen API when standalone and shows an Add to Home Screen tip
+  on the title screen on iOS.
 - Courses: tap the sea, tap the corner minimap (whole world, bottom-left), or open the sea chart (🗺 button: pinch
   zoom to 8x, drag to pan, tap to set). Setting a course raises the sail if it was down. Hands off the wheel = the
   helmsman turns it toward the mark and around land (`steerAround`). Arriving furls the sails.
 - FIRE (spears, or ballista once bought) auto-aims; context button: DOCK / FIGHT / SALVAGE / FISH / SLOW.
-- Pinch or mouse wheel zooms the sea view; TOP / CHASE camera button. Keyboard: A/D wheel, W/S lever, space fire.
+- Pinch or mouse wheel zooms the sea view; TOP / CHASE camera button. Keyboard: A/D wheel, W/S sails, space fire.
 - HUD: hull bar, timber/iron/gold/fish, ship name, sea, weather, Thor timer; compass top-right once bought.
 
 ## Rules as built

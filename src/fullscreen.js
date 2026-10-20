@@ -4,7 +4,7 @@
 // finger-down, so the browser never gets to start its own drag (scroll, bounce, pull-to-refresh or swipe-to-exit).
 // Launched from the home screen there are no browser bars at all, so none of this is needed and the button is hidden.
 // A small ⛶ button (shown off the play screen) turns it on and off; the choice is remembered.
-const GAME_AREA = '#game, #map, #chartCv'; // touches here are the game's; buttons and menus keep their normal taps
+const GAME_AREA = '#game, #map, #chartCv, #helm, #throttle'; // touches here are the game's; buttons and menus keep their normal taps
 
 export function initFullscreen(isPlaying) {
   const el = document.documentElement;
@@ -32,11 +32,13 @@ export function initFullscreen(isPlaying) {
   // that cannot be swiped away
   let told = false; try { told = localStorage.getItem('fs_tip') === '1'; } catch { /* ignore */ }
   const say = (msg) => { for (const o of document.querySelectorAll('.fsTip')) o.remove(); const t = document.createElement('div'); t.className = 'fsTip'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 8000); };
-  const home = ios ? 'open the game in Safari (not inside itch), tap Share ⬆ → Add to Home Screen with Open as Web App on, and play from that icon.' : 'browser menu ⋮ → Add to Home screen / Install app, and play from that icon.';
+  const home = ios ? 'in Safari tap Share ⬆ → Add to Home Screen (keep Open as Web App on) and play from that icon.' : 'browser menu ⋮ → Add to Home screen / Install app, and play from that icon.';
   const onChange = () => { if (isFs() || !isPlaying() || !want) return; drops++;
     if (ios && drops >= 2 && auto) { auto = false; say('iPad Safari lets a swipe close full screen, so the game will stay as it is now. For a full screen that can\'t be swiped away, ' + home); return; }
     if (told) return; told = true; try { localStorage.setItem('fs_tip', '1'); } catch { /* ignore */ }
     say('Tap to go back to full screen. For a full screen that can\'t be swiped away: ' + home); };
+  // on iPhone and iPad in the browser, say once on the title screen how to get the full screen that can't be swiped away
+  if (ios && !app) { const t = document.getElementById('title'); if (t) { const p = document.createElement('p'); p.className = 'small homeTip'; p.textContent = 'iPhone / iPad: tap Share ⬆ → Add to Home Screen and play from the icon for a full screen that can\'t be swiped away.'; t.appendChild(p); } }
   if (can) {
     const b = document.createElement('button'); b.className = 'ghost fsBtn'; b.setAttribute('aria-label', 'Full screen');
     const draw = () => { b.textContent = isFs() ? '⛶ EXIT FULL SCREEN' : '⛶ FULL SCREEN'; };

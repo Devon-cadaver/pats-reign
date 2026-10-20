@@ -1,4 +1,4 @@
-// Pats Reign: a Viking ship on a monster sea. Sail with the ship's wheel and sail lever, a tap on the sea or the map; fish up
+// Pats Reign: a Viking ship on a monster sea. Sail with the ship's wheel and the sail telegraph, a tap on the sea or the map; fish up
 // supplies, fight sea monsters and raiders in battle mini-games, upgrade at harbours, ride out storms (catch lightning
 // for Thor's Fury), rogue waves, waterspouts and sea tornadoes, maelstroms, ambushes, raider fleets and treasure ships,
 // and slay the three legends to reign.
@@ -34,8 +34,8 @@ const foam = createFoam(scene, ocean, 800); const env = createEnv(scene, ocean, 
 let flash = 0;
 const twisters = createTwisters(scene, { onBolt: () => { flash = Math.max(flash, 0.4); } });
 const minis = createMinis({ sfx, hooks: { shoot: (mult, dmg, txt, fire) => battleShoot(mult, dmg, txt, fire), hurt: (d) => battleHurt(d), foeAct: (d) => battleFoeAct(d), cast: () => fishCast(), pull: () => {} } });
-let viewOff = false;
-function applyView() { if (viewOff) { camera.aspect = innerWidth / (innerHeight * 1.5); camera.setViewOffset(innerWidth, innerHeight * 1.5, 0, innerHeight * 0.5, innerWidth, innerHeight); } else { camera.aspect = innerWidth / innerHeight; camera.clearViewOffset(); } camera.updateProjectionMatrix(); }
+let viewOff = false, helmLift = 0; // helmLift: the view is shifted up by this many px so the ship clears the wheel
+function applyView() { if (viewOff) { camera.aspect = innerWidth / (innerHeight * 1.5); camera.setViewOffset(innerWidth, innerHeight * 1.5, 0, innerHeight * 0.5, innerWidth, innerHeight); } else if (helmLift) { camera.aspect = innerWidth / (innerHeight + helmLift); camera.setViewOffset(innerWidth, innerHeight + helmLift, 0, helmLift, innerWidth, innerHeight); } else { camera.aspect = innerWidth / innerHeight; camera.clearViewOffset(); } camera.updateProjectionMatrix(); }
 function resize() { renderer.setSize(innerWidth, innerHeight, false); applyView(); } addEventListener('resize', resize); resize();
 
 // ---------- data: upgrades and costs [timber, iron, gold] ----------
@@ -81,37 +81,53 @@ const mons = [], floats = [], spots = [], projs = [], rings = [], bolts = [], po
 const wx = { type: 'clear', k: 0, t: 30, next: 45, fading: false };
 let battle = null, fishing = null, rogueT = -1, rogueHit = false, spawnT = 0, floatT = 0, spotT = 0, saveT = 0, boltT = 3, msgT = 0, warnT = 0;
 
-// ---------- input: tap the sea to set a course, pinch to zoom; steering is the ship's wheel and the sail lever ----------
+// ---------- input: tap the sea to set a course, pinch to zoom; steering is the ship's wheel and the sail telegraph ----------
 let tapStart = null; const touches = new Map(); let pinch0 = 0, zoom0 = 1;
 canvas.addEventListener('pointerdown', (e) => { if (state !== 'play' || battle || fishing) return; touches.set(e.pointerId, [e.clientX, e.clientY]); if (touches.size === 2) { const [a, b] = [...touches.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); zoom0 = zoom; tapStart = null; return; } tapStart = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() }; try { canvas.setPointerCapture(e.pointerId); } catch { /* ignore */ } });
 canvas.addEventListener('pointermove', (e) => { if (touches.has(e.pointerId)) touches.set(e.pointerId, [e.clientX, e.clientY]); if (touches.size === 2 && pinch0) { const [a, b] = [...touches.values()]; zoom = clamp(zoom0 * pinch0 / (Math.hypot(a[0] - b[0], a[1] - b[1]) || 1), 0.55, 2.2); } });
 const pUp = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pinch0 = 0; if (tapStart && tapStart.id === e.pointerId) { if (performance.now() - tapStart.t < 350 && Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y) < 18) tapSea(e.clientX, e.clientY); tapStart = null; } }; canvas.addEventListener('pointerup', pUp); canvas.addEventListener('pointercancel', pUp);
 
-// ---------- the helm: a ship's wheel you turn with your finger. It stays where you leave it; on a set course it steers
-// itself back toward the mark when you let go. Double-tap it to centre it. Beside it the sail lever sets sail and oar
-// power; pull it right back to furl the sails, stop and cancel the course. ----------
+// ---------- the helm: a big ship's wheel across the bottom of the screen, its hub just below the edge so the top half
+// shows. Swipe along it to turn it; it stays where you leave it, and on a set course it steers itself back toward the
+// mark when you let go. Double-tap it to centre it. Above it the sail telegraph (STOP / ROW / HALF / FULL) sets sail and
+// oar power with a tap; STOP furls the sails and cancels the course. Taps and sideways swipes only, so nothing on the
+// controls is a downward swipe (iPad Safari closes full screen on those). ----------
 const HMAX = 2.4; // the wheel turns about 140 degrees each way
 const helm = { angle: 0, held: false, id: null, last: 0, tapT: 0 }; const helmEl = $('helm'), helmCtx = helmEl.getContext('2d'); let helmDrawn = null;
-function helmAngleAt(e) { const r = helmEl.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)); }
-helmEl.addEventListener('pointerdown', (e) => { const hr = helmEl.getBoundingClientRect(); if (Math.hypot(e.clientX - (hr.left + hr.width / 2), e.clientY - (hr.top + hr.height / 2)) > hr.width / 2) return; e.preventDefault(); e.stopPropagation(); if (state !== 'play') return; unlockAudio(); helm.held = true; helm.id = e.pointerId; helm.last = helmAngleAt(e); try { helmEl.setPointerCapture(e.pointerId); } catch { /* ignore */ } const now = performance.now(); if (now - helm.tapT < 300) helm.angle = 0; helm.tapT = now; });
-helmEl.addEventListener('pointermove', (e) => { if (!helm.held || e.pointerId !== helm.id) return; const a = helmAngleAt(e); helm.angle = clamp(helm.angle + angDiff(a, helm.last) * 0.5, -HMAX, HMAX); helm.last = a; });
+const helmBox = { R: 150, cw: 354, ch: 168 }; // R: rim radius in CSS px; the hub sits 0.06 R below the canvas
+function layoutHelm() { const W = innerWidth, H = innerHeight, wide = W >= 600;
+  const R = Math.round(clamp(Math.min(W * (wide ? 0.3 : 0.4), H * 0.28), 100, 240)), cw = Math.round(R * 2.36), ch = Math.round(R * 1.12);
+  Object.assign(helmBox, { R, cw, ch }); helmEl.style.width = cw + 'px'; helmEl.style.height = ch + 'px'; helmEl.style.clipPath = 'circle(' + Math.round(R * 1.18) + 'px at 50% ' + Math.round(ch + R * 0.06) + 'px)';
+  const wrap = $('helmWrap'); wrap.style.width = cw + 'px'; wrap.style.height = ch + 40 + 'px';
+  document.documentElement.style.setProperty('--helmH', ch + 'px'); document.documentElement.classList.toggle('wideHud', wide); document.documentElement.classList.toggle('tabletHud', Math.min(W, H) >= 700); helmDrawn = null; helmLift = Math.round(ch * 0.9); applyView(); }
+addEventListener('resize', layoutHelm); layoutHelm();
+function helmHub() { const r = helmEl.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height + helmBox.R * 0.06]; }
+function helmAngleAt(e) { const [cx, cy] = helmHub(); return Math.atan2(e.clientY - cy, e.clientX - cx); }
+helmEl.addEventListener('pointerdown', (e) => { const [cx, cy] = helmHub(); if (Math.hypot(e.clientX - cx, e.clientY - cy) > helmBox.R * 1.18) return; e.preventDefault(); e.stopPropagation(); if (state !== 'play') return; unlockAudio(); helm.held = true; helm.id = e.pointerId; helm.last = helmAngleAt(e); try { helmEl.setPointerCapture(e.pointerId); } catch { /* ignore */ } const now = performance.now(); if (now - helm.tapT < 300) helm.angle = 0; helm.tapT = now; });
+helmEl.addEventListener('pointermove', (e) => { if (!helm.held || e.pointerId !== helm.id) return; const a = helmAngleAt(e); helm.angle = clamp(helm.angle + angDiff(a, helm.last) * 0.8, -HMAX, HMAX); helm.last = a; });
 for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) helmEl.addEventListener(ev, (e) => { if (e.pointerId === helm.id) { helm.held = false; helm.id = null; } });
-function drawHelm() { if (!helmEl.clientWidth) return; const dpr = Math.min(2, devicePixelRatio || 1), S = Math.round(helmEl.clientWidth * dpr) || 1; if (helmEl.width !== S) { helmEl.width = helmEl.height = S; helmDrawn = null; } if (helmDrawn !== null && Math.abs(helmDrawn - helm.angle) < 0.002) return; helmDrawn = helm.angle;
-  const g = helmCtx, c = S / 2, R = S / 2 - 2 * dpr, rim = R * 0.7; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, S, S);
-  g.translate(c, c); g.rotate(helm.angle); g.lineCap = 'round';
-  for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2 - Math.PI / 2, ca = Math.cos(a), sa = Math.sin(a);
-    g.strokeStyle = '#2a1608'; g.lineWidth = 9 * dpr; g.beginPath(); g.moveTo(ca * R * 0.16, sa * R * 0.16); g.lineTo(ca * (R - 4 * dpr), sa * (R - 4 * dpr)); g.stroke();
-    g.strokeStyle = i === 0 ? '#e6b43a' : '#8a5a32'; g.lineWidth = 6 * dpr; g.beginPath(); g.moveTo(ca * R * 0.16, sa * R * 0.16); g.lineTo(ca * rim, sa * rim); g.stroke();
-    g.strokeStyle = i === 0 ? '#f2d27a' : '#a87444'; g.lineWidth = 8 * dpr; g.beginPath(); g.moveTo(ca * (rim + 5 * dpr), sa * (rim + 5 * dpr)); g.lineTo(ca * (R - 5 * dpr), sa * (R - 5 * dpr)); g.stroke(); }
-  g.strokeStyle = '#2a1608'; g.lineWidth = 12 * dpr; g.beginPath(); g.arc(0, 0, rim, 0, 6.2832); g.stroke(); g.strokeStyle = '#7a4c2a'; g.lineWidth = 8 * dpr; g.stroke(); g.strokeStyle = '#b8864e'; g.lineWidth = 2 * dpr; g.beginPath(); g.arc(0, 0, rim - 2 * dpr, 0, 6.2832); g.stroke();
-  g.fillStyle = '#4a2e18'; g.beginPath(); g.arc(0, 0, R * 0.2, 0, 6.2832); g.fill(); g.strokeStyle = '#e6b43a'; g.lineWidth = 2 * dpr; g.stroke(); g.fillStyle = '#e6b43a'; g.beginPath(); g.arc(0, 0, R * 0.08, 0, 6.2832); g.fill();
-  g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#f2d27a'; g.beginPath(); g.moveTo(c - 6 * dpr, 1 * dpr); g.lineTo(c + 6 * dpr, 1 * dpr); g.lineTo(c, 8 * dpr); g.closePath(); g.fill(); }
-const thrEl = $('throttle');
+function drawHelm() { if (!helmEl.clientWidth) return; const dpr = Math.min(2, devicePixelRatio || 1), W = Math.round(helmBox.cw * dpr), Hh = Math.round(helmBox.ch * dpr); if (helmEl.width !== W || helmEl.height !== Hh) { helmEl.width = W; helmEl.height = Hh; helmDrawn = null; } if (helmDrawn !== null && Math.abs(helmDrawn - helm.angle) < 0.002) return; helmDrawn = helm.angle;
+  const g = helmCtx, R = helmBox.R * dpr, k = R / 70, cx = W / 2, cy = Hh + R * 0.06, rim = R, hub = R * 0.3; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, Hh);
+  g.translate(cx, cy); g.rotate(helm.angle); g.lineCap = 'round';
+  for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2 - Math.PI / 2, ca = Math.cos(a), sa = Math.sin(a), king = i === 0;
+    // spoke from the hub out through the rim to a turned handle
+    g.strokeStyle = '#2a1608'; g.lineWidth = 9 * k; g.beginPath(); g.moveTo(ca * hub, sa * hub); g.lineTo(ca * rim * 1.15, sa * rim * 1.15); g.stroke();
+    g.strokeStyle = king ? '#e6b43a' : '#8a5a32'; g.lineWidth = 6 * k; g.beginPath(); g.moveTo(ca * hub, sa * hub); g.lineTo(ca * rim, sa * rim); g.stroke();
+    g.strokeStyle = king ? '#f2d27a' : '#a87444'; g.lineWidth = 9 * k; g.beginPath(); g.moveTo(ca * rim * 1.03, sa * rim * 1.03); g.lineTo(ca * rim * 1.14, sa * rim * 1.14); g.stroke();
+    g.fillStyle = king ? '#f2d27a' : '#c08a52'; g.beginPath(); g.arc(ca * rim * 1.15, sa * rim * 1.15, 5 * k, 0, 6.2832); g.fill(); }
+  // rim: a dark outer band, the wood, a bright inner bead; an inner ring nearer the hub
+  g.strokeStyle = '#2a1608'; g.lineWidth = 13 * k; g.beginPath(); g.arc(0, 0, rim, 0, 6.2832); g.stroke(); g.strokeStyle = '#7a4c2a'; g.lineWidth = 9 * k; g.stroke(); g.strokeStyle = '#b8864e'; g.lineWidth = 2 * k; g.beginPath(); g.arc(0, 0, rim - 3 * k, 0, 6.2832); g.stroke();
+  g.strokeStyle = '#2a1608'; g.lineWidth = 7 * k; g.beginPath(); g.arc(0, 0, R * 0.62, 0, 6.2832); g.stroke(); g.strokeStyle = '#8a5a32'; g.lineWidth = 4 * k; g.stroke();
+  g.fillStyle = '#4a2e18'; g.beginPath(); g.arc(0, 0, hub, 0, 6.2832); g.fill(); g.strokeStyle = '#e6b43a'; g.lineWidth = 2 * k; g.stroke();
+  // the mark at the top: where the king spoke sits when the rudder is straight
+  g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#f2d27a'; g.strokeStyle = '#2a1608'; g.lineWidth = 1.5 * dpr; g.beginPath(); g.moveTo(cx - 7 * dpr, 1 * dpr); g.lineTo(cx + 7 * dpr, 1 * dpr); g.lineTo(cx, 10 * dpr); g.closePath(); g.fill(); g.stroke(); }
+const thrEl = $('throttle'), THR_LV = [0, 0.3, 0.6, 1];
 function setThrottle(v, quiet) { v = clamp(v, 0, 1); if (v < 0.06) v = 0; if (v > 0.95) v = 1; const was = boat.throttle || 0; boat.throttle = v; if (v === 0 && was > 0 && boat.wp) { boat.wp = null; courseMark.visible = false; if (!quiet) say('Sails furled. Course cancelled.'); } drawThrottle(); }
-function drawThrottle() { const v = boat.throttle || 0; $('tFill').style.height = v * 100 + '%'; $('tKnob').style.bottom = v * 100 + '%'; const l = v === 0 ? 'STOP' : v < 0.4 ? 'ROW' : v < 0.75 ? 'HALF' : 'FULL'; if ($('tLbl').textContent !== l) $('tLbl').textContent = l; }
-function thrAt(e) { const r = thrEl.querySelector('.tTrack').getBoundingClientRect(); return 1 - (e.clientY - r.top) / r.height; }
-let thrId = null; thrEl.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); if (state !== 'play') return; unlockAudio(); thrId = e.pointerId; try { thrEl.setPointerCapture(e.pointerId); } catch { /* ignore */ } setThrottle(thrAt(e)); });
-thrEl.addEventListener('pointermove', (e) => { if (e.pointerId === thrId) setThrottle(thrAt(e)); });
+function drawThrottle() { const v = boat.throttle || 0, n = v === 0 ? 0 : v < 0.4 ? 1 : v < 0.75 ? 2 : 3; thrEl.querySelectorAll('button').forEach((b, i) => { if (b.classList.contains('on') !== (i === n)) b.classList.toggle('on', i === n); }); }
+// tap a notch, or slide sideways along the row
+function thrPick(e) { const el = document.elementFromPoint(e.clientX, e.clientY), b = el && el.closest && el.closest('#throttle button'); if (b) setThrottle(THR_LV[+b.dataset.n]); }
+let thrId = null; thrEl.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); if (state !== 'play') return; unlockAudio(); thrId = e.pointerId; try { thrEl.setPointerCapture(e.pointerId); } catch { /* ignore */ } thrPick(e); });
+thrEl.addEventListener('pointermove', (e) => { if (e.pointerId === thrId) thrPick(e); });
 for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) thrEl.addEventListener(ev, (e) => { if (e.pointerId === thrId) thrId = null; });
 canvas.addEventListener('wheel', (e) => { zoom = clamp(zoom * Math.exp(e.deltaY * 0.001), 0.55, 2.2); }, { passive: true });
 const keys = {}; addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; if (e.key === ' ' && state === 'play') fire(); }); addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
@@ -265,7 +281,7 @@ function actionContext() { if (battle || fishing) return null; const v = boat.v;
   for (const s of spots) if (Math.hypot(s.x - boat.x, s.z - boat.z) < 9 + T().L * 0.35) return v < 3.5 ? { kind: 'fish', s, icon: s.kind === 'treasure' ? '💰' : s.kind === 'flotsam' ? '📦' : '🎣', label: 'FISH' } : { kind: 'slow', icon: '🎣', label: 'SLOW' };
   return null; }
 let ctx = null;
-function doAction() { if (!ctx || state !== 'play') return; if (ctx.kind === 'dock') openHarbor(ctx.h); else if (ctx.kind === 'fight') startBattle(ctx.mon, true); else if (ctx.kind === 'fish') startFishing(ctx.s); else if (ctx.kind === 'salvage') startSalvage(ctx.w); else if (ctx.kind === 'slow') say('Pull the sail lever back to slow down first.'); }
+function doAction() { if (!ctx || state !== 'play') return; if (ctx.kind === 'dock') openHarbor(ctx.h); else if (ctx.kind === 'fight') startBattle(ctx.mon, true); else if (ctx.kind === 'fish') startFishing(ctx.s); else if (ctx.kind === 'salvage') startSalvage(ctx.w); else if (ctx.kind === 'slow') say('Tap STOP or ROW to slow down first.'); }
 const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(0, 0, 0), V(0, 0, 0)]), new THREE.LineBasicMaterial({ color: 0xf2e6c8 })); line.visible = false; scene.add(line);
 function startFishing(s) { fishing = { s }; boat.wp = null; $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); line.visible = true;
   minis.fish({ kind: s.kind, nets: P.up.nets, tier: P.tier, biteChance: 0.07 }, (res) => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); line.visible = false; fishing = null; boat.grace = 2.5;
@@ -466,7 +482,7 @@ function drawHarbor() { $('hbRes').innerHTML = `<span>🪵 ${P.res.w}</span><spa
     d.innerHTML = `<div class="ic">${u.icon}</div><div class="tx"><b>${u.name}</b><span class="pips">${'◆'.repeat(lv)}${'◇'.repeat(u.max - lv)}</span><div>${capped ? 'Fully upgraded' : u.desc[lv] + (u.eff ? ' · ' + u.eff : '')}</div><div class="cost">${capped ? '' : locked ? '<span class="no">Needs a bigger ship</span>' : costHtml(c)}</div></div>`;
     if (!capped) { const b = document.createElement('button'); b.textContent = 'BUY'; b.disabled = locked || !can(c); b.onclick = () => { if (locked || !can(c)) return; P.res.w -= c[0]; P.res.i -= c[1]; P.res.g -= c[2]; P.up[k]++; if (k === 'armor') P.hp += maxHp() - Math.round(maxHp() / (1 + 0.25 * P.up.armor) * (1 + 0.25 * (P.up.armor - 1))); P.hp = Math.min(P.hp, maxHp()); rebuildShip(); sfx.pickup(); drawHarbor(); save(); }; d.appendChild(b); }
     list.appendChild(d); } }
-$('hbSail').onclick = () => { $('harbor').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; const h = atHarbor; if (h) { boat.x = h.dock.x + Math.cos(h.dir) * 10; boat.z = h.dock.z + Math.sin(h.dir) * 10; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); } atHarbor = null; setThrottle(0, true); helm.angle = 0; hud(); say('Fair winds! Push the sail lever up to set sail.'); };
+$('hbSail').onclick = () => { $('harbor').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; const h = atHarbor; if (h) { boat.x = h.dock.x + Math.cos(h.dir) * 10; boat.z = h.dock.z + Math.sin(h.dir) * 10; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); } atHarbor = null; setThrottle(0, true); helm.angle = 0; hud(); say('Fair winds! Tap HALF or FULL to set sail.'); };
 
 // ---------- lairs (legend bosses) ----------
 const LAIR_NAMES = { kraken: 'The Kraken', jorm: 'Jormungandr', rlyeh: 'The Elder One' }, LAIR_NEED = { kraken: 2, jorm: 3, rlyeh: 4 };
@@ -589,7 +605,7 @@ $('saveQuit').onclick = () => { save(); $('paused').classList.add('hidden'); toT
 $('howBtn').onclick = () => { $('title').classList.add('hidden'); $('how').classList.remove('hidden'); }; $('howBack').onclick = () => { $('how').classList.add('hidden'); $('title').classList.remove('hidden'); };
 function begin(cont) { unlockAudio(); startSaga(); if (!cont) { localStorage.removeItem(SAVE); Object.assign(P, { tier: 0, up: { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 0, oars: 0, nets: 0, lights: 0, compass: 0 }, res: { w: 20, i: 5, g: 40, f: 0 }, legends: {}, kills: 0, home: 0, won: false, tod: 0.16, wreck: null }); placeWreck(); P.hp = maxHp(); const h = world.harbors[0]; boat.x = h.dock.x + Math.cos(h.dir) * 12; boat.z = h.dock.z + Math.sin(h.dir) * 12; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); for (const L of world.lairs) L.beaten = false; }
   boat.v = 0; boat.wp = null; for (const m of [...mons]) removeMon(m); rebuildShip(); $('title').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; fsCtl.play(); hud();
-  boat.throttle = 0; helm.angle = 0; drawThrottle(); helmDrawn = null; say(cont ? 'Back at sea. Skål! Push the sail lever up to get under way.' : 'Push the sail lever up to get under way and turn the wheel to steer. Tap the sea or the map to set a course.', 5.5); camYaw = Math.PI; }
+  boat.throttle = 0; helm.angle = 0; drawThrottle(); helmDrawn = null; say(cont ? 'Back at sea. Skål! Tap ROW, HALF or FULL above the wheel to get under way.' : 'Tap ROW, HALF or FULL above the wheel to get under way, and swipe along the wheel to steer. Tap the sea or the map to set a course.', 5.5); camYaw = Math.PI; }
 const codes = initSaveCodes(); $('codeBtn').onclick = () => codes.open(); $('pauseCode').onclick = () => { save(); codes.open(); };
 $('playBtn').onclick = () => begin(false); $('contBtn').onclick = () => begin(true);
 function toTitle() { state = 'title'; $('hud').classList.add('hidden'); $('title').classList.remove('hidden'); $('contBtn').classList.toggle('hidden', !localStorage.getItem(SAVE)); }
