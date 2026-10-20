@@ -205,6 +205,16 @@ disagree with this file, this file wins.
 - Tested: pass, heave-to and return pattern; on-time hit 20, far miss 0; swap; a 3-ship fleet sunk one by one; pause
   freezes the battle clock (classic fights too); phone and tablet.
 
+## v0.6.3: one-handed controls with a side swap (Sean: all buttons on one side but the minimap; a button to switch sides for left-handed play)
+- pr.css "one-handed HUD" block (end of file). Default: every control on the right (pause at the end of the top row; chart,
+  TOP view and DOCK under it; SPEARS / action above the telegraph; the telegraph a column at the bottom right with FULL on
+  top), the minimap bottom left with #swapBtn (⇄) above it. Tablet: the telegraph is now a right-edge column too and the
+  chart / view / DOCK buttons sit under pause (no longer above the map). html.leftHand mirrors everything (the top row
+  goes row-reverse, pause margin-right auto; the ship / sea names row right-aligns; compass, tutorial card side, the
+  broadside BOARD / FLEE column and the SHE AIMS label all swap). setHand() in main.js, localStorage pr_hand ('L').
+- Fixed: in a ship battle body.busy hid the telegraph, so speed could not be changed to spoil her aim; now
+  body.busy.broadOn keeps it, and W / S work in a ship battle. BOARD / FLEE sit on the minimap's side.
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster

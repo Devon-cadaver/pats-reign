@@ -244,3 +244,36 @@ html.tabletHud #broad .bFire { width: 160px; height: 160px; font-size: 30px; } h
 html.tabletHud #broad .bStrip { bottom: calc(200px + env(safe-area-inset-bottom, 0)); height: 36px; }
 #broad .bStrip span { left: auto; right: 4px; top: auto; bottom: 36px; transform: none; }
 #broad .bSide { max-width: 118px; } #broad .bSide .mgBoard { font-size: 11px; padding: 6px 8px; line-height: 1.2; white-space: normal; text-align: center; } html.tabletHud #broad .bSide { max-width: 210px; } html.tabletHud #broad .bSide .mgBoard { font-size: 14px; }
+/* ---------- one-handed HUD: every control on one side (the sail telegraph, SPEARS and the action button, pause, chart,
+   view and DOCK), the minimap and the ⇄ swap button on the other. html.leftHand mirrors it all for left-handed play. ---------- */
+#swapBtn { position: absolute; pointer-events: auto; padding: 4px 10px; font-size: 16px; line-height: 1.2; }
+body.busy #swapBtn { display: none; }
+body.busy.broadOn #throttle { display: flex; } /* the telegraph stays in a ship battle: your speed spoils her aim */
+/* phone */
+html:not(.tabletHud) #throttle { left: auto; right: max(8px, env(safe-area-inset-right, 0px)); }
+html:not(.tabletHud) #acts { right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(170px + env(safe-area-inset-bottom, 0)); }
+html:not(.tabletHud) #map { right: auto; left: max(8px, env(safe-area-inset-left, 0px)); }
+html:not(.tabletHud) #swapBtn { left: max(8px, env(safe-area-inset-left, 0px)); bottom: calc(112px + env(safe-area-inset-bottom, 0)); }
+html.leftHand:not(.tabletHud) #throttle, html.leftHand:not(.tabletHud) #acts { right: auto; left: max(8px, env(safe-area-inset-left, 0px)); }
+html.leftHand:not(.tabletHud) #map, html.leftHand:not(.tabletHud) #swapBtn { left: auto; right: max(8px, env(safe-area-inset-right, 0px)); }
+html.leftHand:not(.tabletHud) #chartBtn, html.leftHand:not(.tabletHud) #viewBtn, html.leftHand:not(.tabletHud) #dockBtn { right: auto; left: max(8px, env(safe-area-inset-left, 0px)); }
+html.leftHand:not(.tabletHud) #compWrap { left: auto; right: max(8px, env(safe-area-inset-right, 0px)); }
+html.leftHand:not(.tabletHud) #tut { left: 62px; right: 8px; }
+/* tablet: the telegraph becomes a column at the right edge, the chart, view and DOCK buttons go under pause */
+html.tabletHud #throttle { left: auto; right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0)); transform: none; flex-direction: column-reverse; gap: 6px; }
+html.tabletHud #throttle button { min-width: 84px; }
+html.tabletHud #acts { right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(212px + env(safe-area-inset-bottom, 0)); }
+html.tabletHud #map { left: max(12px, env(safe-area-inset-left, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0)); }
+html.tabletHud #swapBtn { left: max(12px, env(safe-area-inset-left, 0px)); bottom: calc(172px + env(safe-area-inset-bottom, 0)); font-size: 20px; padding: 5px 14px; }
+html.tabletHud #chartBtn, html.tabletHud #viewBtn, html.tabletHud #dockBtn { left: auto; right: max(12px, env(safe-area-inset-right, 0px)); bottom: auto; }
+html.tabletHud #chartBtn { top: calc(56px + var(--padTop)); } html.tabletHud #viewBtn { top: calc(104px + var(--padTop)); } html.tabletHud #dockBtn { top: calc(146px + var(--padTop)); }
+html.tabletHud #compWrap { right: auto; left: max(12px, env(safe-area-inset-left, 0px)); }
+html.leftHand.tabletHud #throttle, html.leftHand.tabletHud #acts, html.leftHand.tabletHud #chartBtn, html.leftHand.tabletHud #viewBtn, html.leftHand.tabletHud #dockBtn { right: auto; left: max(12px, env(safe-area-inset-left, 0px)); }
+html.leftHand.tabletHud #map, html.leftHand.tabletHud #swapBtn, html.leftHand.tabletHud #compWrap { left: auto; right: max(12px, env(safe-area-inset-right, 0px)); }
+/* both: pause swaps ends of the top row; in a ship battle BOARD and FLEE sit on the minimap's side (the map is away) */
+html.leftHand #hud .row1 { flex-direction: row-reverse; } html.leftHand #pauseBtn { margin-left: 0; margin-right: auto; }
+#broad .bSide { right: auto; left: max(10px, env(safe-area-inset-left, 0px)); align-items: flex-start; }
+html.leftHand #broad .bSide { left: auto; right: max(10px, env(safe-area-inset-right, 0px)); align-items: flex-end; }
+html.leftHand #broad .bStrip span { right: auto; left: 4px; }
+html.leftHand #hud .row2 { justify-content: flex-end; } /* the ship and sea names move clear of the chart button */
+html:not(.tabletHud) #broad .bSide { max-width: 106px; } html:not(.tabletHud) #broad .bStrip { bottom: calc(170px + env(safe-area-inset-bottom, 0)); }

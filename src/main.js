@@ -777,6 +777,7 @@ function updateBoat(dt) {
   if (boat.airCd > 0) boat.airCd -= dt;
   const t = T(); let thr = boat.throttle || 0, want = null;
   const kTurn = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0), kThr = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0);
+  if (state === 'play' && battle && battle.broad && kThr) setThrottle((boat.throttle || 0) + kThr * dt * 0.7); // W and S set your speed in a ship battle too
   if (state === 'play' && !battle && !fishing) { if (kTurn) helm.angle = clamp(helm.angle + kTurn * dt * 2.2, -HMAX, HMAX); if (kThr) setThrottle((boat.throttle || 0) + kThr * dt * 0.7);
     if (boat.wp) { const dx = boat.wp.x - boat.x, dz = boat.wp.z - boat.z, d = Math.hypot(dx, dz);
       if (d < 4 + t.L * 0.3) { const au = autoOn() && boat.auto.h; boat.wp = null; boat.auto = null; courseMark.visible = false; setThrottle(0, true); if (au) openHarbor(au); else say('Arrived. Sails furled.'); }
@@ -894,6 +895,10 @@ function planRoute(x0, z0, x1, z1) {
   return out; }
 // fleeing instead of fighting: a parting bite (half a hit, like FLEE in a battle), the foe stunned behind you, the oars pulling hard
 function autoFlee(mon) { mon.stun = 7; boat.boost = 3.5; boat.grace = 3; boat.v = Math.max(boat.v, topSpeed()); damage(mon.dmg * 0.5 * (1 - defense()), mon.name + ' lunges as you flee!'); }
+// controls on the right (the default) or on the left: the swap button beside the minimap mirrors the HUD, remembered on this device
+const setHand = (left) => { document.documentElement.classList.toggle('leftHand', left); try { localStorage.setItem('pr_hand', left ? 'L' : 'R'); } catch (e) { /* ignore */ } };
+try { setHand(localStorage.getItem('pr_hand') === 'L'); } catch (e) { /* ignore */ }
+$('swapBtn').onclick = (e) => { e.stopPropagation(); setHand(!document.documentElement.classList.contains('leftHand')); say(document.documentElement.classList.contains('leftHand') ? 'Controls on the left.' : 'Controls on the right.', 1.6); };
 $('dockBtn').onclick = (e) => { e.stopPropagation(); unlockAudio(); if (tut) tut.dockTap = true; autoDock(!autoOn()); };
 let dockShown = null; function drawDockBtn() { const on = autoOn(); if (on !== dockShown) { dockShown = on; $('dockBtn').classList.toggle('on', on); } }
 
