@@ -221,9 +221,10 @@ html.tabletHud #saveBox { padding-top: calc(18px + var(--padTop)); }
 /* boarding and the treasure dig */
 .mgBoard { font-size: 17px; padding: 14px 18px; border-radius: 14px; background: linear-gradient(#9fd46e, #4a8a2a); color: #0e1a08; border-color: #2a4a14; }
 .mgBoard.off { background: #2a1c12; color: #b9a88a; border-color: #6a4a1a; font-size: 13px; max-width: 220px; }
-#mini.dig { min-height: 0; top: 0; justify-content: center; background: #050b10e8; }
+#mini.dig { min-height: 0; top: 0; justify-content: center; background: #050b10e8; overflow-y: auto; }
+@media (max-height: 460px) { #mini.dig { justify-content: flex-start; gap: 4px; padding-top: 6px; } #mini.dig .mgTitle { font-size: 15px; } #mini.dig .mgClue { font-size: 13px; } }
 .mgClue { font-style: italic; color: #f2e6c8; max-width: 340px; font-size: 16px; }
-.digGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; width: min(92vw, 380px); padding: 10px; border-radius: 14px; background: linear-gradient(#d8c08a, #b89a5e); box-shadow: inset 0 0 18px #7a5a2a; }
+.digGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; width: min(92vw, 380px, calc((100vh - 170px) * 1.25)); padding: 10px; border-radius: 14px; background: linear-gradient(#d8c08a, #b89a5e); box-shadow: inset 0 0 18px #7a5a2a; }
 .digCell { aspect-ratio: 1; padding: 0; border-radius: 9px; font-size: 24px; background: #e6d29e; border: 2px solid #c8ad72; box-shadow: none; color: #3a2614; }
 .digCell.mark { background: transparent; border-color: transparent; font-size: 30px; }
 .digCell.dug { background: #8a6a3a; border-color: #6a4a22; } .digCell.hot { background: #a8562a; } .digCell.warm { background: #9a7a3a; } .digCell.cold { background: #5a6a7a; }
@@ -238,7 +239,7 @@ html.tabletHud #saveBox { padding-top: calc(18px + var(--padTop)); }
 #tut b { color: var(--gold2); } #tut i { opacity: .75; }
 #tut.pop { animation: tutPop .4s ease-out; }
 @keyframes tutPop { 0% { scale: .92; opacity: .3; } 100% { scale: 1; opacity: 1; } }
-html:not(.tabletHud) #tut { left: 8px; right: 62px; width: auto; transform: none; top: calc(58px + env(safe-area-inset-top, 0px)); } /* the chart and view buttons sit at the top right on a phone */
+html:not(.tabletHud) #tut { left: 8px; right: 78px; width: auto; transform: none; top: calc(58px + env(safe-area-inset-top, 0px)); } /* the chart and view buttons sit at the top right on a phone */
 #tutHand { position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px; font-size: 36px; line-height: 44px; text-align: center; pointer-events: none; filter: drop-shadow(0 2px 4px #000); z-index: 6; }
 #tutHand.R { animation: tutR .9s ease-in-out infinite; } #tutHand.L { animation: tutL .9s ease-in-out infinite; } #tutHand.swipe { animation: tutSwipe 1.8s ease-in-out infinite; }
 #tutHand.D { animation: tutD .9s ease-in-out infinite; } @keyframes tutD { 50% { transform: translateY(9px); } }

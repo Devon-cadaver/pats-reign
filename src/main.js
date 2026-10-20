@@ -116,7 +116,7 @@ const fireRange = () => (P.up.ballista ? 24 + 6 * P.up.ballista : 16) + P.tier *
 let ship = null;
 // Pat's own ships wear the shipwright's hull and sail; prize ships keep their own colours
 const shipPal = () => (P.skin === 'pats' ? { ...PLAYER_PAL, ...(HULL_LOOK[P.hull] || {}), sail: P.sailD && P.sailD !== 'pats' ? P.sailD : 'pats' } : palOf(P.skin));
-function rebuildShip() { if (ship) scene.remove(ship.g); ship = buildShip(P.tier, P.up, shipPal(), 7); scene.add(ship.g); ship.g.position.set(boat.x, boat.y || 0, boat.z); ship.g.rotation.y = boat.yaw; hud(); }
+function rebuildShip() { if (ship) { scene.remove(ship.g); disposeTree(ship.g); } ship = buildShip(P.tier, P.up, shipPal(), 7); scene.add(ship.g); ship.g.position.set(boat.x, boat.y || 0, boat.z); ship.g.rotation.y = boat.yaw; hud(); }
 
 // ---------- state ----------
 let state = 'title', time = 0, zoom = 1.6, viewMode = 'chase', camYaw = Math.PI, camPos = new THREE.Vector3(0, 40, 40), camTgt = new THREE.Vector3();
@@ -140,16 +140,18 @@ const helm = { angle: 0, held: false, id: null, last: 0, tapT: 0 }; const helmEl
 const helmBox = { R: 150, cw: 354, ch: 168 }; // R: rim radius in CSS px; the hub sits 0.06 R below the canvas
 function layoutHelm() { const W = innerWidth, H = innerHeight, tablet = Math.min(W, H) >= 700;
   // phones: a small wheel (Sean); tablets: a big one
-  const R = Math.round(tablet ? clamp(Math.min(W * 0.3, H * 0.28), 100, 240) : clamp(Math.min(W * 0.24, H * 0.15), 64, 105)), cw = Math.round(R * 2.36), ch = Math.round(R * 1.12);
+  const R = Math.round(tablet ? clamp(Math.min(W * 0.3, H * 0.28, (W / 2 - 170) / 1.18), 100, 240) : clamp(Math.min(W * 0.24, H * 0.15, (W / 2 - 112) / 1.18), 64, 105)), cw = Math.round(R * 2.36), ch = Math.round(R * 1.12);
   Object.assign(helmBox, { R, cw, ch }); helmEl.style.width = cw + 'px'; helmEl.style.height = ch + 'px'; helmEl.style.clipPath = 'circle(' + Math.round(R * 1.18) + 'px at 50% ' + Math.round(ch + R * 0.06) + 'px)';
   const wrap = $('helmWrap'); wrap.style.width = cw + 'px'; wrap.style.height = ch + 'px';
   document.documentElement.style.setProperty('--helmH', ch + 'px'); document.documentElement.classList.toggle('tabletHud', tablet); helmDrawn = null; helmLift = Math.round(ch * 0.9); applyView(); }
 addEventListener('resize', layoutHelm); layoutHelm();
 function helmHub() { const r = helmEl.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height + helmBox.R * 0.06]; }
 function helmAngleAt(e) { const [cx, cy] = helmHub(); return Math.atan2(e.clientY - cy, e.clientX - cx); }
-helmEl.addEventListener('pointerdown', (e) => { const [cx, cy] = helmHub(); if (Math.hypot(e.clientX - cx, e.clientY - cy) > helmBox.R * 1.18) return; e.preventDefault(); e.stopPropagation(); if (state !== 'play') return; unlockAudio(); helm.held = true; helm.id = e.pointerId; helm.last = helmAngleAt(e); try { helmEl.setPointerCapture(e.pointerId); } catch { /* ignore */ } const now = performance.now(); if (now - helm.tapT < 300) helm.angle = 0; helm.tapT = now; });
+helmEl.addEventListener('pointerdown', (e) => { const [cx, cy] = helmHub(); if (Math.hypot(e.clientX - cx, e.clientY - cy) > helmBox.R * 1.18) return; e.preventDefault(); e.stopPropagation(); if (state !== 'play') return; unlockAudio(); helm.held = true; helm.id = e.pointerId; helm.last = helmAngleAt(e); try { helmEl.setPointerCapture(e.pointerId); } catch { /* ignore */ } helm.downT = performance.now(); helm.downX = e.clientX; helm.downY = e.clientY; });
 helmEl.addEventListener('pointermove', (e) => { if (!helm.held || e.pointerId !== helm.id) return; const a = helmAngleAt(e); helm.angle = clamp(helm.angle + angDiff(a, helm.last) * 0.8, -HMAX, HMAX); helm.last = a; });
-for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) helmEl.addEventListener(ev, (e) => { if (e.pointerId === helm.id) { helm.held = false; helm.id = null; } });
+for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) helmEl.addEventListener(ev, (e) => { if (e.pointerId === helm.id) { helm.held = false; helm.id = null;
+  // a tap is short and barely moves; two taps close together centre the wheel
+  if (ev === 'pointerup') { const now = performance.now(); if (now - (helm.downT || 0) < 220 && Math.hypot(e.clientX - (helm.downX || 0), e.clientY - (helm.downY || 0)) < 10) { if (now - helm.tapT < 350) helm.angle = 0; helm.tapT = now; } } } });
 function drawHelm() { if (!helmEl.clientWidth) return; const dpr = Math.min(2, devicePixelRatio || 1), W = Math.round(helmBox.cw * dpr), Hh = Math.round(helmBox.ch * dpr); if (helmEl.width !== W || helmEl.height !== Hh) { helmEl.width = W; helmEl.height = Hh; helmDrawn = null; } if (helmDrawn !== null && Math.abs(helmDrawn - helm.angle) < 0.002) return; helmDrawn = helm.angle;
   const g = helmCtx, R = helmBox.R * dpr, k = R / 70, cx = W / 2, cy = Hh + R * 0.06, rim = R, hub = R * 0.3; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, Hh);
   g.translate(cx, cy); g.rotate(helm.angle); g.lineCap = 'round';
@@ -181,8 +183,8 @@ let thrHold = 0;
 const keys = {}; addEventListener('keydown', (e) => { const k = e.key.toLowerCase(); keys[k] = true; if (e.key === ' ' && !/INPUT|TEXTAREA/.test(e.target.tagName || '')) { e.preventDefault(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); if (state === 'play') fire(true); }
   if (state === 'play' && battle && battle.legend && battle.legend.kind === 'elder' && k >= '1' && k <= '4') elderRune(+k - 1);
   // C changes the view; E opens and shuts the sea chart
-  if (k === 'c' && state === 'play' && !battle && !fishing) $('viewBtn').click(); if (k === 'e') { if (state === 'chart') closeChart(); else $('chartBtn').click(); }
-  if (!e.repeat && (k === 'w' || k === 's' || k === 'arrowup' || k === 'arrowdown')) { thrHold = 0; thrKeyStep(k === 'w' || k === 'arrowup' ? 1 : -1); } }); addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+  if (k === 'c' && !e.repeat && state === 'play' && !battle && !fishing) $('viewBtn').click(); if (k === 'e' && !e.repeat) { if (state === 'chart') closeChart(); else $('chartBtn').click(); }
+  if (!e.repeat && (k === 'w' || k === 's' || k === 'arrowup' || k === 'arrowdown')) { thrHold = 0; thrKeyStep(k === 'w' || k === 'arrowup' ? 1 : -1); } }); addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; }); addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 const ray = new THREE.Raycaster(), seaPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 function tapSea(x, y) { if (battle && battle.legend) { legendTap(x, y); return; } ray.setFromCamera(new THREE.Vector2((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1), camera); const p = new THREE.Vector3(); if (!ray.ray.intersectPlane(seaPlane, p)) return; setCourse(p.x, p.z); }
 function setCourse(x, z) { boat.wp = { x: clamp(x, -HALF + 20, HALF - 20), z: clamp(z, -HALF + 20, HALF - 20) }; courseMark.visible = true; sfx.throw(); if ((boat.throttle || 0) < 0.3) setThrottle(0.8, true); }
@@ -744,8 +746,8 @@ function updateWeather(dt) {
   // lightning: blue warning rings, then the bolt (catch it with your ship for Thor's Fury)
   if ((wx.type === 'storm' || wx.type === 'tornado' || wx.type === 'rogue') && wx.k > 0.6 && !wx.fading && state === 'play') { boltT -= dt; if (boltT <= 0) { boltT = rnd(2.2, 4.5); warnRing(); } }
   for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; r.t += dt; const y = ocean.heightAt(r.x, r.z) + 0.15; r.m.position.set(r.x, y, r.z); r.inner.position.set(r.x, y + 0.02, r.z); const k = r.t / r.dur; r.m.material.opacity = 0.5 + 0.5 * Math.abs(Math.sin(r.t * (6 + k * 14))); r.inner.material.opacity = 0.12 + k * 0.3;
-    if (r.t >= r.dur) { landBolt(r.x, r.z, r.R); scene.remove(r.m); scene.remove(r.inner); r.inner.material.dispose(); r.m.material.dispose(); rings.splice(i, 1); } }
-  for (let i = bolts.length - 1; i >= 0; i--) { const b = bolts[i]; b.t -= dt; b.g.visible = Math.random() < 0.85; if (b.t <= 0) { scene.remove(b.g); bolts.splice(i, 1); } }
+    if (r.t >= r.dur) { landBolt(r.x, r.z, r.R); scene.remove(r.m); scene.remove(r.inner); r.inner.material.dispose(); r.inner.geometry.dispose(); r.m.material.dispose(); rings.splice(i, 1); } }
+  for (let i = bolts.length - 1; i >= 0; i--) { const b = bolts[i]; b.t -= dt; b.g.visible = Math.random() < 0.85; if (b.t <= 0) { scene.remove(b.g); b.g.traverse((o) => o.geometry && o.geometry.dispose()); bolts.splice(i, 1); } }
   flash = Math.max(0, flash - dt * 3);
   // rogue waves: a warning, then a wall of water rolls through; bow into it rides it, side-on gets smashed
   const R = ocean.rogue;
@@ -1235,7 +1237,7 @@ function updateBoat(dt) {
   const bl = world.blockAt(nx, nz, t.B * 0.5 + t.L * 0.18) || world.blockAt(nx + Math.sin(boat.yaw) * t.L * 0.4, nz + Math.cos(boat.yaw) * t.L * 0.4, t.B * 0.3);
   if (bl) { nx = boat.x + bl.nx * dt * 4; nz = boat.z + bl.nz * dt * 4; if (boat.v > 5 && boat.hitCd <= 0) { boat.hitCd = 1.5; damage((boat.v - 4.5) * 1.6 * Math.pow(1.4, P.tier) * (1 - defense()) * (bl.kind === 'berg' ? 1.6 : 1), bl.kind === 'berg' ? 'You hit an iceberg!' : 'Ran aground!'); foam.splash(nx, nz, 1.2); sfx.creak(); } boat.v *= 0.35; if (autoOn()) autoReplan(); else boat.wp = null; }
   boat.hitCd = Math.max(0, boat.hitCd - dt);
-  if (Math.abs(nx) > HALF - 15 || Math.abs(nz) > HALF - 15) { nx = clamp(nx, -HALF + 15, HALF - 15); nz = clamp(nz, -HALF + 15, HALF - 15); if (msgT <= 0) say('The edge of the world. Only mist and falling water beyond.'); }
+  if (Math.abs(nx) > HALF - 15 || Math.abs(nz) > HALF - 15) { nx = clamp(nx, -HALF + 15, HALF - 15); nz = clamp(nz, -HALF + 15, HALF - 15); if (msgT <= 0) say('The edge of the world: the gods let no ship sail further.'); }
   boat.x = nx; boat.z = nz;
   // ride the sea
   const tl = ocean.tiltAt(boat.x, boat.z, boat.yaw, t.L, t.B); boat.y += (tl.y - boat.y) * Math.min(1, dt * 6); boat.pitch += (tl.pitch * 0.85 - boat.pitch) * Math.min(1, dt * 5); boat.roll += (-tl.roll * 0.85 - boat.roll) * Math.min(1, dt * 5);
@@ -1279,7 +1281,7 @@ function updateCamera(dt) { const t = T(); let tgt, dist, pitch; if (!!battle !=
   const off = wrightOn ? 'wright' : battle && (battle.broad || battle.legend) ? 'broad' : !!(battle || fishing); if (off !== viewOff) { viewOff = off; applyView(); }
   if (fishing && !battle) { const s = fishing.s; tgt = V((boat.x + s.x) / 2, 0, (boat.z + s.z) / 2); dist = 26 + t.L * 1.4; pitch = 0.75; }
   camTgt.lerp(tgt, Math.min(1, dt * 4)); const lx = Math.sin(camYaw), lz = Math.cos(camYaw); const want = V(camTgt.x - lx * Math.cos(pitch) * dist, Math.sin(pitch) * dist + 2, camTgt.z - lz * Math.cos(pitch) * dist); camPos.lerp(want, Math.min(1, dt * 3)); camera.position.copy(camPos); camera.lookAt(camTgt);
-  const helmCam = viewMode === 'helm' && !battle && !fishing && state !== 'title' && ship; if (helmCam) { ship.g.updateMatrixWorld(true); const eye = ship.body.localToWorld(V(t.B * 0.28, ship.deckY + 2.2 + t.L * 0.04, -t.L * 0.36)), look = ship.body.localToWorld(V(t.B * 0.1, ship.deckY + 0.6, t.L * 3)); camPos.copy(eye); camTgt.copy(look); camera.position.copy(eye); camera.lookAt(look); camera.rotateZ(-boat.roll * 0.5); }
+  const helmCam = viewMode === 'helm' && !battle && !fishing && state !== 'title' && ship; if (helmCam) { ship.g.updateMatrixWorld(true); const zb = clamp(zoom - 0.9, 0, 1.7), eye = ship.body.localToWorld(V(t.B * 0.28, ship.deckY + 2.2 + t.L * 0.04 + zb * 3, -t.L * 0.36 - zb * 7)), look = ship.body.localToWorld(V(t.B * 0.1, ship.deckY + 0.6, t.L * 3)); camPos.copy(eye); camTgt.copy(look); camera.position.copy(eye); camera.lookAt(look); camera.rotateZ(-boat.roll * 0.5); }
   const fov = helmCam ? 66 : 50; if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
   if (ship) { const op = helmCam ? 0.35 : 1; if (ship.sailMat.opacity !== op) { ship.sailMat.transparent = op < 1 || P.skin === 'ghost'; ship.sailMat.opacity = op; ship.sailMat.depthWrite = op === 1; ship.sailMat.needsUpdate = true; } } }
 
@@ -1293,8 +1295,9 @@ function begin(cont) { abortFight(); unlockAudio(); startSaga(); if (cont && sav
   boat.v = 0; boat.wp = null; for (const m of [...mons]) removeMon(m); rebuildShip(); $('title').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; fsCtl.play(); hud();
   boat.throttle = 0; helm.angle = 0; drawThrottle(); helmDrawn = null; if (tutForce || (!cont && !tutSeen())) { tutForce = false; tutStart(); } else if (!tut) say(cont ? 'Back at sea. Skål! Tap ROW, HALF or FULL to get under way.' : 'Tap ROW, HALF or FULL to get under way, and swipe along the wheel to steer. Tap the sea or the map to set a course.', 5.5); camYaw = Math.PI; }
 const codes = initSaveCodes(); $('codeBtn').onclick = () => codes.open(); $('pauseCode').onclick = () => { save(); codes.open(); };
-$('playBtn').onclick = () => begin(false); $('contBtn').onclick = () => begin(true);
-function toTitle() { state = 'title'; $('hud').classList.add('hidden'); $('title').classList.remove('hidden'); $('contBtn').classList.toggle('hidden', !localStorage.getItem(SAVE) || saveBad); }
+// a new voyage replaces the saved one, so with a save it takes a second tap within 4 s
+let newArm = 0; $('playBtn').onclick = () => { const has = !!localStorage.getItem(SAVE) && !saveBad; if (has && performance.now() - newArm > 4000) { newArm = performance.now(); $('playBtn').textContent = '⚠ TAP AGAIN: A NEW VOYAGE REPLACES YOUR SAVED ONE'; setTimeout(() => { if (performance.now() - newArm >= 3900) $('playBtn').textContent = 'NEW VOYAGE'; }, 4000); return; } newArm = 0; begin(false); }; $('contBtn').onclick = () => begin(true);
+function toTitle() { state = 'title'; $('hud').classList.add('hidden'); $('title').classList.remove('hidden'); const has = !!localStorage.getItem(SAVE) && !saveBad; $('contBtn').classList.toggle('hidden', !has); $('playBtn').textContent = has ? 'NEW VOYAGE' : 'SET SAIL'; $('playBtn').classList.toggle('ghost', has); if (has) $('contBtn').after($('playBtn')); else $('contBtn').before($('playBtn')); }
 const fsCtl = initFullscreen(() => state === 'play');
 soundToggle($('title').querySelector('.menu'), $('paused')); $('ver').textContent = 'v' + VERSION;
 
@@ -1321,7 +1324,7 @@ function autoReplan() { const A = boat.auto; if (A.replanT > 0) return; A.replan
 // the route: A* over a 6-unit grid of open water kept a hull's width off every coast, then the corners pulled straight
 // wherever the line between two points is clear
 function planRoute(x0, z0, x1, z1) {
-  const C = 6, N = Math.floor(WORLD / C), E = HALF - 25, pad = T().B * 0.6 + 2.5, cellOf = (v) => clamp(Math.floor((v + HALF) / C), 0, N - 1), mid = (i) => -HALF + (i + 0.5) * C;
+  const C = 6, N = Math.floor(WORLD / C), E = HALF - 25, pad = Math.max(T().B * 0.6 + 2.5, T().B * 0.5 + T().L * 0.15 + 1.5), cellOf = (v) => clamp(Math.floor((v + HALF) / C), 0, N - 1), mid = (i) => -HALF + (i + 0.5) * C;
   const memo = new Int8Array(N * N); // 0 not looked at yet, 1 water, 2 land or the edge of the world
   const free = (i, j) => { const k = j * N + i; if (!memo[k]) { const x = mid(i), z = mid(j); memo[k] = Math.abs(x) > E || Math.abs(z) > E || world.blockAt(x, z, pad) ? 2 : 1; } return memo[k] === 1; };
   const near = (i, j) => { if (free(i, j)) return [i, j]; for (let r = 1; r < 8; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) { const a = i + di, b = j + dj; if (Math.max(Math.abs(di), Math.abs(dj)) === r && a >= 0 && b >= 0 && a < N && b < N && free(a, b)) return [a, b]; } return null; };
