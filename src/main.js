@@ -628,7 +628,7 @@ function updateElder(dt) { const L = battle.legend, mon = battle.mon, st = mon.s
     const lt = L.mt - 1.2, open = lt >= F.win && lt <= F.win + F.wl; L.mark.visible = true; L.mark.position.set(ex, ey, ez); L.mark.scale.setScalar(R * (open ? 2.2 : 1.2) * (1 + 0.1 * Math.sin(battle.t * 14))); L.mark.material.opacity = open ? 1 : 0.3; L.mark.lookAt(camera.position); if (open && !F.flashed) { F.flashed = true; sfx.zap(); }
     if (F.hit) { L.mode = 'drop'; L.mt = 0; F.from = F.h; L.mark.material.opacity = 0.85; mon.hp -= attack() * 0.8; st.hurt = 1; pop(ex, ey + 2, ez, 'IT DROPS YOU! −' + Math.round(attack() * 0.8), '#7dff3a'); sfx.hit(); }
     else if (L.mt > 1.2 + (L.young ? 2.6 : 2) - F.grip) { L.mark.material.opacity = 0.85; L.mode = 'slam'; L.mt = 0; F.from = F.h; F.throw = Math.random() < 0.35; } }
-  if (L.mode === 'drop' || L.mode === 'slam') { const F = L.lift, dur = L.mode === 'drop' ? 0.7 : 0.35, k = Math.min(1, L.mt / dur); boat.dunk = -F.from * (1 - k * k);
+  if (L.mode === 'drop' || L.mode === 'slam') { const F = L.lift, dur = L.mode === 'drop' ? 0.7 : 0.35, k = Math.min(1, L.mt / dur); if (!F.throw) { boat.x = lerp(boat.x, F.x0, Math.min(1, dt * 2.5)); boat.z = lerp(boat.z, F.z0, Math.min(1, dt * 2.5)); } boat.dunk = -F.from * (1 - k * k);
     if (k >= 1) { boat.dunk = 0; foam.splash(boat.x, boat.z, L.mode === 'slam' ? 3 : 1.6); sfx.splash();
       if (L.mode === 'slam') { boat.shake = 1; sfx.boom(); damage(mon.dmg * (L.young ? 1.1 : 1.6) * (1 - defense()), F.throw ? mon.name + ' hurls your ship away!' : mon.name + ' slams your ship into the sea!'); if (!battle) return;
         if (F.throw) { boat.air = startAir(boat, { x: mon.x, z: mon.z, r: 8, vs: 1 }, 0.6, 1); say('…and flings you away!', 2); } }
