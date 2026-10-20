@@ -34,12 +34,13 @@ export const GHOST_PAL = { name: 'Draugr Ghost Ship', ghost: true, top: 0x1a3a2a
 const GH0 = { hull: 0x2a4a3a, dark: 0x1a2a22, glow: 0x6affb0, emis: 0x0a3a22, tunic: 0x1a3a2a, trou: 0x0f2a1f, wood: 0x2a3a30, rope: 0x6a8a7a, iron: 0x3a5a4a, skin: 0x8affc8, horn: 0x9affd0, bone: 0xb0ffd8, dark2: 0x1a2a24, deep: 0x0a1a12, cape: 0x2a5a4a, sailEm: 0x0a2a1a, rim: 0x3a6a52, sail: '#4a5a50', eye: '#6affb0' };
 let G = GH0;
 // Helheim's undead fleets, one for each of its seas (key = the sea they sail)
-const UND = (name, sail, gc) => ({ name, ghost: true, undead: true, top: gc.hull, top2: gc.glow, sail: 'ghost', shields: [[gc.dark2, gc.glow]], crew: [gc.tunic], gold: gc.glow, gc: { ...GH0, ...gc, sail } });
+const UND = (name, sail, gc0) => { const gc = { ...GH0, ...gc0, sail }; return { name, ghost: true, undead: true, top: gc.hull, top2: gc.glow, sail: 'ghost', shields: [[gc.dark2, gc.glow]], crew: [gc.tunic], gold: gc.glow, gc }; };
 export const HEL_PALS = {
   home: UND('Draugr Longships', '#4a5a50', {}),
   frost: UND('Rime Wraiths', '#5a6a7a', { hull: 0x3a4a5a, dark: 0x1a2430, glow: 0x9ae6ff, emis: 0x0a2a3a, tunic: 0x2a3a4a, trou: 0x1a2430, wood: 0x3a4654, rope: 0x8aa0b0, iron: 0x5a6a7a, skin: 0xbff4ff, horn: 0xe0f8ff, bone: 0xe8f8ff, dark2: 0x1a2430, deep: 0x0a121a, cape: 0x3a5a7a, sailEm: 0x0a1a2a, rim: 0x5a7a9a, eye: '#9ae6ff' }),
   storm: UND('Muspel Burners', '#3a2218', { hull: 0x2a1a14, dark: 0x140c08, glow: 0xff7a2a, emis: 0x3a1000, tunic: 0x3a1a10, trou: 0x1a0c08, wood: 0x2a1a12, rope: 0x8a5a3a, iron: 0x4a3a32, skin: 0xffb070, horn: 0xffd8a0, bone: 0xffe0b0, dark2: 0x1a0e0a, deep: 0x100604, cape: 0x6a2a10, sailEm: 0x3a1000, rim: 0x8a3a1a, eye: '#ff8a2a' }),
   mist: UND('Corpse-ships of Nastrond', '#4a3a4a', { hull: 0x3a2a3a, dark: 0x1e141e, glow: 0xc46aff, emis: 0x220a2a, tunic: 0x2a1a2a, trou: 0x1a101a, wood: 0x3a2a34, rope: 0x7a6a7a, iron: 0x4a3a4a, skin: 0xd8a0ff, horn: 0xe8d0ff, bone: 0xf0e0ff, dark2: 0x1e141e, deep: 0x10080e, cape: 0x4a2a5a, sailEm: 0x1a0a22, rim: 0x6a4a7a, eye: '#c46aff' }),
+  barge: UND("Hel's Soul Barge", '#5a4a2a', { hull: 0x4a3a1a, dark: 0x2a2010, glow: 0xffd24a, emis: 0x2a1a00, tunic: 0x3a2a10, trou: 0x1a1408, wood: 0x4a3a20, rope: 0xa8904a, iron: 0x6a5a3a, skin: 0xffe8a0, horn: 0xfff0c0, bone: 0xfff4d0, dark2: 0x2a2010, deep: 0x140c04, cape: 0x6a4a1a, sailEm: 0x2a1a00, rim: 0x8a6a2a, eye: '#ffd24a' }),
   warm: UND('The Bone Fleet', '#c8c0a8', { hull: 0xd8d0bc, dark: 0x6a6250, glow: 0xb06aff, emis: 0x1a1024, tunic: 0x3a3448, trou: 0x241e2a, wood: 0xb8ae98, rope: 0xa89a88, iron: 0x7a7068, skin: 0xf0e8d8, horn: 0xfff8e8, bone: 0xfffaf0, dark2: 0x4a4238, deep: 0x2a2018, cape: 0x5a3a7a, sailEm: 0x140a1e, rim: 0xa89a80, eye: '#b06aff' }),
 };
 
@@ -190,7 +191,7 @@ function serpentHead(parent, sc, pal, ghost) { const h = grp(parent); h.scale.se
 // treasure chests with glowing gold lids along the deck (the treasure knarr)
 export function addCargo(s) { const t = s.t; for (let i = 0; i < 6; i++) { const z = (i / 5 - 0.5) * t.L * 0.45, x = (i % 2 ? 1 : -1) * t.B * 0.16; const c = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.5), M(0x7a4a22)); c.position.set(x, s.deckY + 0.3, z); s.body.add(c); const l = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.12, 0.54), M(0xe6b43a, 'glow')); l.position.set(x, s.deckY + 0.6, z); s.body.add(l); } }
 export function buildShip(tier = 0, up = {}, pal = PLAYER_PAL, seed = 1) {
-  const t = SHIP_TIERS[Math.max(0, Math.min(SHIP_TIERS.length - 1, tier))], ghost = !!pal.ghost, r = rand(seed * 977 + tier * 31); G = pal.gc || GH0;
+  const t0 = SHIP_TIERS[Math.max(0, Math.min(SHIP_TIERS.length - 1, tier))], t = t0.head === 'naglfar' && (RAIDER_PALS.includes(pal) || pal === TREASURE_PAL || pal === GHOST_PAL) ? { ...t0, head: 'wyrm' } : t0, ghost = !!pal.ghost, r = rand(seed * 977 + tier * 31); G = pal.gc || GH0;
   const root = new THREE.Group(), body = grp(root), st = grp(body); // st: static parts (merged)
   const { g: hullG, Ln } = hullGeometry(t, pal, ghost); const hull = new THREE.Mesh(hullG, ghost ? new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: pal.gc && pal.gc.opaque ? 1 : 0.85, emissive: G.emis }) : VC.lambert); body.add(hull);
   if (!deckMat) { deckMat = new THREE.MeshLambertMaterial({ map: plankTex() }); deckMat.userData.shared = true; }

@@ -223,7 +223,7 @@ function levelled(e) { const d = rollDelta(), hb = P.realm === 'hel' ? 0.5 : 0;
 function spawnMon(e, x, z, o = {}) {
   let m, size, top, naval = false;
   const hel = P.realm === 'hel', sea = world.regionAt(x, z);
-  if (e.type === 'raider' || e.type === 'ghost') { const pal = hel ? (o.pal === TREASURE_PAL ? HEL_PALS.barge : HEL_PALS[sea] || HEL_PALS.home) : e.type === 'ghost' ? GHOST_PAL : o.pal || RAIDER_PALS[(Math.random() * RAIDER_PALS.length) | 0], arm = !o.merchant; const lvl = arm ? Math.min(3, e.v) : 0; const s = buildShip(e.v, { shields: lvl, armor: arm && e.v > 2 ? 1 : 0, ballista: arm && e.v > 1 ? 1 : 0, fire: 0, ram: 0, sail: e.v }, pal, (Math.random() * 999) | 0); if (o.merchant) addCargo(s);
+  if (e.type === 'raider' || e.type === 'ghost') { const pal = hel ? (o.pal === TREASURE_PAL ? HEL_PALS.barge || HEL_PALS.home : HEL_PALS[sea] || HEL_PALS.home) : e.type === 'ghost' ? GHOST_PAL : o.pal || RAIDER_PALS[(Math.random() * RAIDER_PALS.length) | 0], arm = !o.merchant; const lvl = arm ? Math.min(3, e.v) : 0; const s = buildShip(e.v, { shields: lvl, armor: arm && e.v > 2 ? 1 : 0, ballista: arm && e.v > 1 ? 1 : 0, fire: 0, ram: 0, sail: e.v }, pal, (Math.random() * 999) | 0); if (o.merchant) addCargo(s);
     m = { g: s.g, anim: (dt, st) => s.anim(dt, { speed: st.speed * s.t.speed, time, night: isNight() }), name: pal.name, ship: s, skinKey: e.type === 'ghost' ? 'ghost' : pal === TREASURE_PAL ? 'treasure' : pal.name }; size = s.len * 0.5; top = s.mastTop + 1; naval = true; }
   else { const up = e.base != null ? Math.max(0, Math.min(4, e.lv - e.base)) : 0; m = makeMonster(e.type, e.v, (o.scale || 1) * (1 + 0.06 * up), hel ? sea : null); if (up >= 1.5 && !hel) m.name = 'Dread ' + m.name; size = m.size; top = m.top; }
   m.g.position.set(x, 0, z); scene.add(m.g);
@@ -1452,7 +1452,8 @@ function drawCompass() { const lv = P.up.compass || 0; $('compWrap').classList.t
 // ---------- main loop ----------
 let last = performance.now(), ctxKey = '', fireKey = '';
 let timeScale = 1;
-function frame(now) { const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)) * timeScale; last = now; tick(dt); requestAnimationFrame(frame); }
+// the next frame is asked for first, so one error in a frame can never freeze the game (it is logged, the game runs on)
+function frame(now) { requestAnimationFrame(frame); const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)) * timeScale; last = now; try { tick(dt); } catch (e) { console.error(e); } }
 let mapFlip = 0;
 function tick(dt) { time += dt;
   if (state === 'play' || state === 'title' || state === 'harbor' || state === 'chart') {
