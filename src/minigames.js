@@ -46,16 +46,24 @@ export function createMinis({ sfx, hooks }) {
       const dmg = mult ? dmgRoll(mult) : 0; foe.hp -= dmg; hooks.shoot(mult, dmg, txt); banner(txt + (dmg ? ' −' + dmg : ''), col); (mult >= 1 ? sfx.hit : sfx.throw)(); hpDraw(); S.shots++; S.phase = 'shotFx'; S.t = 0; }
     function firePot() { if (S.phase !== 'aim' || S.fire <= 0 || S.potVolley) return; S.potVolley = true; S.fire--; you.fireUsed = (you.fireUsed || 0) + 1; const k = you.potK || 2.6, dmg = dmgRoll(k); foe.hp -= dmg; hooks.shoot(k, dmg, 'FIRE', true); banner('🔥 BURN −' + dmg, '#ff8a2a'); sfx.boom(); hpDraw(); S.shots++; S.phase = 'shotFx'; S.t = 0; }
     const DIRS = { L: '⬅', R: '➡', U: '⬆' };
-    function defendUI() { stage.innerHTML = ''; btns.innerHTML = ''; const naval = foe.naval; const opts = naval ? ['L', 'R', 'U'] : foe.moves || ['L', 'R', 'U']; const d = opts[(Math.random() * opts.length) | 0];
+    // special moves: an octopus may wrap its arms round your hull, a serpent coil round your ship; hack at it fast to break
+    // free (tap, Space or any dodge key), or it drags you under / crushes you for 1.4 x a hit
+    function specialUI() { stage.innerHTML = ''; btns.innerHTML = ''; const grab = foe.special === 'grab', need = 5 + Math.min(5, Math.round(foe.lv * 0.7));
+      S.prompt = { d: 'G', t: 0, win: 2.8 * (you.thor ? 1.25 : 1), done: false, need, hits: 0 }; hooks.foeAct('U');
+      cue.innerHTML = `<div class="mgWarn">${foe.name} ${grab ? 'wraps its arms round your hull!' : 'coils round your ship!'}</div><div class="mgPrompt">${grab ? '🐙 BREAK FREE!' : '🐍 BREAK ITS COILS!'} <span id="mgHits">0 / ${need}</span></div><div class="timer"><i id="mgTimer"></i></div>`;
+      const b = el('button', 'mgDir lit mgBreak', '🪓 HACK AT IT'); b.onpointerdown = (e) => { e.preventDefault(); breakTap(); }; btns.appendChild(b); sfx.hurt(); }
+    function breakTap() { const P = S.prompt; if (S.phase !== 'defend' || !P || P.done || P.d !== 'G') return; P.hits++; const h = $('mgHits'); if (h) h.textContent = P.hits + ' / ' + P.need; sfx.hit(); if (P.hits >= P.need) answer('G'); }
+    function defendUI() { if (foe.special && S.attacks === 0 && Math.random() < 0.22) { specialUI(); return; } stage.innerHTML = ''; btns.innerHTML = ''; const naval = foe.naval; const opts = naval ? ['L', 'R', 'U'] : foe.moves || ['L', 'R', 'U']; const d = opts[(Math.random() * opts.length) | 0];
       const what = naval ? { L: 'Ram from port!', R: 'Ram from starboard!', U: 'Arrow volley!' }[d] : (foe.attackNames || { L: 'swings from the right', R: 'swings from the left', U: 'rears up to slam' })[d];
       const win = Math.max(0.55, (foe.boss ? 1.05 : 1.35) - foe.lv * 0.08) * (you.thor ? 1.25 : 1);
       S.prompt = { d, t: 0, win, done: false }; hooks.foeAct(d);
       cue.innerHTML = `<div class="mgWarn">${foe.name} ${what}</div><div class="mgPrompt">${d === 'U' ? '⬆ BRACE ⬆' : 'DODGE ' + DIRS[d]}</div><div class="timer"><i id="mgTimer"></i></div>`;
       if (d !== 'U') { side.className = 'mgSide on ' + d; side.textContent = DIRS[d]; }
       for (const k of ['L', 'U', 'R']) { const b = el('button', 'mgDir' + (k === d ? ' lit' : ''), k === 'U' ? '🛡' : DIRS[k]); b.onpointerdown = (e) => { e.preventDefault(); answer(k); }; btns.appendChild(b); } }
-    function answer(k) { const P = S.prompt; if (S.phase !== 'defend' || !P || P.done) return; P.done = true; side.className = 'mgSide';
+    function answer(k) { const P = S.prompt; if (S.phase !== 'defend' || !P || P.done) return; if (P.d === 'G' && k !== 'G' && k !== '-') { breakTap(); return; } P.done = true; side.className = 'mgSide';
       let dmg = foe.dmg * (1 - you.def) * (0.85 + Math.random() * 0.3);
-      if (k === P.d) { dmg = P.d === 'U' ? dmg * 0.25 : 0; banner(P.d === 'U' ? 'BRACED!' : 'DODGED!', '#7dff3a'); sfx.pickup(); }
+      if (P.d === 'G') { if (k === 'G') { dmg = 0; banner('BROKE FREE!', '#7dff3a'); sfx.pickup(); } else { dmg *= 1.4; banner((foe.special === 'grab' ? 'DRAGGED UNDER −' : 'CRUSHED −') + Math.round(dmg), '#ff5a3a'); sfx.hurt(); } }
+      else if (k === P.d) { dmg = P.d === 'U' ? dmg * 0.25 : 0; banner(P.d === 'U' ? 'BRACED!' : 'DODGED!', '#7dff3a'); sfx.pickup(); }
       else if (k === 'U') { dmg *= 0.5; banner('BLOCKED −' + Math.round(dmg), '#9fd6ff'); sfx.hit(); }
       else { banner('HIT −' + Math.round(dmg), '#ff5a3a'); sfx.hurt(); }
       dmg = Math.round(dmg); if (dmg > 0) { you.hp -= dmg; S.taken += dmg; hooks.hurt(dmg); } hpDraw(); S.attacks++; S.phase = 'defFx'; S.t = 0; }

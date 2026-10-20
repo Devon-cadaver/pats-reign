@@ -139,6 +139,7 @@ button:disabled { opacity: .45; filter: grayscale(.6); }
 .deed .dn { font-size: 12px; opacity: .85; white-space: nowrap; }
 #saga:not(.hidden) ~ .fsBtn { display: none !important; }
 .digCell.sel { outline: 3px solid #ffe08a; outline-offset: -3px; }
+.mgBreak { min-width: 180px; font-size: 18px !important; animation: pulse .5s infinite; }
 #fade { position: fixed; inset: 0; z-index: 40; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 45%, #4a1070, #0a0010 72%); transition: opacity .9s ease; }
 #fade.on { opacity: 1; pointer-events: auto; }
 #gate { background: radial-gradient(ellipse at 50% 40%, #2a0a3acc, #050008f0 80%); }
