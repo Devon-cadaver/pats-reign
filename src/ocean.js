@@ -63,7 +63,7 @@ void main() {
 const FRAG = `
 uniform vec3 uDeep, uMid, uShallow, uSky, uHorizon, uSunDir, uSunCol, uFoamCol;
 uniform float uTime, uFlash, uAmbient, uSunK, uFoamK, uAmp;
-uniform sampler2D uDetail;
+uniform sampler2D uDetail; uniform vec4 uLamp; uniform vec3 uLampCol;
 varying vec3 vWorld; varying float vJ; varying float vH; varying float vShore; varying vec3 vN; varying float vHull; varying float vRogue;
 #include <common>
 #include <fog_pars_fragment>
@@ -97,6 +97,8 @@ void main() {
   float foam = smoothstep(1.0 - D, 1.2 - D, nz) * min(1.0, D * 3.0) + smoothstep(0.9, 0.96, vShore);
   foam = clamp(foam, 0.0, 1.0);
   col = mix(col, uFoamCol * (uAmbient + diff * uSunK * 0.7 + 0.25), foam * 0.92);
+  if (uLamp.w > 0.0) { float ld = length(vWorld.xz - uLamp.xy), lk = uLamp.w * smoothstep(uLamp.z, 0.0, ld); vec3 Ld = normalize(vec3(uLamp.x, 4.0, uLamp.y) - vWorld); float ls = pow(max(dot(R, Ld), 0.0), 36.0);
+    col += uLampCol * lk * (0.22 + 0.5 * foam + ls * 2.2) + uLampCol * pow(max(dot(R, Ld), 0.0), 8.0) * 0.14 * uLamp.w * smoothstep(uLamp.z * 1.6, 0.0, ld); }
   col += vec3(0.75, 0.85, 1.0) * uFlash * (0.4 + fres);
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
@@ -126,6 +128,7 @@ export function createOcean(scene, { size = 420, seg = 170, world = 1000, shore 
     uDeep: { value: C(0x06324f) }, uMid: { value: C(0x1d7f98) }, uShallow: { value: C(0x37c4b4) }, uFoamCol: { value: C(0xf4fbff) },
     uSky: { value: C(0x5aa8e0) }, uHorizon: { value: C(0xcfe6f2) }, uSunDir: { value: new THREE.Vector3(0.4, 0.6, -0.7).normalize() }, uSunCol: { value: C(0xfff1d0) },
     uHA: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) }, uHB: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) }, uHC: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) },
+    uLamp: { value: new THREE.Vector4(0, 0, 20, 0) }, uLampCol: { value: new THREE.Color(0xffa850) },
     uRA: { value: new THREE.Vector4(0, 0, 1, 0) }, uRB: { value: new THREE.Vector4(0, 10, 60, 0) },
     uShore: { value: null }, uDetail: { value: null }, uWorld: { value: new THREE.Vector3(-world / 2, -world / 2, world) },
   }]);
@@ -174,11 +177,11 @@ function softDisc(S = 64) { const c = document.createElement('canvas'); c.width 
   r.addColorStop(0, 'rgba(255,255,255,0.95)'); r.addColorStop(0.45, 'rgba(255,255,255,0.55)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, S, S);
   for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(0,0,0,' + (0.25 + Math.random() * 0.3) + ')'; g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(Math.random() * S, Math.random() * S, 2 + Math.random() * 6, 0, 6.28); g.fill(); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
-export function createFoam(scene, ocean, max = 700) {
+export function createFoam(scene, ocean, max = 700, { color = 0xf2faff } = {}) {
   const geo = new THREE.InstancedBufferGeometry(); const base = new THREE.PlaneGeometry(1, 1); base.rotateX(-Math.PI / 2); geo.index = base.index; geo.attributes.position = base.attributes.position; geo.attributes.uv = base.attributes.uv;
   const off = new Float32Array(max * 4), alpha = new Float32Array(max), aOff = new THREE.InstancedBufferAttribute(off, 4), aA = new THREE.InstancedBufferAttribute(alpha, 1); aOff.setUsage(THREE.DynamicDrawUsage); aA.setUsage(THREE.DynamicDrawUsage);
   geo.setAttribute('aOff', aOff); geo.setAttribute('aA', aA); geo.instanceCount = 0;
-  const mat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, fog: true, uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { map: { value: softDisc() }, uLight: { value: 1 } }]),
+  const mat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, fog: true, uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { map: { value: softDisc() }, uLight: { value: 1 }, uColor: { value: new THREE.Color(color) } }]),
     vertexShader: `attribute vec4 aOff; attribute float aA; varying vec2 vUv; varying float vA;
 #include <common>
 #include <fog_pars_vertex>
@@ -187,22 +190,22 @@ void main() { vUv = uv; vA = aA; vec3 p = position * aOff.w; vec4 mvPosition;
  gl_Position = projectionMatrix * mvPosition;
  #include <fog_vertex>
 }`,
-    fragmentShader: `uniform sampler2D map; uniform float uLight; varying vec2 vUv; varying float vA;
+    fragmentShader: `uniform sampler2D map; uniform float uLight; uniform vec3 uColor; varying vec2 vUv; varying float vA;
 #include <common>
 #include <fog_pars_fragment>
-void main() { vec4 t = texture2D(map, vUv); gl_FragColor = vec4(vec3(0.95, 0.98, 1.0) * uLight, t.a * vA);
+void main() { vec4 t = texture2D(map, vUv); gl_FragColor = vec4(uColor * uLight, t.a * vA);
  #include <fog_fragment>
 }` });
   const mesh = new THREE.Mesh(geo, mat); mesh.frustumCulled = false; mesh.renderOrder = 1; scene.add(mesh);
   const parts = [];
   // kind 'flat' sits on the water and spreads; 'spray' is a billboard flung up that falls back
-  function add(x, z, o = {}) { if (parts.length >= max) parts.shift(); parts.push({ x, z, y: o.y || 0, vx: o.vx || 0, vz: o.vz || 0, vy: o.vy || 0, s: o.s || 1, grow: o.grow ?? 0.6, life: o.life || 3, max: o.life || 3, a: o.a ?? 0.8, spray: !!o.spray }); }
+  function add(x, z, o = {}) { if (parts.length >= max) parts.shift(); parts.push({ x, z, y: o.y || 0, vx: o.vx || 0, vz: o.vz || 0, vy: o.vy || 0, s: o.s || 1, grow: o.grow ?? 0.6, life: o.life || 3, max: o.life || 3, a: o.a ?? 0.8, spray: !!o.spray, g: o.g ?? 14 }); }
   function splash(x, z, power = 1) { for (let i = 0; i < 10 * power; i++) { const a = Math.random() * 6.28, v = (1.5 + Math.random() * 3) * power; add(x, z, { spray: true, y: ocean.heightAt(x, z) + 0.2, vx: Math.cos(a) * v, vz: Math.sin(a) * v, vy: (4 + Math.random() * 5) * Math.sqrt(power), s: 0.5 + Math.random() * 0.6 * power, life: 0.9 + Math.random() * 0.5, grow: 0.3, a: 0.9 }); }
     for (let i = 0; i < 4 * power; i++) add(x + (Math.random() - 0.5) * power, z + (Math.random() - 0.5) * power, { s: 1.2 * power, grow: 1.4 * power, life: 2.5, a: 0.7 }); }
   function update(dt) { let n = 0;
     for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.life -= dt; if (p.life <= 0) { parts.splice(i, 1); continue; } }
     for (const p of parts) { p.x += p.vx * dt; p.z += p.vz * dt; const k = p.life / p.max;
-      if (p.spray) { p.vy -= 14 * dt; p.y += p.vy * dt; const sea = ocean.heightAt(p.x, p.z); if (p.y < sea) { p.y = sea; p.vy = 0; p.vx *= 0.5; p.vz *= 0.5; } }
+      if (p.spray) { p.vy -= p.g * dt; p.y += p.vy * dt; const sea = ocean.heightAt(p.x, p.z); if (p.y < sea) { p.y = sea; p.vy = 0; p.vx *= 0.5; p.vz *= 0.5; } }
       else { p.vx *= 1 - dt * 0.8; p.vz *= 1 - dt * 0.8; p.y = ocean.heightAt(p.x, p.z) + 0.06; }
       p.s += p.grow * dt; off[n * 4] = p.x; off[n * 4 + 1] = p.y; off[n * 4 + 2] = p.z; off[n * 4 + 3] = p.spray ? -p.s : p.s; alpha[n] = p.a * Math.min(1, k * 2.2) * (p.spray ? 1 : Math.min(1, (1 - k) * 6 + 0.3)); n++; }
     geo.instanceCount = n; aOff.needsUpdate = true; aA.needsUpdate = true; }

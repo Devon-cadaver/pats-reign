@@ -184,3 +184,5 @@ export function setSea(level, storm = 0) { if (!ctx || !noiseBuf) return;
   if (!sea) { const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 450; const g = ctx.createGain(); g.gain.value = 0; s.connect(f).connect(g).connect(master); s.start();
     const lfo = ctx.createOscillator(); lfo.frequency.value = 0.11; const lg = ctx.createGain(); lg.gain.value = 0.025; lfo.connect(lg).connect(g.gain); lfo.start(); sea = { g, f }; }
   sea.g.gain.setTargetAtTime(level * 0.05, ctx.currentTime, 0.6); sea.f.frequency.setTargetAtTime(380 + storm * 900, ctx.currentTime, 0.6); }
+// for the saga music engine (music.js): the shared context, master volume and noise buffer
+export function audioNodes() { return { ctx, master, noiseBuf }; }

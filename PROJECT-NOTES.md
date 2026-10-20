@@ -1,6 +1,6 @@
 # Pats Reign: project notes
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-19 (v0.1.0).
+READ THIS FIRST after a context compaction. Current as of 2026-10-19 (v0.2.0).
 
 ## What it is
 A phone-first Viking ocean game. Sail a longship on a 1200 x 1200 sea (Megacity in Tornado Alley is about 140 across),
@@ -20,6 +20,14 @@ Same stack as Dead City (D:\ClaudeCode\010_2026-10-16_newgame): Three.js 0.170 +
 - src/world.js: islands (heightfields, 5 biomes), sea stacks, icebergs, pine/dead/birch tree instancing, 6 harbour villages (dock, longhouse, huts, runestone, fire, boat, lanterns) on flattened plateaus, 16 wrecks, 3 lairs (Kraken's Maw NE, Serpent's Coil N, R'lyeh SW), shore map, collision `blockAt`, minimap canvas. Fixed seed.
 - src/minigames.js: overlay mini-games. Battle (aim bar weak spot: CRITICAL/HIT/GRAZE/MISS, fire pots; dodge prompts L/R/U with timer, swipe or tap; flee). Fishing (cast meter, then hold REEL to keep the catch in the net box). Salvage (alternate pulls, tension).
 - src/tornado.js: copied from Dead City + `waterspout` and `seastorm` skins. src/audio.js: Dead City audio + horn, splash, thunder, zap, coins, `setSea` surf ambience.
+
+## v0.2.0 additions
+- Four seas look nothing alike (world.js `regionWeights` blends them; env.js `REGION_LOOKS` sets water/sky/fog/light per sea): Frost N (tall snow peaks, snow pines, icebergs, bobbing ice floes, snowfall, pale icy water), Storm E (black volcanic islands with glowing lava via glowVC `aGlow`, crater smoke and embers, charred trees, basalt columns, ash fall, dark slate water, constant distant flicker), Mist W (low marsh islands, dead trees, standing stones and arches, green ghost lights, thick mist, murky green water), Warm S (white beaches, palms, coral heads, turquoise water). Home stays green. Sea stacks use each sea's stone (`STACK_PAL`). Minimap tints each sea. Crossing into a sea shows a banner. `VBIAS` makes each sea spawn its own monster colours (Frost Wyrm north, Lava Crab east, Obsidian Horror and ghost ships west, Golden Naga south).
+- Controls: no joystick. A ship's wheel (`helm`, HMAX 2.4 rad) you turn by dragging round it; it stays where you leave it; double-tap centres it. Sail lever (`boat.throttle` 0..1: STOP / ROW / HALF / FULL) sets speed and reefs the sail. A course (tap sea, minimap or chart) raises sail if it was down; hands off the wheel = the helmsman turns it toward the mark (and around land). Pulling the lever to STOP cancels the course; arriving furls the sails.
+- Upgrades: Lanterns (3 levels: stern lantern, bow + mast lanterns, iron fire braziers; PointLight on the ship + `uLamp` warm pool on the water; longer night fog), Compass (1 lodestone: heading dial top-right; 2 sunstone: also points to the nearest harbour).
+- Sea chart: pinch to zoom (to 8x), drag to pan, tap to set a course (`chartView`). Corner map stays whole-world.
+- Music (src/music.js): synthesized saga. Sailing = D Dorian 6/8 ballad (drone, frame drum, lyre, lur horn, choir). Battle = 138 bpm war drums, ostinato, horn calls, war cries, choir; `setBattle()` switches on the bar.
+- Test hook: `__pr.step(n, dt)` runs frames synchronously (the hidden browser pane runs ~1 fps); `__pr.helm`, `__pr.setThrottle`, `__pr.chartView`.
 
 ## Rules as built
 - Ship tiers: Faering, Karvi, Snekkja, Skeid, Drakkar (hull 100 x 1.75^tier x (1 + 0.25 armour)). Upgrades: shields, armor, ballista, fire, ram, sail, oars, nets; each capped at ship tier + 1. Costs in `UPG` / `TIER_COST` (timber, iron, gold).

@@ -231,6 +231,12 @@ export function buildShip(tier = 0, up = {}, pal = PLAYER_PAL, seed = 1) {
     for (let i = 0; i < t.oars; i++) for (const s of [-1, 1]) { const z = -t.L * 0.3 + (t.L * 0.6 * (i + 0.5)) / t.oars, u = z / t.L + 0.5, q = Ln.sec(u, 0.9); oarSlots.push({ s, p: V(s * q.x, q.y, z), ph: i * 0.05 }); } }
   // lantern for night
   const lantern = part(body, SPH_LO(), M(ghost ? 0x6affb0 : 0xffc86a, 'glow'), 0.18, 0.22, 0.18, 0, Ln.top(0.04) + postH * 0.4, -t.L * 0.44); lantern.visible = ghost;
+  // lantern upgrade: a stern lantern on an iron post, then bow and mast lanterns, then two great iron fire braziers
+  const lamps = [lantern], braziers = [], lv = up.lights || 0, lampOn = M(0xffc86a, 'glow');
+  const lampAt = (x, y, z, post) => { if (post) rod(st, iron, V(x, deckY, z), V(x, y + 0.35, z), 0.05); const hous = grp(st, x, y, z); part(hous, BOX(), dwood, 0.42, 0.06, 0.42, 0, 0.3, 0); part(hous, BOX(), dwood, 0.42, 0.06, 0.42, 0, -0.3, 0); for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) part(hous, BOX(), iron, 0.04, 0.6, 0.04, a * 0.19, 0, b * 0.19); part(hous, CON(), iron, 0.5, 0.25, 0.5, 0, 0.45, 0); const g = part(body, SPH_LO(), lampOn, 0.3, 0.42, 0.3, x, y, z); g.visible = false; lamps.push(g); };
+  if (lv >= 1 && !ghost) lampAt(0.35, Ln.top(0.06) + 0.5, -t.L * 0.4, true);
+  if (lv >= 2 && !ghost) { lampAt(0, Ln.top(0.94) + 0.45, t.L * 0.41, true); lampAt(0, deckY + t.mast * 0.55, mastZ + t.B * 0.1, false); }
+  if (lv >= 3 && !ghost) for (const sd of [-1, 1]) { const q = Ln.sec(0.78, Ln.vAt(0.78, deckY + 0.2)), bx = sd * Math.max(0.3, q.x - 0.45), bz = t.L * 0.28; for (const a of [0, 2.1, 4.2]) rod(st, iron, V(bx + Math.cos(a) * 0.3, deckY, bz + Math.sin(a) * 0.3), V(bx, deckY + 0.9, bz), 0.04); const bowl = part(st, CYL(), iron, 0.75, 0.3, 0.75, bx, deckY + 1.0, bz); void bowl; part(st, TOR(), M(0x3a3a3e), 0.8, 0.8, 1.4, bx, deckY + 1.15, bz, Math.PI / 2); const fl = part(body, CON(), M(0xff8a2a, 'glow'), 0.55, 0.9, 0.55, bx, deckY + 1.55, bz); const fl2 = part(body, CON(), M(0xffe27a, 'glow'), 0.3, 0.6, 0.3, bx, deckY + 1.45, bz); fl.visible = fl2.visible = false; braziers.push(fl, fl2); }
   // merge the static parts: flatten nested groups first so each material becomes one mesh
   flatten(st); mergeParts(st);
   // water mask: an invisible lid at the gunwale drawn after the ship and before the sea, so waves never show inside the hull
@@ -240,13 +246,13 @@ export function buildShip(tier = 0, up = {}, pal = PLAYER_PAL, seed = 1) {
     root.traverse((o) => { if (o.isMesh || o.isLine || o.isLineSegments) o.renderOrder = -10; }); mask.renderOrder = -9; }
   root.userData.tier = tier;
   const mtx = new THREE.Matrix4(), q4 = new THREE.Quaternion(), e = new THREE.Euler(), one = V(1, 1, 1); let ph = 0, billow = 0;
-  function anim(dt, { speed = 0, time = 0, night = false } = {}) {
+  function anim(dt, { speed = 0, time = 0, night = false, sail: sailK = 1 } = {}) {
     const k = Math.min(1, Math.abs(speed) / t.speed); ph += dt * (1.2 + k * 2.2) * (k > 0.05 ? 1 : 0.15);
     if (oars) { oarSlots.forEach((o, i) => { const a = ph + o.ph; const sweep = Math.sin(a) * 0.38 * (0.25 + k), lift = (Math.cos(a) * 0.14 - 0.02) * (0.3 + k);
         e.set(0, o.s > 0 ? -sweep : Math.PI + sweep, -0.42 + lift, 'YXZ'); q4.setFromEuler(e); mtx.compose(o.p, q4, one); oars.setMatrixAt(i, mtx); }); oars.instanceMatrix.needsUpdate = true; }
-    billow += (0.55 + k * 0.6 - billow) * Math.min(1, dt * 1.5); sail.scale.z = billow + Math.sin(time * 1.7) * 0.04; sail.scale.y = 1;
+    billow += (0.55 + k * 0.6 - billow) * Math.min(1, dt * 1.5); sail.scale.z = (billow + Math.sin(time * 1.7) * 0.04) * (0.3 + 0.7 * sailK); sail.scale.y = 0.16 + 0.84 * sailK;
     const fp = flag.geometry.attributes.position; for (let i = 0; i < fp.count; i++) { const x = fp.getX(i); fp.setZ(i, Math.sin(time * 6 + x * 5) * 0.08 * (-x / t.B) * 2); } fp.needsUpdate = true;
-    lantern.visible = ghost || night; for (const gl of potGlow) gl.scale.setScalar(0.1 * (0.85 + Math.sin(time * 9 + gl.position.x * 7) * 0.15));
+    for (const l of lamps) l.visible = ghost || night; braziers.forEach((b, i) => { b.visible = night; b.scale.y = (i % 2 ? 0.6 : 0.9) * (0.85 + Math.sin(time * 11 + i * 2) * 0.15); }); for (const gl of potGlow) gl.scale.setScalar(0.1 * (0.85 + Math.sin(time * 9 + gl.position.x * 7) * 0.15));
   }
   return { g: root, body, t, tier, anim, len: t.L, beam: t.B, mastTop, deckY, sail, ballista, bowZ: half * 1.06, sailMat, hull };
 }

@@ -22,11 +22,13 @@
       </div>
       <div class="row2"><span id="shipName">Faering</span><span id="region">Home Waters</span><span id="wxTxt"></span><span id="buff"></span></div>
     </div>
+    <div id="compWrap" class="hidden"><canvas id="compass"></canvas><span id="compTxt"></span></div>
+    <div id="seaBanner"></div>
     <canvas id="map"></canvas>
     <button id="chartBtn" class="ghost">🗺</button>
     <div id="msg"></div>
     <div id="warn"></div>
-    <div id="stick"><div id="knob"></div></div>
+    <div id="helmWrap"><canvas id="helm"></canvas><div id="throttle"><div class="tTrack"><i id="tFill"></i><b class="n1"></b><b class="n2"></b><div id="tKnob">⛵</div></div><span id="tLbl">STOP</span></div></div>
     <div id="acts">
       <button id="actBtn" class="act hidden"><em>🎣</em><small>FISH</small></button>
       <button id="fireBtn" class="act fire"><em>🗡</em><small>SPEARS</small><i class="cd" id="fireCd"></i></button>
@@ -47,7 +49,7 @@
   <div id="how" class="screen hidden">
     <h2>HOW TO PLAY</h2>
     <div class="howList">
-      <p><b>⛵ Sail.</b> Drag your left thumb for the steering circle. Tap the sea, or the map in the corner, to set a course.</p>
+      <p><b>⛵ Sail.</b> Push the sail lever up for speed (row, half sail, full sail) and turn the ship's wheel to steer; it stays where you leave it, and a double-tap centres it. Tap the sea, the corner map or the sea chart to set a course: let go of the wheel and the helmsman steers to the mark. Pull the lever right back to stop.</p>
       <p><b>🐍 Beware.</b> Sea monsters grow as your ship grows. Red and purple names are stronger than you: outrun them until you upgrade.</p>
       <p><b>⚔ Fight.</b> Throw spears or fire the ballista at range. Up close a battle starts: tap FIRE on the weak spot, then dodge the way the monster shows.</p>
       <p><b>🎣 Fish.</b> Slow down at bubbling water. Cast in the gold band, then hold REEL to keep the catch in the net. Crates give timber and iron, glints give gold.</p>
@@ -64,7 +66,7 @@
     <div id="hbList"></div>
     <button id="hbSail">SET SAIL</button>
   </div>
-  <div id="chart" class="screen hidden"><h2>SEA CHART</h2><p class="small">Tap anywhere on the chart to set your course.</p><canvas id="chartCv"></canvas><button id="chartClose" class="ghost">CLOSE</button></div>
+  <div id="chart" class="screen hidden"><h2>SEA CHART</h2><p class="small">Pinch to zoom, drag to look around, tap to set your course.</p><canvas id="chartCv"></canvas><button id="chartClose" class="ghost">CLOSE</button></div>
   <div id="paused" class="screen hidden"><h2>PAUSED</h2><p id="pauseText" class="small"></p><button id="resumeBtn">RESUME</button><button id="saveQuit" class="ghost">SAVE &amp; QUIT TO TITLE</button></div>
   <div id="sunk" class="screen hidden"><h1>VALHALLA<br>CALLS</h1><p id="sunkText"></p><button id="sunkBtn">RISE AGAIN</button></div>
   <div id="won" class="screen hidden"><h1>PAT'S<br>REIGN</h1><p id="wonText"></p><button id="wonBtn">SAIL ON</button></div>
