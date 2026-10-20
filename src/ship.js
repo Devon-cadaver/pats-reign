@@ -193,7 +193,7 @@ export function buildShip(tier = 0, up = {}, pal = PLAYER_PAL, seed = 1) {
   const t = SHIP_TIERS[Math.max(0, Math.min(SHIP_TIERS.length - 1, tier))], ghost = !!pal.ghost, r = rand(seed * 977 + tier * 31); G = pal.gc || GH0;
   const root = new THREE.Group(), body = grp(root), st = grp(body); // st: static parts (merged)
   const { g: hullG, Ln } = hullGeometry(t, pal, ghost); const hull = new THREE.Mesh(hullG, ghost ? new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: pal.gc && pal.gc.opaque ? 1 : 0.85, emissive: G.emis }) : VC.lambert); body.add(hull);
-  if (!deckMat) deckMat = new THREE.MeshLambertMaterial({ map: plankTex() });
+  if (!deckMat) { deckMat = new THREE.MeshLambertMaterial({ map: plankTex() }); deckMat.userData.shared = true; }
   const { g: deckG, deckY } = deckGeometry(t, Ln); body.add(new THREE.Mesh(deckG, ghost ? M(G.dark) : deckMat));
   const wood = M(ghost ? G.wood : 0x6a4426), dwood = M(ghost ? G.dark : 0x4a2e18), rope = M(ghost ? G.rope : 0xc8b08a), iron = M(ghost ? G.iron : 0x5a5e66), gold = M(ghost ? G.glow : pal.gold);
   // benches (thwarts) and ribs

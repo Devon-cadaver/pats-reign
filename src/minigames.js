@@ -16,7 +16,7 @@ export function createMinis({ sfx, hooks }) {
   const root = $('mini'); let cur = null;
   function open(cls) { root.className = cls; root.innerHTML = ''; root.classList.remove('hidden'); }
   const keyOf = (e) => (e.key === ' ' ? ' ' : e.key.toLowerCase()), typing = (e) => /INPUT|TEXTAREA/.test((e.target && e.target.tagName) || '');
-  addEventListener('keydown', (e) => { if (cur && cur.key && !typing(e) && cur.key(keyOf(e), true, e.repeat)) e.preventDefault(); });
+  addEventListener('keydown', (e) => { if (cur && cur.key && !typing(e) && !(hooks.paused && hooks.paused()) && cur.key(keyOf(e), true, e.repeat)) e.preventDefault(); });
   addEventListener('keyup', (e) => { if (cur && cur.key && !typing(e) && cur.key(keyOf(e), false)) e.preventDefault(); });
   function close() { root.className = 'hidden'; root.innerHTML = ''; cur = null; }
   const banner = (txt, color = '#ffd24a') => { const b = el('div', 'mgBanner', txt); b.style.color = color; root.appendChild(b); setTimeout(() => b.remove(), 1100); };
@@ -37,14 +37,14 @@ export function createMinis({ sfx, hooks }) {
       cue.innerHTML = `<div class="mgHint">${foe.naval ? 'Aim at their hull' : 'Aim for the weak spot'} · shot ${S.shots + 1} of ${S.maxShots}</div><div class="track" id="mgTrack"><div class="zone" id="mgZone"></div><div class="zone crit" id="mgCrit"></div><div class="needle" id="mgNeedle"></div></div>`;
       const z = $('mgZone'), c = $('mgCrit'); z.style.left = (S.zone - zw / 2) * 100 + '%'; z.style.width = zw * 100 + '%'; c.style.left = (S.zone - zw * 0.17) * 100 + '%'; c.style.width = zw * 34 + '%'; S.zw = zw;
       const fb = el('button', 'mgBig', you.weapon || 'FIRE'); fb.onclick = shoot; btns.appendChild(fb); $('mgTrack').onpointerdown = (e) => { e.preventDefault(); shoot(); };
-      if (S.fire > 0) { const fp = el('button', 'mgFire', '🔥 FIRE POT ×' + S.fire); fp.onclick = firePot; btns.appendChild(fp); }
+      if (S.fire > 0 && !S.potVolley) { const fp = el('button', 'mgFire', '🔥 FIRE POT ×' + S.fire); fp.onclick = firePot; btns.appendChild(fp); }
       if (foe.naval && foe.boardBlock !== undefined && !S.repelled) { if (foe.hp / foe.maxHp <= 0.4) { const b = el('button', 'mgBoard' + (foe.boardBlock ? ' off' : ''), foe.boardBlock ? '🪝 ' + foe.boardBlock : '🪝 BOARD HER'); b.onclick = () => { if (S.phase !== 'aim') return; if (foe.boardBlock) { banner(foe.boardBlock, '#c8c8c8'); return; } boardStart(); }; btns.appendChild(b); }
         else if ((you.hooks || 0) > 0) cue.insertAdjacentHTML('beforeend', '<div class="mgHint">🪝 Bring her hull below 40% to board</div>'); } }
     function dmgRoll(mult) { return Math.max(1, Math.round(you.atk * mult * (you.thor ? 2 : 1) * (0.85 + Math.random() * 0.3))); }
     function shoot() { if (S.phase !== 'aim') return; const d = Math.abs(S.mark - S.zone) / (S.zw / 2); let mult, txt, col;
       if (d < 0.34) { mult = 2; txt = 'CRITICAL!'; col = '#ffd24a'; } else if (d < 1) { mult = 1; txt = 'HIT'; col = '#ffffff'; } else if (d < 2) { mult = 0.4; txt = 'GRAZE'; col = '#c8c8c8'; } else { mult = 0; txt = 'MISS'; col = '#8a9aa8'; }
       const dmg = mult ? dmgRoll(mult) : 0; foe.hp -= dmg; hooks.shoot(mult, dmg, txt); banner(txt + (dmg ? ' −' + dmg : ''), col); (mult >= 1 ? sfx.hit : sfx.throw)(); hpDraw(); S.shots++; S.phase = 'shotFx'; S.t = 0; }
-    function firePot() { if (S.phase !== 'aim' || S.fire <= 0) return; S.fire--; you.fireUsed = (you.fireUsed || 0) + 1; const dmg = dmgRoll(2.6); foe.hp -= dmg; hooks.shoot(2.6, dmg, 'FIRE', true); banner('🔥 BURN −' + dmg, '#ff8a2a'); sfx.boom(); hpDraw(); S.phase = 'shotFx'; S.t = 0; }
+    function firePot() { if (S.phase !== 'aim' || S.fire <= 0 || S.potVolley) return; S.potVolley = true; S.fire--; you.fireUsed = (you.fireUsed || 0) + 1; const k = you.potK || 2.6, dmg = dmgRoll(k); foe.hp -= dmg; hooks.shoot(k, dmg, 'FIRE', true); banner('🔥 BURN −' + dmg, '#ff8a2a'); sfx.boom(); hpDraw(); S.shots++; S.phase = 'shotFx'; S.t = 0; }
     const DIRS = { L: '⬅', R: '➡', U: '⬆' };
     function defendUI() { stage.innerHTML = ''; btns.innerHTML = ''; const naval = foe.naval; const opts = naval ? ['L', 'R', 'U'] : foe.moves || ['L', 'R', 'U']; const d = opts[(Math.random() * opts.length) | 0];
       const what = naval ? { L: 'Ram from port!', R: 'Ram from starboard!', U: 'Arrow volley!' }[d] : (foe.attackNames || { L: 'swings from the right', R: 'swings from the left', U: 'rears up to slam' })[d];
@@ -92,7 +92,7 @@ export function createMinis({ sfx, hooks }) {
     cur = { key: battleKey, update(dt) { S.t += dt;
       if (S.phase === 'intro' && S.t > (o.firstStrike === false ? 0.2 : 1.0)) { if (o.board) boardStart(); else if (o.firstStrike === false) { S.phase = 'defend'; S.maxAtk = foe.attacks || 1; S.attacks = 0; defendUI(); } else { S.phase = 'aim'; aimUI(); } }
       else if (S.phase === 'aim') { const sp = (0.75 + foe.lv * 0.1) * (foe.boss ? 1.25 : 1); S.mark += S.dir * sp * dt; if (S.mark > 1) { S.mark = 2 - S.mark; S.dir = -1; } if (S.mark < 0) { S.mark = -S.mark; S.dir = 1; } const n = $('mgNeedle'); if (n) n.style.left = S.mark * 100 + '%'; }
-      else if (S.phase === 'shotFx' && S.t > 0.55) { if (foe.hp <= 0) end('win'); else if (S.shots >= S.maxShots) { S.shots = 0; S.phase = 'defend'; S.maxAtk = foe.attacks || 1; S.attacks = 0; defendUI(); } else { S.phase = 'aim'; aimUI(); } }
+      else if (S.phase === 'shotFx' && S.t > 0.55) { if (foe.hp <= 0) end('win'); else if (S.shots >= S.maxShots) { S.shots = 0; S.potVolley = false; S.phase = 'defend'; S.maxAtk = foe.attacks || 1; S.attacks = 0; defendUI(); } else { S.phase = 'aim'; aimUI(); } }
       else if (S.phase === 'defend' && S.prompt) { S.prompt.t += dt; const k = 1 - S.prompt.t / S.prompt.win, tm = $('mgTimer'); if (tm) tm.style.width = clamp(k, 0, 1) * 100 + '%'; if (k <= 0 && !S.prompt.done) answer('-'); }
       else if (S.phase === 'defFx' && S.t > 0.6) { if (you.hp <= 0) end('sunk'); else if (S.attacks >= S.maxAtk) { S.phase = 'aim'; aimUI(); } else { S.phase = 'defend'; defendUI(); } }
       else if (S.phase === 'grapple') { const sp = 0.85 + foe.lv * 0.08; S.mark += S.dir * sp * dt; if (S.mark > 1) { S.mark = 2 - S.mark; S.dir = -1; } if (S.mark < 0) { S.mark = -S.mark; S.dir = 1; } const n = $('mgNeedle'); if (n) n.style.left = S.mark * 100 + '%'; }

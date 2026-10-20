@@ -6,7 +6,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 
 const mats = new Map();
 // kind: 'skin' matte, 'flat' faceted, 'metal' shiny, 'glow' unlit, 'wet' glossy creature skin, 'ghost' see-through glow
-export const M = (c, kind = 'skin') => { const k = c + ':' + kind; if (!mats.has(k)) mats.set(k,
+export const M = (c, kind = 'skin') => { const k = c + ':' + kind; if (!mats.has(k)) { mats.set(k,
   kind === 'glow' ? new THREE.MeshBasicMaterial({ color: c })
   : kind === 'ghost' ? new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending })
   : kind === 'metal' ? new THREE.MeshPhongMaterial({ color: c, shininess: 70, specular: 0x666666 })
@@ -14,9 +14,10 @@ export const M = (c, kind = 'skin') => { const k = c + ':' + kind; if (!mats.has
   : kind === 'fin' ? new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide })
   : kind === 'finglow' ? new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide, transparent: true, opacity: 0.6, depthWrite: false })
   : kind === 'flat' ? new THREE.MeshLambertMaterial({ color: c, flatShading: true })
-  : new THREE.MeshLambertMaterial({ color: c })); return mats.get(k); };
+  : new THREE.MeshLambertMaterial({ color: c })); mats.get(k).userData.shared = true; } return mats.get(k); };
 export const VC = { lambert: new THREE.MeshLambertMaterial({ vertexColors: true }), wet: new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 40, specular: 0x34444a }), flat: new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), double: new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }) };
-const geos = new Map(); export const geo = (k, make) => { if (!geos.has(k)) geos.set(k, make()); return geos.get(k); };
+const geos = new Map(); export const geo = (k, make) => { if (!geos.has(k)) { const g = make(); g.userData.shared = true; geos.set(k, g); } return geos.get(k); };
+for (const m of Object.values(VC)) m.userData.shared = true;
 export const SPH = () => geo('sph', () => new THREE.SphereGeometry(0.5, 14, 10));
 export const SPH_LO = () => geo('sphlo', () => new THREE.SphereGeometry(0.5, 8, 6));
 export const HEMI = () => geo('hemi', () => new THREE.SphereGeometry(0.5, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2));

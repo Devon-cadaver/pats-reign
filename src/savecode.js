@@ -10,6 +10,10 @@ const b64 = (bytes) => { let s = ''; for (const b of bytes) s += String.fromChar
 const unb64 = (s) => { const t = atob(s.replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(t, (ch) => ch.charCodeAt(0)); };
 const check = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36).slice(-4).toUpperCase().padStart(4, '0'); };
 const pipe = async (bytes, stream) => new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+// unpacking stops past cap bytes, so a small code that expands to hundreds of megabytes is refused (the exploit tester)
+const pipeCapped = async (bytes, stream, cap) => { const rd = new Blob([bytes]).stream().pipeThrough(stream).getReader(), parts = []; let n = 0;
+  for (;;) { const { done, value } = await rd.read(); if (done) break; n += value.length; if (n > cap) { try { await rd.cancel(); } catch { /* ignore */ } throw new Error('That code is too big to be a Pats Reign save code.'); } parts.push(value); }
+  const out = new Uint8Array(n); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; } return out; };
 
 export async function makeCode() {
   const data = {}; for (const k of keys()) data[k] = localStorage.getItem(k);
@@ -19,18 +23,23 @@ export async function makeCode() {
 }
 // reads a code and returns { data, summary } or throws an Error with a message for the player
 export async function readCode(code) {
-  const m = /^(PR[01])-([A-Za-z0-9_-]+)-([0-9A-Z]{4})$/.exec(String(code).replace(/\s+/g, '').trim()); if (!m) throw new Error("That doesn't look like a Pats Reign save code.");
+  const txt = String(code).replace(/\s+/g, '').trim(); if (txt.length > 20000) throw new Error('That code is far too long to be a Pats Reign save code.');
+  const m = /^(PR[01])-([A-Za-z0-9_-]+)-([0-9A-Z]{4})$/.exec(txt); if (!m) throw new Error("That doesn't look like a Pats Reign save code.");
   if (check(m[2]) !== m[3]) throw new Error('That code has a typo in it. Copy it again, all of it.');
-  let bytes = unb64(m[2]); if (m[1] === 'PR1') { if (typeof DecompressionStream === 'undefined') throw new Error('This browser is too old to read save codes.'); bytes = await pipe(bytes, new DecompressionStream('deflate-raw')); }
+  let bytes = unb64(m[2]); if (m[1] === 'PR1') { if (typeof DecompressionStream === 'undefined') throw new Error('This browser is too old to read save codes.'); bytes = await pipeCapped(bytes, new DecompressionStream('deflate-raw'), 262144); } if (bytes.length > 262144) throw new Error('That code is too big to be a Pats Reign save code.');
   const data = JSON.parse(new TextDecoder().decode(bytes)); const clean = {}; for (const k in data) if (KEEP.test(k) && typeof data[k] === 'string') clean[k] = data[k];
-  if (!clean.pr_save) throw new Error('That code has no voyage in it.');
+  if (!clean.pr_save) throw new Error('That code has no voyage in it.'); if (clean.pr_save.length > 100000) throw new Error('That code is too big to be a Pats Reign save code.');
   return { data: clean, summary: summarize(clean.pr_save) };
 }
-export function applyCode(data) { for (const k of keys()) localStorage.removeItem(k); for (const k in data) localStorage.setItem(k, data[k]); }
+// replaces this device's voyage; if the new one cannot be stored, the old one is put back and it returns false
+export function applyCode(data) { const old = {}; for (const k of keys()) old[k] = localStorage.getItem(k);
+  try { for (const k of keys()) localStorage.removeItem(k); for (const k in data) localStorage.setItem(k, data[k]); return true; }
+  catch { try { for (const k of keys()) localStorage.removeItem(k); for (const k in old) localStorage.setItem(k, old[k]); } catch { /* ignore */ } return false; } }
 function summarize(raw) {
-  let s = null; try { s = JSON.parse(raw || 'null'); } catch { /* ignore */ } if (!s) return 'No voyage saved yet. Set sail first!';
-  const ups = Object.values(s.up || {}).reduce((a, b) => a + (+b || 0), 0), legends = Object.keys(s.legends || {}).length, r = s.res || {};
-  return '🐉 ' + (SHIP_TIERS[s.tier] || SHIP_TIERS[0]).name + ' · ⚒ ' + ups + ' upgrades · 🪙 ' + (r.g || 0) + ' · 🪵 ' + (r.w || 0) + ' · ⚙️ ' + (r.i || 0) + ' · ⚔ ' + (s.kills || 0) + ' slain · 👑 ' + legends + ' / 3 legends' + (s.wreck ? ' · ☠ a wreck to raise' : '');
+  let s = null; try { s = JSON.parse(raw || 'null'); } catch { /* ignore */ } if (!s || typeof s !== 'object') return 'No voyage saved yet. Set sail first!';
+  const n = (v, hi) => (typeof v === 'number' && isFinite(v) ? Math.max(0, Math.min(hi, Math.round(v))) : 0), o = (v) => (v && typeof v === 'object' ? v : {});
+  const ups = Object.values(o(s.up)).reduce((a, b) => a + n(b, 5), 0), legends = ['kraken', 'jorm', 'rlyeh', 'hafgufa', 'surtr', 'nidhogg'].filter((k) => Object.prototype.hasOwnProperty.call(o(s.legends), k) && s.legends[k] === true).length, r = o(s.res);
+  return '🐉 ' + SHIP_TIERS[n(s.tier, SHIP_TIERS.length - 1)].name + ' · ⚒ ' + ups + ' upgrades · 🪙 ' + n(r.g, 1e7) + ' · 🪵 ' + n(r.w, 1e7) + ' · ⚙️ ' + n(r.i, 1e7) + (n(r.s, 1e7) ? ' · 👻 ' + n(r.s, 1e7) : '') + ' · ⚔ ' + n(s.kills, 1e7) + ' slain · 👑 ' + Math.min(6, legends) + ' legends' + (s.realm === 'hel' ? ' · in Helheim' : '') + (s.wreck ? ' · ☠ a wreck to raise' : '');
 }
 
 const CSS = `
@@ -73,7 +82,7 @@ export function initSaveCodes() {
     try { await navigator.clipboard.writeText(code); say('saveOutMsg', '✓ Copied! Paste it somewhere safe.', 'good'); }
     catch { sel(); let ok = false; try { ok = document.execCommand('copy'); } catch { /* ignore */ } say('saveOutMsg', ok ? '✓ Copied! Paste it somewhere safe.' : 'The code is selected: press and hold it, then Copy.', ok ? 'good' : ''); } });
   $('saveLoad').addEventListener('click', async () => {
-    if (pending && pending.raw === $('saveIn').value && performance.now() - armT < 4000) { applyCode(pending.data); say('saveInMsg', '✓ Loaded! Restarting…', 'good'); setTimeout(() => location.reload(), 900); return; }
+    if (pending && pending.raw === $('saveIn').value && performance.now() - armT < 4000) { if (!applyCode(pending.data)) { pending = null; disarm(); say('saveInMsg', 'That code could not be stored on this device. Your voyage here is unchanged.', 'bad'); return; } say('saveInMsg', '✓ Loaded! Restarting…', 'good'); setTimeout(() => location.reload(), 900); return; }
     try { pending = await readCode($('saveIn').value); pending.raw = $('saveIn').value; armT = performance.now(); $('saveLoad').classList.add('armed'); $('saveLoad').textContent = '⚠️ TAP AGAIN TO REPLACE THIS DEVICE\'S VOYAGE';
       say('saveInMsg', 'This code has: ' + pending.summary, ''); setTimeout(() => { if (performance.now() - armT >= 3900) disarm(); }, 4000); }
     catch (e) { pending = null; say('saveInMsg', e.message || 'That code could not be read.', 'bad'); } });

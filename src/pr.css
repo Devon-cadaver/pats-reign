@@ -324,3 +324,9 @@ html:not(.tabletHud) #broad .bStrip { bottom: calc(204px + env(safe-area-inset-b
   html:not(.tabletHud) #acts { bottom: calc(30px + env(safe-area-inset-bottom, 0)); right: calc(max(8px, env(safe-area-inset-right, 0px)) + 68px); }
   html.leftHand:not(.tabletHud) #acts { right: auto; left: calc(max(8px, env(safe-area-inset-left, 0px)) + 68px); }
 }
+/* v0.8.0: legend fights hide the minimap (it covered Jormungandr's FLEE), and warnings and messages sit below the boss bar and hint */
+body.legendOn #map, body.legendOn #swapBtn { display: none; }
+body.legendOn #warn, body.broadOn #warn { top: calc(150px + env(safe-area-inset-top, 0px)); }
+body.legendOn #msg, body.broadOn #msg { top: calc(190px + env(safe-area-inset-top, 0px)); }
+html.tabletHud body.legendOn #warn, html.tabletHud body.broadOn #warn { top: calc(176px + var(--padTop)); }
+html.tabletHud body.legendOn #msg, html.tabletHud body.broadOn #msg { top: calc(218px + var(--padTop)); }
