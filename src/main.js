@@ -231,6 +231,7 @@ function contact(mon) {
 function enemyArrows(mon) { for (let k = 0; k < 4; k++) setTimeout(() => { if (state !== 'play') return; launch({ x: mon.x, y: 3, z: mon.z }, { x: boat.x + rnd(-2, 2), y: 1, z: boat.z + rnd(-2, 2) }, 'arrow', () => { if (!battle) damage(mon.dmg * 0.12 * (1 - defense())); }); }, k * 120); sfx.throw(); }
 function killMon(mon) { mon.dead = 0.01; mon.tag.remove(); P.kills++; const lv = mon.lv, r = mon.naval ? { w: Math.round(12 * Math.pow(1.6, lv)), i: Math.round(3 + lv * 3), g: Math.round(16 * Math.pow(1.6, lv)) } : { i: Math.round(1 + lv * 2.5), g: Math.round(12 * Math.pow(1.6, lv)) };
   if (mon.type === 'jelly') { r.i = 0; r.g = Math.round(r.g * 0.4); } if (mon.treasure) { r.g *= 3; r.i = Math.round(r.i * 1.5); say('<b>💰 The treasure is yours!</b>', 3.5); } if (mon.ambush) r.g = Math.round(r.g * 1.5);
+  if (mon.young) { r.g = Math.round(r.g * 1.5); lairCool[mon.young] = time + 150; setTimeout(() => say('<b>The ' + mon.name + ' is slain!</b> ' + LAIR_NAMES[mon.young] + ' still sleeps below.', 4.5), 600); }
   reward(r, mon.x, mon.top + 1, mon.z); foam.splash(mon.x, mon.z, 2); if (mon.fleet) fleetDown(mon.fleet);
   if (mon.type === 'ghost' && !P.relics.bane && !P.maps.some((m) => m.kind === 'relic')) setTimeout(() => giveMap('relic'), 1500); else if (mon.naval && Math.random() < (mon.treasure ? 0.6 : 0.12)) setTimeout(() => giveMap(), 1600);
   if (mon.boss) { P.legends[mon.lair] = true; world.lairs.find((l) => l.key === mon.lair).beaten = true; say('<b>' + mon.name.toUpperCase() + ' IS SLAIN!</b> Legends beaten: ' + Object.keys(P.legends).length + ' / 3', 5); sfx.horn(); if (Object.keys(P.legends).length >= 3 && !P.won) setTimeout(winGame, 2500); save(); } }
@@ -697,11 +698,20 @@ $('hbSail').onclick = () => { $('harbor').classList.add('hidden'); $('hud').clas
 
 // ---------- lairs (legend bosses) ----------
 const LAIR_NAMES = { kraken: 'The Kraken', jorm: 'Jormungandr', rlyeh: 'The Elder One' }, LAIR_NEED = { kraken: 2, jorm: 3, rlyeh: 4 };
-let lairWarned = {};
-function updateLairs() { for (const L of world.lairs) { if (L.beaten || P.legends[L.key]) continue; const d = Math.hypot(boat.x - L.x, boat.z - L.z);
-    if (d < 95 && !lairWarned[L.key]) { lairWarned[L.key] = true; say(P.tier >= LAIR_NEED[L.key] ? 'You enter ' + L.name + '. ' + LAIR_NAMES[L.key] + ' stirs below…' : L.name + ': ' + LAIR_NAMES[L.key] + ' sleeps here. Come back with a ' + SHIP_TIERS[LAIR_NEED[L.key]].name + ' or bigger.', 4); }
+// the legends always rise now. With a big enough ship it is the legend itself. In a smaller ship it is usually one of its
+// young (sized and levelled to be a hard but fair fight for your ship, half again the gold, not a legend slain), and now
+// and then (PAPA_CHANCE) the legend itself, who will wreck you: flee, and it sinks back into the deep when you are away
+const YOUNG_NAMES = { kraken: 'Kraken Hatchling', jorm: "Jormungandr's Whelp", rlyeh: 'Spawn of the Elder One' }, YOUNG_SCALE = { kraken: 3.5, jormungandr: 0.7, elder: 1.1 }, PAPA_CHANCE = 0.25;
+let lairWarned = {}; const lairCool = {};
+function updateLairs() { for (const L of world.lairs) { if (L.beaten || P.legends[L.key]) continue; const d = Math.hypot(boat.x - L.x, boat.z - L.z), big = P.tier >= LAIR_NEED[L.key];
+    if (d < 95 && !lairWarned[L.key]) { lairWarned[L.key] = true; say(big ? 'You enter ' + L.name + '. ' + LAIR_NAMES[L.key] + ' stirs below…' : L.name + ': ' + LAIR_NAMES[L.key] + ' sleeps below. It takes a ' + SHIP_TIERS[LAIR_NEED[L.key]].name + ' to face it; in a ' + T().name + ', pray only its young wake…', 5); }
     if (d > 130) lairWarned[L.key] = false;
-    if (d < 40 && P.tier >= LAIR_NEED[L.key] && !mons.some((m) => m.boss && m.lair === L.key)) { const lv = MLV[L.monster][0], mon = spawnMon({ type: L.monster, v: L.key === 'jorm' ? 0 : 0, lv }, L.x, L.z, { boss: true, lair: L.key, scale: L.monster === 'kraken' ? 17.5 : L.monster === 'elder' ? 1.5 : 1 }); mon.name = LAIR_NAMES[L.key]; warn('⚠ ' + LAIR_NAMES[L.key].toUpperCase() + ' RISES! ⚠', 4); sfx.horn(); sfx.thunder(); flash = 1; } } }
+    for (const m of mons) if (m.papa && m.lair === L.key && !m.dead && !inFight(m) && d > 120) { removeMon(m); lairCool[L.key] = time + 60; say(LAIR_NAMES[L.key] + ' sinks back into the deep.', 3); }
+    if (d < 40 && !(lairCool[L.key] > time) && !mons.some((m) => !m.dead && m.lair === L.key)) {
+      if (big || Math.random() < PAPA_CHANCE) { const lv = MLV[L.monster][0], mon = spawnMon({ type: L.monster, v: 0, lv }, L.x, L.z, { boss: true, lair: L.key, scale: L.monster === 'kraken' ? 17.5 : L.monster === 'elder' ? 1.5 : 1 }); mon.name = LAIR_NAMES[L.key]; mon.papa = !big;
+        warn('⚠ ' + LAIR_NAMES[L.key].toUpperCase() + ' RISES! ⚠' + (big ? '' : '<br>Your ' + T().name + ' is far too small: FLEE!'), big ? 4 : 6); sfx.horn(); sfx.thunder(); flash = 1; }
+      else { const lv = clamp(P.tier + 1.2, 1, MLV[L.monster][0] - 0.8), mon = spawnMon({ type: L.monster, v: 0, lv }, L.x, L.z, { lair: L.key, scale: YOUNG_SCALE[L.monster] || 0.6 });
+        Object.assign(mon, { name: YOUNG_NAMES[L.key], young: L.key, state: 'rise', rise: 0, dive: 1, riseK: 0.6, hunt: true }); warn('⚠ ' + YOUNG_NAMES[L.key].toUpperCase() + ' RISES! ⚠<br>Only a young one…', 4); sfx.horn(); } } } }
 
 // ---------- sinking, saving ----------
 function sink() { if (state !== 'play') return; state = 'sunk'; clearBroadside(); if (boat.air) { boat.air = null; if (ship.mask) ship.mask.visible = true; } battle = null; fishing = null; minis.close(); const lost = {}; for (const k of ['w', 'i', 'g', 'f']) { lost[k] = Math.floor(P.res[k] / 2); P.res[k] -= lost[k]; }

@@ -250,6 +250,14 @@ disagree with this file, this file wins.
 - env.js: fog weather near/far 4-46 -> 12-85; Frost Sea 60-260 -> 90-330; Mist Sea 18-125 -> 25-155. Falling snow and
   ash opacity 0.85 -> 0.6 (main.js fall.m.opacity).
 
+## v0.6.9: the legends always rise (Sean: baby versions for small ships, or sometimes papa who wrecks you)
+- updateLairs (main.js): at a lair (d < 40) with no lair monster alive and no cooldown: a big enough ship (LAIR_NEED) gets
+  the legend as before. A smaller one gets the legend with PAPA_CHANCE (0.25), marked mon.papa, with the warning "Your X is
+  far too small: FLEE!"; a papa sinks back into the deep once you are 120 away and not fighting it (lair rests 60 s).
+  Otherwise a young one rises: YOUNG_NAMES (Kraken Hatchling, Jormungandr's Whelp, Spawn of the Elder One), YOUNG_SCALE
+  (3.5 / 0.7 / 1.1), lv = tier + 1.2 (capped below the legend), not a boss, hunts you; killing it pays x1.5 gold, does not
+  count as a legend, and rests the lair 150 s. The approach message now says it takes an X to face the legend.
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster
