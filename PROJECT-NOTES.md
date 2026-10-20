@@ -1,45 +1,119 @@
-# Pats Reign: project notes
+# Pats Reign: project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-19 (v0.2.0).
+READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.2.1. Where older notes or memory
+disagree with this file, this file wins.
 
-## What it is
-A phone-first Viking ocean game. Sail a longship on a 1200 x 1200 sea (Megacity in Tornado Alley is about 140 across),
-avoid or fight sea monsters, fish up supplies, upgrade at harbours, survive weather, slay three legends.
-Same stack as Dead City (D:\ClaudeCode\010_2026-10-16_newgame): Three.js 0.170 + Vite 6, plain JS, synthesized audio.
+## Where things are
+- Folder: D:\ClaudeCode\012_2026-10-19_PatsViking (git, branch `main`).
+- Live: https://devon-cadaver.github.io/pats-reign/ (asset gallery: /showcase.html).
+- Repo: https://github.com/Devon-cadaver/pats-reign (public). GitHub Pages deploys on every push to `main` via
+  .github/workflows/deploy.yml, about 1 minute.
+- Built on the Dead City stack (D:\ClaudeCode\010_2026-10-16_newgame, repo Devon-cadaver/office-outbreak):
+  Three.js 0.170 + Vite 6, plain JS, synthesized audio, no image or sound files.
+- Screenshots sent to Sean live in previews/ (01-11 first art pass, 20-27 first gameplay, 30-31 rocks, 40-46 v0.2.0).
 
-## Pages
-- index.html + src/main.js: the game. Debug hook `window.__pr` (P, boat, mons, setWeather, spawnMon, startBattle, startFishing, openHarbor, landBolt, warnRing, spawnSpout, rebuildShip, timeScale, dmgLog).
-- showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ship tiers, raiders, ghost ship, every monster and variant, times of day, weather, rogue wave, waterspout, sea tornado). Debug hook `window.__sc`, `__showMonster(type, variant)`.
+## Who the user is and how they work
+- Sean (GitHub Devon-cadaver). Plays on an iPhone through Remote Control, so the live site is how they try things.
+  Wants one-line requests turned into finished, tested, pushed work, with screenshots sent (SendUserFile) to approve
+  looks. Approved publishing to GitHub Pages; normal follow-up pushes to this repo are expected without asking.
+- Asked for: game named "Pats Reign"; Viking ship on a huge, mostly-water map (bigger than Megacity); avoid sea
+  serpents, sharks, octopus, Cthulhu-like monsters until upgraded; monsters and ship grow together; fish and kill for
+  supplies; mini-games for fishing and for fighting ships and monsters; weather with big waves, lightning (catching
+  it = temporary damage/defence buff), fog, tornadoes, waterspouts, rogue LARGE waves; water must never clip through
+  the hull; Dead City-level detail on assets.
+- Later requests, all done: solid rocks; minimap bottom-left; four seas dramatically different; ship's wheel +
+  sail lever instead of joystick (wheel stays where set; on a map course it steers back to the X when released;
+  pulling the lever back is how you stop auto sailing); Lanterns upgrade; Compass as a bought upgrade; pinch zoom on
+  the big chart (tap still sets a course); Viking ballad music and dramatic battle music; wheel less sensitive and
+  only touchable on the wheel itself; corner minimap still sets a course on tap (the big chart is the same map,
+  bigger and zoomable).
 
-## Modules
-- src/ocean.js: water. 170x170 grid following the camera, 4 Gerstner waves on the GPU; `heightAt`/`tiltAt` run the same maths in JS (undoing the crest push), so everything floats on the visible surface. Detail normals + Worley foam texture, density-based foam (crests, shores, rogue crest, hull ring), sun glints, sky reflection, light through crests, shore texture (shallows turquoise, waves damped near land). `setHulls` (up to 6): near each hull the sea blends to that hull's waterline plane so crests can't cut through the planks. `rogue` = a moving sech^2 swell + trough (`{x,z,dx,dz,H,w,Lc,k}`). Far ring + sky dome. `createFoam`: instanced wake/spray discs.
-- src/env.js: time of day looks (dawn/day/dusk/night) and weather overlays (storm/rain/fog/calm), blended and pushed to ocean uniforms, fog, lights. Horizon colour = fog colour (no seam).
-- src/ship.js: `buildShip(tier, up, pal, seed)`. Lofted clinker hull (overlapping strakes, tar below waterline, painted top strake), inner skin, gunwale cap, plank deck, benches, ribs, curved stem/stern posts, heads (plain / spiral / serpent / dragon / royal gold dragon + tail), mast/yard/billowing sail (canvas textures: Pat's crest), rigging, pennant, crew of Vikings, steering oar, instanced rowing oars. Upgrades shown: shields (3 looks), iron plates, ram, ballista (twin at 3), fire pots, cargo. Invisible gunwale "water mask" drawn before the sea. Raider palettes + ghost ship.
-- src/monsters.js: `makeMonster(type, variant, scale)` -> `{ g, size, top, anim(dt, st), mats }`. Shark (5), serpent (7 incl. winged Sea Dragon), eel (3, lightning arcs), octopus (4), kraken (3), crab (3), angler (2), jelly (3), whale (3), elder (3, Cthulhu-like), jormungandr (2). SpineTube bodies follow the head's trail and arch out of the sea.
-- src/geom.js: material cache, part/grp/rod helpers, taperTube, SpineTube (live tube + dorsal fin), glowVC (vertex-colour glow), fin/wing shapes.
-- src/world.js: islands (heightfields, 5 biomes), sea stacks, icebergs, pine/dead/birch tree instancing, 6 harbour villages (dock, longhouse, huts, runestone, fire, boat, lanterns) on flattened plateaus, 16 wrecks, 3 lairs (Kraken's Maw NE, Serpent's Coil N, R'lyeh SW), shore map, collision `blockAt`, minimap canvas. Fixed seed.
-- src/minigames.js: overlay mini-games. Battle (aim bar weak spot: CRITICAL/HIT/GRAZE/MISS, fire pots; dodge prompts L/R/U with timer, swipe or tap; flee). Fishing (cast meter, then hold REEL to keep the catch in the net box). Salvage (alternate pulls, tension).
-- src/tornado.js: copied from Dead City + `waterspout` and `seastorm` skins. src/audio.js: Dead City audio + horn, splash, thunder, zap, coins, `setSea` surf ambience.
+## Pages and modules
+- index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
+- showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster
+  variant, times of day, weather, rogue wave, waterspout, sea tornado). Hooks `window.__sc`, `__showMonster(type, v)`.
+- src/ocean.js: the sea. 170x170 grid following the camera, 4 Gerstner waves on the GPU; `heightAt`/`tiltAt` run the
+  same maths in JS so ships and monsters float on the visible surface. Ripple normals, density-based foam (crests,
+  shores, rogue crest, hull ring), sun glints, sky reflection, light through crests, shore map (turquoise shallows,
+  waves damped near land). `setHulls` (up to 6): near each hull the sea settles onto that hull's waterline plane, so
+  crests cannot cut through the planks. `rogue` = moving sech^2 swell + trough. `uLamp` = warm lantern pool.
+  `createFoam(scene, ocean, max, { color })`: instanced wake/spray/smoke discs (per-particle gravity `g`).
+- src/env.js: time-of-day looks, weather overlays, and `REGION_LOOKS` per sea, blended by `regionWeights`; pushes
+  colours to the ocean, sky dome, fog and lights. Horizon colour = fog colour (no seam).
+- src/ship.js: `buildShip(tier, up, pal, seed)`. Lofted clinker hull, deck, benches, ribs, curved stems, heads
+  (plain / spiral / serpent / dragon / royal gold dragon + tail), mast, reefable billowing sail (Pat's crest
+  textures), rigging, Viking crew, steering oar, instanced rowing oars. Upgrades shown on the model: shields, iron
+  plates, ram, ballista (twin at 3), fire pots, lanterns (stern / bow + mast / iron braziers). Invisible gunwale
+  "water mask" drawn before the sea so no water shows inside the hull. Raider palettes + ghost ship. `anim(dt,
+  { speed, time, night, sail })`.
+- src/monsters.js: `makeMonster(type, variant, scale)`. Shark (5 incl. Megalodon), serpent (7 incl. winged Sea
+  Dragon), eel (3, lightning arcs), octopus (4), kraken (3), crab (3), angler (2), jelly (3), whale (3), elder (3,
+  Cthulhu-like), jormungandr (2). SpineTube bodies follow the head's trail and arch out of the sea.
+- src/geom.js: material cache, part/grp/rod, taperTube, SpineTube, glowVC (vertex-colour glow via `aGlow`), shapes.
+- src/world.js: 1200 x 1200 sea, fixed seed. `regionAt`, `regionWeights`. Five waters:
+  Home (centre, green pines), Frost N (tall snow peaks, snow pines, icebergs, bobbing ice floes), Storm E (black
+  volcanic islands with glowing lava rivers, crater smoke + embers, charred trees, basalt columns), Mist W (low marsh
+  islands, dead trees, standing stones and arches, green ghost lights), Warm S (white beaches, palms, coral heads).
+  Sea stacks in each sea's stone (`STACK_PAL`), 6 harbour villages on flattened plateaus, 16 wrecks, 3 lairs
+  (Kraken's Maw NE, Serpent's Coil N, R'lyeh SW), collision `blockAt`, region-tinted 512px map canvas,
+  `update()` bobs floes and floats wisps. Exposes `volcanoes` for smoke.
+- src/minigames.js: Battle (aim bar weak spot CRITICAL/HIT/GRAZE/MISS, fire pots, dodge prompts L/R/U, flee),
+  Fishing (cast meter, then hold REEL to keep the catch in the net box), Salvage (alternate pulls, tension).
+- src/music.js: synthesized saga. Sailing: D Dorian 6/8 ballad at 66 bpm (drone, frame drum, lyre, lur horn, choir).
+  Battle: 138 bpm war drums, ostinato, horn calls, "HU!" war cries, choir. `startSaga()`, `setBattle(on)`.
+- src/audio.js: Dead City sfx + horn, splash, thunder, zap, coins, creak, `setSea` surf, `audioNodes()`.
+- src/tornado.js: Dead City twisters + `waterspout` and `seastorm` skins. fullscreen.js, perf.js: from Dead City.
 
-## v0.2.0 additions
-- Four seas look nothing alike (world.js `regionWeights` blends them; env.js `REGION_LOOKS` sets water/sky/fog/light per sea): Frost N (tall snow peaks, snow pines, icebergs, bobbing ice floes, snowfall, pale icy water), Storm E (black volcanic islands with glowing lava via glowVC `aGlow`, crater smoke and embers, charred trees, basalt columns, ash fall, dark slate water, constant distant flicker), Mist W (low marsh islands, dead trees, standing stones and arches, green ghost lights, thick mist, murky green water), Warm S (white beaches, palms, coral heads, turquoise water). Home stays green. Sea stacks use each sea's stone (`STACK_PAL`). Minimap tints each sea. Crossing into a sea shows a banner. `VBIAS` makes each sea spawn its own monster colours (Frost Wyrm north, Lava Crab east, Obsidian Horror and ghost ships west, Golden Naga south).
-- Controls: no joystick. A ship's wheel (`helm`, HMAX 2.4 rad) you turn by dragging round it; it stays where you leave it; double-tap centres it. Sail lever (`boat.throttle` 0..1: STOP / ROW / HALF / FULL) sets speed and reefs the sail. A course (tap sea, minimap or chart) raises sail if it was down; hands off the wheel = the helmsman turns it toward the mark (and around land). Pulling the lever to STOP cancels the course; arriving furls the sails.
-- Upgrades: Lanterns (3 levels: stern lantern, bow + mast lanterns, iron fire braziers; PointLight on the ship + `uLamp` warm pool on the water; longer night fog), Compass (1 lodestone: heading dial top-right; 2 sunstone: also points to the nearest harbour).
-- Sea chart: pinch to zoom (to 8x), drag to pan, tap to set a course (`chartView`). Corner map stays whole-world.
-- Music (src/music.js): synthesized saga. Sailing = D Dorian 6/8 ballad (drone, frame drum, lyre, lur horn, choir). Battle = 138 bpm war drums, ostinato, horn calls, war cries, choir; `setBattle()` switches on the bar.
-- Test hook: `__pr.step(n, dt)` runs frames synchronously (the hidden browser pane runs ~1 fps); `__pr.helm`, `__pr.setThrottle`, `__pr.chartView`.
+## Controls (v0.2.1)
+- Ship's wheel (bottom middle): drag around it to turn; it turns at half the finger's rate, gentle near centre
+  (rudder = sign * |angle/HMAX|^1.4, HMAX 2.4 rad). Only the round wheel takes touches (`clip-path: circle` + radius
+  check). It stays where you leave it; double-tap centres it.
+- Sail lever beside it: STOP / ROW / HALF / FULL (`boat.throttle` 0..1); sail reefs to match. STOP cancels a course.
+- Courses: tap the sea, tap the corner minimap (whole world, bottom-left), or open the sea chart (🗺 button: pinch
+  zoom to 8x, drag to pan, tap to set). Setting a course raises the sail if it was down. Hands off the wheel = the
+  helmsman turns it toward the mark and around land (`steerAround`). Arriving furls the sails.
+- FIRE (spears, or ballista once bought) auto-aims; context button: DOCK / FIGHT / SALVAGE / FISH / SLOW.
+- Pinch or mouse wheel zooms the sea view; TOP / CHASE camera button. Keyboard: A/D wheel, W/S lever, space fire.
+- HUD: hull bar, timber/iron/gold/fish, ship name, sea, weather, Thor timer; compass top-right once bought.
 
 ## Rules as built
-- Ship tiers: Faering, Karvi, Snekkja, Skeid, Drakkar (hull 100 x 1.75^tier x (1 + 0.25 armour)). Upgrades: shields, armor, ballista, fire, ram, sail, oars, nets; each capped at ship tier + 1. Costs in `UPG` / `TIER_COST` (timber, iron, gold).
-- Monsters: level per species variant in `MLV`; spawn table centred on the ship tier (weaker and up to +1.7 stronger), region bias, night anglers and ghost ships. hp 45 x 1.65^lv, dmg 9 x 1.5^lv. Name tag colour = danger. Strong monsters chase at 0.86 x your top speed and give up after 24 s, so you can outrun them.
-- Contact starts a battle (they strike first); FIGHT button at range lets you strike first. Ram upgrade hits at speed. Jellies just sting. 3.5 s grace after a battle.
-- Fishing spots (fish / crates / treasure) and floating barrels around the ship; wrecks to salvage (8 min respawn). Harbours sell fish, repair, upgrade, save.
-- Weather: calm, rain, storm, fog, waterspouts, sea tornado, rogue waves (region-biased). Storms drop blue warning rings; a bolt landing on your ship = Thor's Fury 22 s (x2 damage, +0.3 defence). Rogue wave: bow into it = bonus, side-on = heavy damage + spin. Spouts spin and damage, rain fish.
-- Legends: Kraken needs a Snekkja, Jormungandr a Skeid, Elder One a Drakkar. All three = "PAT'S REIGN" ending.
+- Ships: Faering, Karvi, Snekkja, Skeid, Drakkar. Hull 100 x 1.75^tier x (1 + 0.25 x armour). Speeds 9 to 13.
+- Upgrades (UPG in main.js, costs timber/iron/gold, each capped at ship tier + 1): shields, armor, ballista, fire
+  pots, ram, sail, oars, lights (Lanterns 3), compass (2: lodestone heading, sunstone harbour pointer), nets.
+  Ship sizes in TIER_COST.
+- Monsters: levels in MLV; spawn table centred on ship tier (weaker, and up to +1.7 stronger); region type bias
+  (REGION_BIAS) and variant bias (VBIAS: Frost Wyrm north, Lava Crab east, Obsidian Horror + ghost ships west,
+  Golden Naga south); anglers at night; ghost ships at night or in the Mist Sea. hp 45 x 1.65^lv, dmg 9 x 1.5^lv.
+  Tag colour = danger. Strong monsters chase at 0.86 x your top speed and give up after 24 s.
+- Contact starts a battle (foe strikes first); FIGHT button lets you strike first; ram hits at speed; jellies sting.
+  3.5 s grace after a battle. Win = gold/iron (ships also timber). Flee = hull hit, foe stunned, lever to FULL.
+- Fishing spots (fish / crates / treasure), floating barrels, wrecks to salvage (8 min respawn). Harbours sell fish,
+  repair, upgrade, save.
+- Weather (region-biased): calm, rain, storm, fog, waterspouts, sea tornado, rogue waves. Storms drop blue rings; a
+  bolt on your ship = Thor's Fury 22 s (x2 damage, +0.3 defence). Rogue wave: bow into it = bonus, side-on = heavy
+  damage + spin. Spouts spin and damage, and rain fish. The Storm Sea flickers and rumbles all the time.
+- Each sea: own water/sky/fog/light, minimap colour, entry banner, particles (snow north, ash east), props.
+- Night: day cycle 420 s; lanterns light the ship and sea and push the night fog back.
+- Legends: Kraken (needs Snekkja), Jormungandr (Skeid), Elder One (Drakkar). All three = "PAT'S REIGN" ending.
 - Sinking: half cargo lost, respawn at last harbour. Save in localStorage `pr_save` (dock, every 30 s, pause menu).
-- Controls: left-half drag = steering circle (camera-relative), tap sea = course, tap minimap/chart = course (autopilot steers around land), pinch/wheel zoom, TOP/CHASE camera, FIRE (spears / ballista auto-aim), context button (DOCK / FIGHT / SALVAGE / FISH / SLOW).
 
-## Workflow
-- Patch with node .cjs scripts in the scratchpad (normalise CRLF; anchors must match; never put `\n` escapes inside template-literal patch text that writes into JS strings). Build with `npx vite build`. Dev server: preview_start `game` (port 5173, falls back to 5174).
-- Testing in the hidden browser pane runs at ~2 fps: use `__pr.timeScale`, drive through `window.__pr`, auto-tap mini-games with DOM events.
-- Live: https://devon-cadaver.github.io/pats-reign/ (repo Devon-cadaver/pats-reign, branch main, GitHub Pages via .github/workflows/deploy.yml on push, about 1 min). Commit as sean duvall <328185017+Devon-cadaver@users.noreply.github.com> (set in the repo config); GitHub rejects pushes that use the private email. No gh CLI on this PC: API calls use the git credential manager token.
+## Workflow and gotchas
+- Patch with node .cjs scripts in the scratchpad; normalise CRLF; anchors must match exactly. Long multi-file bash
+  heredocs break in this shell: write patch text files with the Write tool, then run node.
+- Never put `\n` escapes in patch text that lands inside JS string literals (it becomes a real newline).
+- Build `npx vite build`. Dev server: preview_start `game` (port 5173, falls back to 5174).
+- The browser pane is hidden while Sean is on Remote Control and runs at about 1 frame a second. Use
+  `__pr.step(n, dt)` to run frames synchronously before screenshots, `__pr.timeScale` for longer runs, and drive
+  everything through `window.__pr` (P, boat, helm, setThrottle, chartView, mons, spawnMon, startBattle,
+  startFishing, openHarbor, setWeather, landBolt, warnRing, spawnSpout, rebuildShip, minis, world, ocean, dmgLog).
+  Screenshots can lag a frame behind: wait 2-3 s and take another if the HUD text looks stale.
+- Anything drawn on a canvas must skip when its element is hidden (clientWidth 0), or it throws and freezes the loop.
+- Commit as `sean duvall <328185017+Devon-cadaver@users.noreply.github.com>` (set in repo config; GitHub rejects the
+  private email). End commit messages with the Co-Authored-By line the system gives. No gh CLI on this PC: GitHub API
+  calls use the git credential manager token (`git credential fill`), never printed.
+- After pushing, wait for the Pages run (Actions API, head_sha) and check the live JS bundle contains the version.
+- Version lives in src/version.js and package.json (bump both).
+
+## Ideas not built yet
+- Crew management, ship naming, quests from harbour jarls, trade routes between harbours, co-op raids, an aurora
+  over the Frost Sea at night, more boss phases, sea birds over the Warm Sea, itch.io zip like Dead City.
