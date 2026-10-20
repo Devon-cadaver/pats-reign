@@ -1,6 +1,6 @@
 # Pats Reign: project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.4.2. Where older notes or memory
+READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.4.3. Where older notes or memory
 disagree with this file, this file wins.
 
 ## Where things are
@@ -97,8 +97,11 @@ disagree with this file, this file wins.
   where you leave it; double-tap centres it. Sean's idea after iPad testing (v0.4.1).
 - Sail telegraph above the wheel: tap STOP / ROW / HALF / FULL (0, 0.3, 0.6, 1; slide sideways too). STOP cancels a
   course. No control needs a downward swipe (iPad Safari exits full screen on those).
-- Layout: html.wideHud (W >= 600) keeps map and buttons in the corners; phones put them above the wheel (--helmH);
-  html.tabletHud (min side >= 700) makes the telegraph, map and buttons bigger. helmLift shifts the camera view up
+- Layout (v0.4.3, Sean's phone layout): phones (html:not(.tabletHud), shorter side < 700, portrait or landscape) get a
+  small wheel (R = clamp(min(W*0.24, H*0.15), 64, 105)) bottom centre, the telegraph stacked up the left with FULL on top,
+  the minimap bottom right with the action buttons above it, a bigger pause top right with the sea chart button and
+  TOP/CHASE under it, and the compass on the left under the ship name. Tablets (html.tabletHud): big wheel centred,
+  telegraph above it, bigger map bottom left and buttons bottom right. helmLift shifts the camera view up
   (setViewOffset) by 0.9 x the wheel height so the ship clears the controls; battles use their own offset.
 - iPad full screen: Safari's own swipe-down exits element fullscreen and a page cannot stop it. The fix is the home-screen
   web app: public/manifest.webmanifest (display fullscreen) + icons (icon-180/192/512, a gold wheel with PR) +

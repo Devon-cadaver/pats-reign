@@ -89,17 +89,18 @@ const pUp = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pinch0 =
 
 // ---------- the helm: a big ship's wheel across the bottom of the screen, its hub just below the edge so the top half
 // shows. Swipe along it to turn it; it stays where you leave it, and on a set course it steers itself back toward the
-// mark when you let go. Double-tap it to centre it. Above it the sail telegraph (STOP / ROW / HALF / FULL) sets sail and
+// mark when you let go. Double-tap it to centre it. The sail telegraph (STOP / ROW / HALF / FULL; up the left on phones, above the wheel on tablets) sets sail and
 // oar power with a tap; STOP furls the sails and cancels the course. Taps and sideways swipes only, so nothing on the
 // controls is a downward swipe (iPad Safari closes full screen on those). ----------
 const HMAX = 2.4; // the wheel turns about 140 degrees each way
 const helm = { angle: 0, held: false, id: null, last: 0, tapT: 0 }; const helmEl = $('helm'), helmCtx = helmEl.getContext('2d'); let helmDrawn = null;
 const helmBox = { R: 150, cw: 354, ch: 168 }; // R: rim radius in CSS px; the hub sits 0.06 R below the canvas
-function layoutHelm() { const W = innerWidth, H = innerHeight, wide = W >= 600;
-  const R = Math.round(clamp(Math.min(W * (wide ? 0.3 : 0.4), H * 0.28), 100, 240)), cw = Math.round(R * 2.36), ch = Math.round(R * 1.12);
+function layoutHelm() { const W = innerWidth, H = innerHeight, tablet = Math.min(W, H) >= 700;
+  // phones: a small wheel (Sean); tablets: a big one
+  const R = Math.round(tablet ? clamp(Math.min(W * 0.3, H * 0.28), 100, 240) : clamp(Math.min(W * 0.24, H * 0.15), 64, 105)), cw = Math.round(R * 2.36), ch = Math.round(R * 1.12);
   Object.assign(helmBox, { R, cw, ch }); helmEl.style.width = cw + 'px'; helmEl.style.height = ch + 'px'; helmEl.style.clipPath = 'circle(' + Math.round(R * 1.18) + 'px at 50% ' + Math.round(ch + R * 0.06) + 'px)';
-  const wrap = $('helmWrap'); wrap.style.width = cw + 'px'; wrap.style.height = ch + 40 + 'px';
-  document.documentElement.style.setProperty('--helmH', ch + 'px'); document.documentElement.classList.toggle('wideHud', wide); document.documentElement.classList.toggle('tabletHud', Math.min(W, H) >= 700); helmDrawn = null; helmLift = Math.round(ch * 0.9); applyView(); }
+  const wrap = $('helmWrap'); wrap.style.width = cw + 'px'; wrap.style.height = ch + 'px';
+  document.documentElement.style.setProperty('--helmH', ch + 'px'); document.documentElement.classList.toggle('tabletHud', tablet); helmDrawn = null; helmLift = Math.round(ch * 0.9); applyView(); }
 addEventListener('resize', layoutHelm); layoutHelm();
 function helmHub() { const r = helmEl.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height + helmBox.R * 0.06]; }
 function helmAngleAt(e) { const [cx, cy] = helmHub(); return Math.atan2(e.clientY - cy, e.clientX - cx); }
@@ -605,7 +606,7 @@ $('saveQuit').onclick = () => { save(); $('paused').classList.add('hidden'); toT
 $('howBtn').onclick = () => { $('title').classList.add('hidden'); $('how').classList.remove('hidden'); }; $('howBack').onclick = () => { $('how').classList.add('hidden'); $('title').classList.remove('hidden'); };
 function begin(cont) { unlockAudio(); startSaga(); if (!cont) { localStorage.removeItem(SAVE); Object.assign(P, { tier: 0, up: { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 0, oars: 0, nets: 0, lights: 0, compass: 0 }, res: { w: 20, i: 5, g: 40, f: 0 }, legends: {}, kills: 0, home: 0, won: false, tod: 0.16, wreck: null }); placeWreck(); P.hp = maxHp(); const h = world.harbors[0]; boat.x = h.dock.x + Math.cos(h.dir) * 12; boat.z = h.dock.z + Math.sin(h.dir) * 12; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); for (const L of world.lairs) L.beaten = false; }
   boat.v = 0; boat.wp = null; for (const m of [...mons]) removeMon(m); rebuildShip(); $('title').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; fsCtl.play(); hud();
-  boat.throttle = 0; helm.angle = 0; drawThrottle(); helmDrawn = null; say(cont ? 'Back at sea. Skål! Tap ROW, HALF or FULL above the wheel to get under way.' : 'Tap ROW, HALF or FULL above the wheel to get under way, and swipe along the wheel to steer. Tap the sea or the map to set a course.', 5.5); camYaw = Math.PI; }
+  boat.throttle = 0; helm.angle = 0; drawThrottle(); helmDrawn = null; say(cont ? 'Back at sea. Skål! Tap ROW, HALF or FULL to get under way.' : 'Tap ROW, HALF or FULL to get under way, and swipe along the wheel to steer. Tap the sea or the map to set a course.', 5.5); camYaw = Math.PI; }
 const codes = initSaveCodes(); $('codeBtn').onclick = () => codes.open(); $('pauseCode').onclick = () => { save(); codes.open(); };
 $('playBtn').onclick = () => begin(false); $('contBtn').onclick = () => begin(true);
 function toTitle() { state = 'title'; $('hud').classList.add('hidden'); $('title').classList.remove('hidden'); $('contBtn').classList.toggle('hidden', !localStorage.getItem(SAVE)); }

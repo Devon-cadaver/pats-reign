@@ -32,7 +32,8 @@
     <button id="chartBtn" class="ghost">🗺</button>
     <div id="msg"></div>
     <div id="warn"></div>
-    <div id="helmWrap"><div id="throttle" aria-label="Sail telegraph"><button data-n="0" class="on">STOP</button><button data-n="1">ROW</button><button data-n="2">HALF</button><button data-n="3">FULL</button></div><canvas id="helm"></canvas></div>
+    <div id="helmWrap"><canvas id="helm"></canvas></div>
+    <div id="throttle" aria-label="Sail telegraph"><button data-n="0" class="on">STOP</button><button data-n="1">ROW</button><button data-n="2">HALF</button><button data-n="3">FULL</button></div>
     <div id="acts">
       <button id="actBtn" class="act hidden"><em>🎣</em><small>FISH</small></button>
       <button id="fireBtn" class="act fire"><em>🗡</em><small>SPEARS</small><i class="cd" id="fireCd"></i></button>
@@ -54,7 +55,7 @@
   <div id="how" class="screen hidden">
     <h2>HOW TO PLAY</h2>
     <div class="howList">
-      <p><b>⛵ Sail.</b> Tap the sail telegraph above the wheel for speed (ROW, HALF sail, FULL sail; STOP furls the sails) and swipe along the big ship's wheel to steer; it stays where you leave it, and a double-tap centres it. On a keyboard, W and S set the sails, A and D turn the wheel. Tap the sea, the corner map or the sea chart to set a course: let go of the wheel and the helmsman steers to the mark. Tap STOP to stop.</p>
+      <p><b>⛵ Sail.</b> Tap the sail telegraph for speed (ROW, HALF sail, FULL sail; STOP furls the sails) and swipe along the big ship's wheel to steer; it stays where you leave it, and a double-tap centres it. On a keyboard, W and S set the sails, A and D turn the wheel. Tap the sea, the corner map or the sea chart to set a course: let go of the wheel and the helmsman steers to the mark. Tap STOP to stop.</p>
       <p><b>🐍 Beware.</b> Sea monsters grow as your ship grows. Red and purple names are stronger than you: outrun them until you upgrade.</p>
       <p><b>⚔ Fight.</b> Throw spears or fire the ballista at range. Up close a battle starts: tap FIRE on the weak spot, then dodge the way the monster shows.</p>
       <p><b>🎣 Fish.</b> Slow down at bubbling water. Cast in the gold band, then hold REEL to keep the catch in the net. Crates give timber and iron, glints give gold.</p>

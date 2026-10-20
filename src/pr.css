@@ -30,7 +30,7 @@ button:disabled { opacity: .45; filter: grayscale(.6); }
 #hullTxt { position: absolute; inset: 0; font: 700 11px/16px Georgia, serif; text-align: center; }
 #res { display: flex; gap: 8px; font-size: 13px; flex: 1; min-width: 0; white-space: nowrap; }
 #res b { font-weight: 700; margin-left: 2px; }
-#pauseBtn { pointer-events: auto; padding: 4px 8px; font-size: 12px; margin-left: auto; }
+#pauseBtn { pointer-events: auto; padding: 7px 13px; font-size: 16px; margin-left: auto; }
 #hud .row2 { display: flex; gap: 9px; font-size: 12px; margin-top: 3px; white-space: nowrap; overflow: hidden; }
 #shipName { color: var(--gold2); font-weight: 700; }
 #buff { color: #9fe0ff; font-weight: 700; }
@@ -135,13 +135,21 @@ button:disabled { opacity: .45; filter: grayscale(.6); }
 :root { --helmH: 168px; }
 #helmWrap { position: absolute; left: 50%; bottom: env(safe-area-inset-bottom, 0); transform: translateX(-50%); width: 354px; height: 208px; pointer-events: none; }
 #helm { position: absolute; left: 0; bottom: 0; pointer-events: auto; touch-action: none; filter: drop-shadow(0 -2px 8px #000a); }
-#throttle { position: absolute; top: 0; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; pointer-events: auto; touch-action: none; }
+#throttle { position: absolute; left: 50%; bottom: calc(var(--helmH) + 8px + env(safe-area-inset-bottom, 0)); transform: translateX(-50%); display: flex; gap: 3px; pointer-events: auto; touch-action: none; }
 #throttle button { font: 700 11px Georgia, serif; letter-spacing: 1px; min-width: 40px; padding: 7px 5px; border-radius: 8px; background: #2a1c12e0; color: var(--ink); border: 1.5px solid var(--gold); box-shadow: 0 2px 6px #000a; }
 #throttle button.on { background: linear-gradient(#f2d27a, #c8962a); color: #1a120a; border-color: #6a4a1a; }
-html:not(.wideHud) #map { bottom: calc(var(--helmH) + 44px + env(safe-area-inset-bottom, 0)); width: 96px; height: 96px; }
-html:not(.wideHud) #chartBtn, html:not(.wideHud) #viewBtn { bottom: calc(var(--helmH) + 148px + env(safe-area-inset-bottom, 0)); }
-html:not(.wideHud) #acts { bottom: calc(var(--helmH) + 44px + env(safe-area-inset-bottom, 0)); gap: 8px; }
-html:not(.wideHud) .act { width: 58px; height: 58px; } html:not(.wideHud) #actBtn { width: 56px; height: 56px; }
+/* phones (Sean's layout): small wheel bottom centre, the sail telegraph stacked up the left with FULL on top, the minimap
+   bottom right with the action buttons above it, the sea chart button under a bigger pause at the top right, the
+   compass on the left under the ship's name */
+html:not(.tabletHud) #throttle { left: max(8px, env(safe-area-inset-left, 0px)); bottom: calc(8px + env(safe-area-inset-bottom, 0)); transform: none; flex-direction: column-reverse; gap: 5px; }
+html:not(.tabletHud) #throttle button { min-width: 60px; padding: 9px 4px; font-size: 12px; }
+html:not(.tabletHud) #map { left: auto; right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(8px + env(safe-area-inset-bottom, 0)); width: 96px; height: 96px; }
+html:not(.tabletHud) #acts { right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(114px + env(safe-area-inset-bottom, 0)); gap: 8px; }
+html:not(.tabletHud) .act { width: 58px; height: 58px; } html:not(.tabletHud) #actBtn { width: 56px; height: 56px; }
+html:not(.tabletHud) #chartBtn { left: auto; right: max(8px, env(safe-area-inset-right, 0px)); bottom: auto; top: calc(54px + env(safe-area-inset-top, 0)); font-size: 20px; padding: 6px 11px; }
+html:not(.tabletHud) #viewBtn { left: auto; right: max(8px, env(safe-area-inset-right, 0px)); bottom: auto; top: calc(102px + env(safe-area-inset-top, 0)); }
+html:not(.tabletHud) #compWrap { right: auto; left: max(8px, env(safe-area-inset-left, 0px)); top: calc(66px + env(safe-area-inset-top, 0)); }
+body.busy #throttle { display: none; }
 .homeTip { max-width: 300px; opacity: .85; }
 /* tablets: bigger telegraph, map and buttons to match the bigger wheel */
 html.tabletHud #throttle { gap: 6px; } html.tabletHud #throttle button { font-size: 15px; min-width: 70px; padding: 10px 8px; }
