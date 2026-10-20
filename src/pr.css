@@ -244,14 +244,14 @@ html.tabletHud #saveBox { padding-top: calc(18px + var(--padTop)); }
 #prize p { max-width: 360px; }
 #mini.dig .mgFlee { position: static; margin-top: 6px; }
 /* the tutorial card, its pointing hand, and the last tip at the harbour */
-#tut { position: absolute; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); width: min(92vw, 440px); box-sizing: border-box; background: #1a120ae8; border: 1.5px solid var(--gold); border-radius: 12px; padding: 7px 12px 10px; font-size: 14px; line-height: 1.38; text-align: left; white-space: normal; pointer-events: auto; box-shadow: 0 4px 14px #000a; }
+#tut { position: fixed; z-index: 40; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); width: min(92vw, 440px); box-sizing: border-box; background: #1a120ae8; border: 1.5px solid var(--gold); border-radius: 12px; padding: 7px 12px 10px; font-size: 14px; line-height: 1.38; text-align: left; white-space: normal; pointer-events: auto; box-shadow: 0 4px 14px #000a; }
 #tut .tutHead { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; letter-spacing: 2px; color: var(--gold); margin-bottom: 4px; }
 #tut .tutHead button { padding: 3px 10px; font-size: 11px; letter-spacing: 1px; }
 #tut b { color: var(--gold2); } #tut i { opacity: .75; }
 #tut.pop { animation: tutPop .4s ease-out; }
 @keyframes tutPop { 0% { scale: .92; opacity: .3; } 100% { scale: 1; opacity: 1; } }
 html:not(.tabletHud) #tut { left: 8px; right: 78px; width: auto; transform: none; top: calc(58px + env(safe-area-inset-top, 0px)); } /* the chart and view buttons sit at the top right on a phone */
-#tutHand { position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px; font-size: 36px; line-height: 44px; text-align: center; pointer-events: none; filter: drop-shadow(0 2px 4px #000); z-index: 6; }
+#tutHand { position: fixed; z-index: 41; pointer-events: none; width: 44px; height: 44px; margin: -22px 0 0 -22px; font-size: 36px; line-height: 44px; text-align: center; pointer-events: none; filter: drop-shadow(0 2px 4px #000); z-index: 6; }
 #tutHand.R { animation: tutR .9s ease-in-out infinite; } #tutHand.L { animation: tutL .9s ease-in-out infinite; } #tutHand.swipe { animation: tutSwipe 1.8s ease-in-out infinite; }
 #tutHand.D { animation: tutD .9s ease-in-out infinite; } @keyframes tutD { 50% { transform: translateY(9px); } }
 @keyframes tutR { 50% { transform: translateX(9px); } } @keyframes tutL { 50% { transform: translateX(-9px); } }
