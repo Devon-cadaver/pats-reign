@@ -76,6 +76,21 @@ disagree with this file, this file wins.
 - Not done yet / ideas: roster page does not show the new ships' skins or the dig; on-foot island exploration (kept as
   the landing-party dig on purpose); more relics; ship names.
 
+## v0.5.1: a quick tutorial and a shorter HOW TO PLAY (Sean: "make a quick tutorial and shorten the how to play")
+- Design decision: no fixed-level sea zones. Monsters scale with your ship everywhere (Sean likes free exploration and a
+  world that grows with you); the seas only change which monsters appear. Don't re-propose zone levels.
+- Tutorial (main.js, section after begin()): TUT is 5 steps, each waits for the player to do it: raise the sail (throttle
+  > 0.4), steer (yaw turned > 1.1 rad), set a course (boat.wp), a shark (tutShark spawns a shark near your level 36-50 ahead
+  and chasing; respawns if it is lost or you sink; done when it dies), head home (done in openHarbor, which shows #hbTip
+  "Last tip" and ends it). Card #tut (inside #hud; hidden by body.busy in mini-games; on a phone it sits left of the chart
+  and view buttons) with SKIP; #tutHand is a pointing emoji (beside a button, pointing in from the screen middle; down onto
+  the tablet's telegraph row; swiping on the wheel). body.tutOn moves #warn and #msg below the card. Keyboard hints show
+  only with a fine pointer.
+- When it runs: a new voyage (SET SAIL) if localStorage pr_tut is unset; HOW TO PLAY has a TUTORIAL button that always runs
+  it (continuing your voyage if there is a save). SKIP or finishing sets pr_tut. Quitting mid-tutorial and continuing keeps it.
+- HOW TO PLAY is now ten one- or two-line entries; BACK and TUTORIAL sit side by side; the screen scrolls from the top when
+  it is taller than the phone, and the full screen pill is hidden there.
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster
