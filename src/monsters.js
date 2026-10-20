@@ -437,6 +437,6 @@ export const UNDEAD = {
   warm: { pre: 'Bone', top: 0xd8d0bc, belly: 0xf4efe4, accent: 0xb06aff, eye: 0xc88aff, fin: 0x9a9080, k: 0.72 },
 };
 export function undeadPal(P, sea) { const U = UNDEAD[sea] || UNDEAD.home, mix = (a, b) => (a == null ? a : lerpHex(a, b, U.k));
-  return { ...P, name: U.pre + ' ' + P.name, top: mix(P.top, U.top), belly: mix(P.belly ?? P.top, U.belly), accent: U.accent, fin: mix(P.fin, U.fin), wing: mix(P.wing, U.fin), dark: mix(P.dark, U.top), horn: mix(P.horn, U.belly), eye: U.eye, glow: true, pattern: 'rings', undead: sea }; }
+  return { ...P, name: P.name.includes(U.pre) ? P.name : /^The /.test(P.name) ? 'The ' + U.pre + ' ' + P.name.slice(4) : U.pre + ' ' + P.name, top: mix(P.top, U.top), belly: mix(P.belly ?? P.top, U.belly), accent: U.accent, fin: mix(P.fin, U.fin), wing: mix(P.wing, U.fin), dark: mix(P.dark, U.top), horn: mix(P.horn, U.belly), eye: U.eye, glow: true, pattern: 'rings', undead: sea }; }
 export function makeMonster(type, vi = 0, scale = 1, undead = null) { const sp = SPECIES[type], P0 = sp.variants[((vi % sp.variants.length) + sp.variants.length) % sp.variants.length], P = undead ? undeadPal(P0, undead) : P0; const m = sp.build(P, scale * (P.scale || 1)); m.type = type; m.variant = P; m.name = P.name;
   m.g.traverse((o) => { if (o.isMesh || o.isLine || o.isLineSegments) o.castShadow = false; }); return m; }

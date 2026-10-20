@@ -183,7 +183,7 @@ let thrHold = 0;
 const keys = {}; addEventListener('keydown', (e) => { const k = e.key.toLowerCase(); keys[k] = true; if (e.key === ' ' && !/INPUT|TEXTAREA/.test(e.target.tagName || '')) { e.preventDefault(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); if (state === 'play') fire(true); }
   if (state === 'play' && battle && battle.legend && battle.legend.kind === 'elder' && k >= '1' && k <= '4') elderRune(+k - 1);
   // C changes the view; E opens and shuts the sea chart
-  if (k === 'c' && !e.repeat && state === 'play' && !battle && !fishing) $('viewBtn').click(); if (k === 'e' && !e.repeat) { if (state === 'chart') closeChart(); else $('chartBtn').click(); }
+  if (k === 'c' && !e.repeat && state === 'play' && !battle && !fishing) $('viewBtn').click(); if (k === 'f' && !e.repeat && state === 'play' && !battle && !fishing) doAction(); if (k === 'e' && !e.repeat) { if (state === 'chart') closeChart(); else $('chartBtn').click(); }
   if (!e.repeat && (k === 'w' || k === 's' || k === 'arrowup' || k === 'arrowdown')) { thrHold = 0; thrKeyStep(k === 'w' || k === 'arrowup' ? 1 : -1); } }); addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; }); addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 const ray = new THREE.Raycaster(), seaPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 function tapSea(x, y) { if (battle && battle.legend) { legendTap(x, y); return; } ray.setFromCamera(new THREE.Vector2((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1), camera); const p = new THREE.Vector3(); if (!ray.ray.intersectPlane(seaPlane, p)) return; setCourse(p.x, p.z); }
@@ -191,8 +191,10 @@ function setCourse(x, z) { boat.wp = { x: clamp(x, -HALF + 20, HALF - 20), z: cl
 const courseMark = new THREE.Mesh(new THREE.RingGeometry(1.6, 2.2, 32), new THREE.MeshBasicMaterial({ color: 0xffd24a, transparent: true, opacity: 0.8, depthWrite: false })); courseMark.rotation.x = -Math.PI / 2; courseMark.visible = false; scene.add(courseMark);
 
 // ---------- HUD ----------
+const an = (n) => (/^[AEIOU]/i.test(n) ? 'an ' : 'a ') + n;
 const rname = (k) => (world.regions || REGIONS)[k].name;
-function hud() { P.hp = Math.min(P.hp, maxHp()); $('hullFill').style.width = clamp(P.hp / maxHp(), 0, 1) * 100 + '%'; $('hullTxt').textContent = Math.ceil(P.hp) + ' / ' + maxHp(); $('rW').textContent = P.res.w; $('rI').textContent = P.res.i; $('rG').textContent = P.res.g; $('rF').textContent = P.res.f; $('rS').textContent = P.res.s || 0; $('rSw').classList.toggle('hidden', !(P.res.s > 0 || P.realm === 'hel')); $('shipName').textContent = P.shipName ? '“' + P.shipName + '”' : T().name; $('shipName').title = T().name; $('rF').parentElement.classList.toggle('hidden', !P.res.f); }
+const short = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e4 ? Math.round(n / 1000) + 'k' : String(n));
+function hud() { P.hp = Math.min(P.hp, maxHp()); $('hullFill').style.width = clamp(P.hp / maxHp(), 0, 1) * 100 + '%'; $('hullTxt').textContent = Math.ceil(P.hp) + ' / ' + maxHp(); $('rW').textContent = short(P.res.w); $('rI').textContent = short(P.res.i); $('rG').textContent = short(P.res.g); $('rF').textContent = short(P.res.f); $('rS').textContent = short(P.res.s || 0); $('rSw').classList.toggle('hidden', !(P.res.s > 0 || P.realm === 'hel')); $('shipName').textContent = P.shipName ? '“' + P.shipName + '”' : T().name; $('shipName').title = T().name; $('rF').parentElement.classList.toggle('hidden', !P.res.f); }
 function say(t, secs = 2.6) { const m = $('msg'); m.innerHTML = t; m.style.opacity = 1; msgT = secs; }
 function warn(t, secs = 3) { $('warn').innerHTML = t; warnT = secs; }
 const tmpV = new THREE.Vector3();
@@ -300,7 +302,7 @@ function killMon(mon) { if (mon.dead) return; mon.dead = 0.01; mon.tag.remove();
     if (!hel && n >= 3 && !P.won) setTimeout(winGame, 2500); if (hel && n >= 3 && !P.helWon) { P.helWon = true; setTimeout(helWin, 2500); } save(); } }
 const legendCount = (hel) => Object.keys(hel ? LAIRS_HEL : LAIRS).filter((k) => P.legends[k]).length;
 // a slain legend leaves something for the shipwright: its hide for a hull, its likeness for a sail
-function legendDesigns(key) { sagaCheck(); const got = []; for (const [k, d] of Object.entries(HULLS)) if (d.got.legend === key && !P.owned.h.includes(k)) { P.owned.h.push(k); got.push(d.name + ' hull'); }
+function legendDesigns(key) { sagaCheck(); const got = []; for (const [k, d] of Object.entries(HULLS)) if (d.got.legend === key && !P.owned.h.includes(k)) { P.owned.h.push(k); got.push(d.name + (/hull$/i.test(d.name) ? '' : ' hull')); }
   for (const [k, d] of Object.entries(SAILS)) if (d.got.legend === key && !P.owned.s.includes(k)) { P.owned.s.push(k); got.push(d.name + ' sail'); } if (got.length) { say('🎨 New at every shipwright: the ' + got.join(' and the ') + '!', 5); save(); } }
 
 // ---------- projectiles (spears, bolts, enemy arrows) ----------
@@ -490,7 +492,7 @@ function startLegend(mon) {
   ui.innerHTML = `<div class="bFoe"><b>${mon.name} <small>Lv ${Math.round(mon.lv) + 1}</small></b><div class="hp foe"><i id="bFoeHp"></i></div></div><div class="bHint" id="bHint">${hint}</div>` +
     (held ? '<button class="bFire" id="bFire">FIRE<i id="bLoad"></i></button>' : '') + '<div class="bSide"><button class="ghost" id="bFlee">FLEE</button></div>';
   $('hud').appendChild(ui); if (held) $('bFire').onpointerdown = (e) => { e.preventDefault(); e.stopPropagation(); legendFire(); }; $('bFlee').onclick = (e) => { e.stopPropagation(); endLegend('flee'); };
-  warn(kind === 'kraken' ? (young ? '⚠ THE HATCHLING ATTACKS! ⚠' : '⚠ ' + mon.name.toUpperCase() + ' SEIZES YOUR SHIP! ⚠') : kind === 'elder' ? (young ? '⚠ THE SPAWN BINDS YOUR SHIP! ⚠' : '⚠ ' + mon.name.toUpperCase() + ' BINDS YOUR SHIP! ⚠') : young ? '⚠ THE WHELP HUNTS YOU! ⚠' : '⚠ ' + mon.name.toUpperCase() + ' HUNTS YOU! ⚠', 3); sfx.horn(); sfx.thunder(); return true; }
+  warn(kind === 'kraken' ? (young ? '⚠ ' + mon.name.toUpperCase() + ' ATTACKS! ⚠' : '⚠ ' + mon.name.toUpperCase() + ' SEIZES YOUR SHIP! ⚠') : kind === 'elder' ? (young ? '⚠ ' + mon.name.toUpperCase() + ' BINDS YOUR SHIP! ⚠' : '⚠ ' + mon.name.toUpperCase() + ' BINDS YOUR SHIP! ⚠') : young ? '⚠ ' + mon.name.toUpperCase() + ' HUNTS YOU! ⚠' : '⚠ ' + mon.name.toUpperCase() + ' HUNTS YOU! ⚠', 3); sfx.horn(); sfx.thunder(); return true; }
 const legendReload = () => (battle && battle.legend && battle.legend.grab ? 0.2 : P.up.ballista ? 0.6 : 0.8);
 function krakenTentacle(L) { const t = T(), mon = battle.mon, taken = L.tents.map((x) => x.a), behind = Math.atan2(boat.x - mon.x, boat.z - mon.z); let a = 0;
   for (let k = 0; k < 16; k++) { a = Math.random() * Math.PI * 2; if (Math.abs(angDiff(a, behind)) > 1.0 && taken.every((b) => Math.abs(angDiff(a, b)) > 0.7)) break; }
@@ -681,7 +683,7 @@ function updateSea(dt) {
     if (state === 'play' && Math.hypot(f.x - boat.x, f.z - boat.z) < T().L * 0.5 + 1.5) { const k = 1 + P.tier * 0.6, r = f.kind === 'w' ? { w: Math.round(rnd(3, 7) * k) } : f.kind === 'i' ? { i: Math.round(rnd(1, 4) * k) } : f.kind === 'f' ? { f: f.amt || 1 } : f.kind === 's' ? { s: 1 } : { g: Math.round(rnd(10, 30) * k) }; reward(r, f.x, 2, f.z); foam.splash(f.x, f.z, 0.5); scene.remove(f.g); floats.splice(i, 1); } }
   for (const w of world.wrecks) if (w.looted && time > w.looted) w.looted = false;
 }
-function actionContext() { if (battle || fishing) return null; const v = boat.v;
+function actionContext() { if (battle || fishing || boat.air) return null; const v = boat.v;
   { const G = world.gate; if (G && Math.hypot(G.x - boat.x, G.z - boat.z) < 20 + T().L * 0.3) return v < 6 || !gateOpen() ? { kind: 'gate', icon: P.realm === 'hel' ? '🌅' : '🌀', label: P.realm === 'hel' ? 'HOME' : 'HEL' } : { kind: 'slow', icon: '🌀', label: 'SLOW' }; }
   for (const h of world.harbors) if (Math.hypot(h.dock.x - boat.x, h.dock.z - boat.z) < 16 + T().L * 0.3) return v < 4.5 ? { kind: 'dock', h, icon: '⚓', label: 'DOCK' } : { kind: 'slow', icon: '⚓', label: 'SLOW' };
   let nearM = null, nd = 1e9; for (const mon of mons) { if (mon.dead || mon.rise < 1 || mon.type === 'jelly') continue; const d = Math.hypot(mon.x - boat.x, mon.z - boat.z); if (d < 22 + mon.size && d < nd) { nd = d; nearM = mon; } } if (nearM) return { kind: 'fight', mon: nearM, icon: '⚔', label: 'FIGHT' };
@@ -838,7 +840,7 @@ function raiderFleet() { const n = P.tier === 0 ? 2 : P.tier < 3 ? 3 : 4;
     const id = ++EV.fleetN, pal = P.realm === 'hel' ? HEL_PALS[world.regionAt(cx, cz)] || HEL_PALS.home : RAIDER_PALS[(Math.random() * RAIDER_PALS.length) | 0], hd = Math.atan2(boat.x - cx, boat.z - cz); let got = 0;
     for (let i = 0; i < n; i++) { const lead = i === 0, st = lead ? Math.min(7, P.tier) : Math.max(0, P.tier - 1), row = Math.ceil(i / 2), off = lead ? 0 : (i % 2 ? 1 : -1) * 16 * row, back = 12 * row;
       const x = cx + Math.cos(hd) * off - Math.sin(hd) * back, z = cz - Math.sin(hd) * off - Math.cos(hd) * back; if (world.blockAt(x, z, 6)) continue;
-      const mon = spawnMon({ type: 'raider', v: st, lv: st + 0.4 + (lead ? 0.3 : 0) + (P.realm === 'hel' ? 0.5 : 0) }, x, z, { pal }); Object.assign(mon, { yaw: hd, state: 'chase', hunt: 80, fleet: id, fleetOff: off }); if (lead) mon.name = 'Warlord of the ' + pal.name; got++; }
+      const mon = spawnMon({ type: 'raider', v: st, lv: st + 0.4 + (lead ? 0.3 : 0) + (P.realm === 'hel' ? 0.5 : 0) }, x, z, { pal }); Object.assign(mon, { yaw: hd, state: 'chase', hunt: 80, fleet: id, fleetOff: off }); if (lead) mon.name = 'Warlord of ' + (/^The /.test(pal.name) ? pal.name.replace(/^The /, 'the ') : 'the ' + pal.name); got++; }
     if (!got) return false; EV.fleets[id] = { n: got, killed: 0, pal };
     warn((P.realm === 'hel' ? '⚔ A DRAUGR FLEET' : '⚔ A RAIDER FLEET') + ' to the ' + compassName(cx - boat.x, cz - boat.z) + '! ' + got + ' ships of the ' + pal.name + '. Fight them or outrun them!', 5); sfx.horn(); setTimeout(() => sfx.horn(), 800); return true; }
   return false; }
@@ -927,6 +929,7 @@ function prizeChoice(mon) { state = 'prize'; const full = P.prizes.length >= moo
 }
 
 // ---------- treasure maps: an ✕ on a real island; land there and dig ----------
+const LANDMARK_HEL = { home: ['🪦', 'the leaning grave-stone'], frost: ['🧊', 'the black ice'], storm: ['🌋', 'the smoking rock'], mist: ['💀', 'the skull on a stake'], warm: ['🦴', 'the great rib-bone'] };
 const LANDMARK = { home: ['🌲', 'the lone pine'], frost: ['🧊', 'the ice rock'], storm: ['🪨', 'the black rock'], mist: ['🗿', 'the standing stone'], warm: ['🌴', 'the leaning palm'] };
 function giveMap(kind = null) { if (P.maps.length >= 3) { say('You find another treasure map, but your sea chest already holds three.', 3); return false; }
   const relic = kind === 'relic', taken = new Set(P.maps.map((m) => m.isl)), isl0 = world.islands;
@@ -935,7 +938,7 @@ function giveMap(kind = null) { if (P.maps.length >= 3) { say('You find another 
     for (let k = 0; k < 16; k++) { const a = Math.random() * 6.28, cr = isl.R * isl.shape(a), wa = a + isl.rot, lx = isl.x + Math.cos(wa) * (cr + 9), lz = isl.z + Math.sin(wa) * (cr + 9);
       if (world.blockAt(lx, lz, 3) || Math.abs(lx) > HALF - 25 || Math.abs(lz) > HALF - 25) continue;
       const ri = (n) => (Math.random() * n) | 0; let mk, cell, dec; do { mk = [ri(5), ri(4)]; cell = [ri(5), ri(4)]; dec = [ri(5), ri(4)]; } while (Math.abs(mk[0] - cell[0]) + Math.abs(mk[1] - cell[1]) < 2 || (dec[0] === mk[0] && dec[1] === mk[1]) || (dec[0] === cell[0] && dec[1] === cell[1]));
-      const [icon, name] = LANDMARK[isl.region] || LANDMARK.home, dx = cell[0] - mk[0], dy = cell[1] - mk[1], p = (n) => n + ' pace' + (n === 1 ? '' : 's'), parts = [];
+      const [icon, name] = (P.realm === 'hel' ? LANDMARK_HEL : LANDMARK)[isl.region] || LANDMARK.home, dx = cell[0] - mk[0], dy = cell[1] - mk[1], p = (n) => n + ' pace' + (n === 1 ? '' : 's'), parts = [];
       if (dx) parts.push(p(Math.abs(dx)) + (dx > 0 ? ' east' : ' west')); if (dy) parts.push(p(Math.abs(dy)) + (dy > 0 ? ' south' : ' north'));
       const clue = (relic ? 'Where the drowned king sleeps: from ' : 'From ') + name + ', walk ' + parts.join(' and ') + '.';
       const m = { isl: i, lx, lz, kind: relic ? 'relic' : 'gold', realm: P.realm, region: isl.region, cell, clue, marks: [{ c: mk, icon }, { c: dec, icon: ['🦴', '⚓', '🐚'][ri(3)] }] };
@@ -947,7 +950,7 @@ function startDig(m) { fishing = { s: { x: m.lx, z: m.lz } }; boat.wp = null; $(
   minis.dig({ map: m, risk: m.region === 'mist' ? 0.2 : 0.13 }, (res) => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); fishing = null; boat.grace = 2; const k = P.tier + 1;
     if (res.result === 'found') { P.maps.splice(P.maps.indexOf(m), 1); P.st.digs = (P.st.digs || 0) + 1; sagaCheck();
       if (m.kind === 'relic') { P.relics.bane = true; reward({ g: 80 * k }, m.lx, 3, m.lz); say("🗝 DRAUGR'S BANE! With this rune-carved relic your grappling hooks can bite into a ghost ship (Grappling Hooks III, at night).", 6); sfx.horn(); }
-      else { reward({ w: Math.round(rnd(20, 40) * k), i: Math.round(rnd(8, 18) * k), g: Math.round(rnd(90, 180) * k) }, m.lx, 3, m.lz); say('💰 You dig up a chest of hacksilver and gold!', 4); }
+      else { reward({ w: Math.round(rnd(20, 40) * k), i: Math.round(rnd(8, 18) * k), g: Math.round(rnd(90, 180) * k), s: (m.realm || 'mid') === 'hel' ? 10 + 3 * P.tier : 0 }, m.lx, 3, m.lz); say('💰 You dig up a chest of hacksilver and gold!', 4); }
       save(); }
     else if (res.result === 'guardian') { const v = clamp(Math.round(P.tier - 1), 0, 2); let first = null; for (let n = 0; n < 2; n++) { const a = Math.random() * 6.28, mon = spawnMon({ type: 'crab', v, lv: Math.max(MLV.crab[v], P.tier - 0.4 + (P.realm === 'hel' ? 0.5 : 0)) }, m.lx + Math.sin(a) * 9, m.lz + Math.cos(a) * 9); mon.state = 'chase'; if (!first) first = mon; }
       warn('🦀 Giant crabs burst out of the sand!', 3); if (first) startBattle(first, false); }
@@ -979,7 +982,15 @@ function drawHarbor() { $('hbRes').innerHTML = `<span>🪵 ${P.res.w}</span><spa
     list.appendChild(d); } }
 // a second tap on the same spot within 0.4 s is a double tap: dropped (a quick tap somewhere else still counts)
 let hbLock = { t: 0, x: 0, y: 0 }; for (const id of ['hbList', 'wrList', 'prize']) $(id).addEventListener('click', (e) => { if (!(e.target.closest && e.target.closest('button'))) return; const now = performance.now(), near = Math.hypot(e.clientX - hbLock.x, e.clientY - hbLock.y) < 40; if (now - hbLock.t < 400 && near) { e.stopPropagation(); e.preventDefault(); return; } hbLock = { t: now, x: e.clientX, y: e.clientY }; }, true);
-$('hbSail').onclick = () => { $('harbor').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; const h = atHarbor; if (h) { boat.x = h.dock.x + Math.cos(h.dir) * 10; boat.z = h.dock.z + Math.sin(h.dir) * 10; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); } atHarbor = null; setThrottle(0, true); helm.angle = 0; hud(); if (P.tier >= 4 && !P.beenHel && P.realm === 'mid') say('🌀 Your ship is great enough for <b>Hel\'s Gate</b>, far west in the Mist Sea (🌀 on the chart). Helheim awaits.', 6); else say('Fair winds! Tap HALF or FULL to set sail.'); };
+// where a ship leaving the dock starts: 10 out, or further until the whole hull is clear of land
+// (a fan of directions out from the dock: some harbours face another island across a narrow channel); returns [x, z, yaw]
+function sailOut(h) { const t = T(), pad = t.B * 0.5 + t.L * 0.18 + 1; let best = null, bs = -1e9;
+  // every clear spot in a fan out from the dock, scored by the open water ahead of it (and a little for staying close)
+  for (let d = 10; d <= 58; d += 4) for (const da of [0, 0.35, -0.35, 0.7, -0.7, 1.05, -1.05]) { const a = h.dir + da, x = h.dock.x + Math.cos(a) * d, z = h.dock.z + Math.sin(a) * d;
+    if (world.blockAt(x, z, pad)) continue; for (const dy of [0, 0.5, -0.5, 1, -1]) { const yaw = Math.atan2(Math.cos(a), Math.sin(a)) + dy; if (world.blockAt(x - Math.sin(yaw) * t.L * 0.45, z - Math.cos(yaw) * t.L * 0.45, t.B * 0.4)) continue;
+      let run = 0; while (run < 90 && !world.blockAt(x + Math.sin(yaw) * (run + t.L * 0.5), z + Math.cos(yaw) * (run + t.L * 0.5), t.B * 0.5 + 1)) run += 5; const sc = run - d * 0.4 - Math.abs(dy) * 6; if (sc > bs) { bs = sc; best = [x, z, yaw]; } } }
+  return best || [h.dock.x + Math.cos(h.dir) * 10, h.dock.z + Math.sin(h.dir) * 10, Math.atan2(Math.cos(h.dir), Math.sin(h.dir))]; }
+$('hbSail').onclick = () => { $('harbor').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; const h = atHarbor; if (h) { [boat.x, boat.z, boat.yaw] = sailOut(h); } atHarbor = null; setThrottle(0, true); helm.angle = 0; hud(); if (P.tier >= 4 && !P.beenHel && P.realm === 'mid') say('🌀 Your ship is great enough for <b>Hel\'s Gate</b>, far west in the Mist Sea (🌀 on the chart). Helheim awaits.', 6); else say('Fair winds! Tap HALF or FULL to set sail.'); };
 
 // ---------- Pat's saga (v0.8.0): deeds in ranks, counted over the whole voyage. Each rank pays out once (souls too once you
 // have been to Helheim) and the highest deed you hold names you on the pause screen ----------
@@ -1098,7 +1109,7 @@ function lairSpawn(L, big) { const w = (lairWave[L.key] = (lairWave[L.key] || 0)
   warn('⚠ ' + YOUNG_NAMES[L.key].toUpperCase() + ' RISES! ⚠<br>' + (w > 1 ? 'The deep stirs again: wave ' + w + ', stronger than the last.' : 'Only a young one…'), 4); sfx.horn(); }
 let lairHud = 0;
 function updateLairs() { lairHud = 0; for (const L of world.lairs) { if (lairWave[L.key] > 0 && Math.hypot(boat.x - L.x, boat.z - L.z) < 95) lairHud = lairWave[L.key]; const d = Math.hypot(boat.x - L.x, boat.z - L.z), big = P.tier >= LAIR_NEED[L.key], slain = L.beaten || !!P.legends[L.key];
-    if (d < 95 && !lairWarned[L.key]) { lairWarned[L.key] = true; say(slain ? L.name + ': ' + LAIR_NAMES[L.key] + ' is slain, but its young still stir here.' : big ? 'You enter ' + L.name + '. ' + LAIR_NAMES[L.key] + ' stirs below…' : L.name + ': ' + LAIR_NAMES[L.key] + ' sleeps below. It takes a ' + SHIP_TIERS[LAIR_NEED[L.key]].name + ' to face it; in a ' + T().name + ', pray only its young wake…', 5); }
+    if (d < 95 && !lairWarned[L.key]) { lairWarned[L.key] = true; say(slain ? L.name + ': ' + LAIR_NAMES[L.key] + ' is slain, but its young still stir here.' : big ? 'You enter ' + L.name + '. ' + LAIR_NAMES[L.key] + ' stirs below…' : L.name + ': ' + LAIR_NAMES[L.key] + ' sleeps below. It takes ' + an(SHIP_TIERS[LAIR_NEED[L.key]].name) + ' to face it; in ' + an(T().name) + ', pray only its young wake…', 5); }
     if (d > 130) { lairWarned[L.key] = false; lairWave[L.key] = 0; }
     for (const m of mons) if (m.papa && m.lair === L.key && !m.dead && !inFight(m) && d > 120) { removeMon(m); lairCool[L.key] = time + 60; say(LAIR_NAMES[L.key] + ' sinks back into the deep.', 3); }
     if (!battle && !(lairCool[L.key] > time) && (d < 40 || (lairWave[L.key] > 0 && d < 95)) && !mons.some((m) => !m.dead && m.lair === L.key)) lairSpawn(L, big); } }
@@ -1123,7 +1134,7 @@ function gateAsk() { if (state !== 'play') return; if (!gateOpen()) { say("🌀 
 $('gateNo').onclick = () => { $('gate').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; boat.grace = 2; };
 $('gateGo').onclick = () => { $('gate').classList.add('hidden'); crossRealm(); };
 function crossRealm() { const to = P.realm === 'hel' ? 'mid' : 'hel'; state = 'cross'; $('fade').classList.add('on'); sfx.whoosh(); sfx.thunder();
-  setTimeout(() => { setRealm(to); if (to === 'hel') P.beenHel = true; const G = GATES[to], dir = Math.atan2(-G.x, -G.z); boat.x = G.x + Math.sin(dir) * 32; boat.z = G.z + Math.cos(dir) * 32; boat.yaw = dir; boat.v = 0; boat.wp = null; courseMark.visible = false; boat.grace = 6; setThrottle(0, true); helm.angle = 0;
+  setTimeout(() => { setRealm(to); if (to === 'hel') P.beenHel = true; const G = GATES[to], dir = Math.atan2(-G.x, -G.z); boat.x = G.x + Math.sin(dir) * 32; boat.z = G.z + Math.cos(dir) * 32; curSea = world.regionAt(boat.x, boat.z); boat.yaw = dir; boat.v = 0; boat.wp = null; courseMark.visible = false; boat.grace = 6; setThrottle(0, true); helm.angle = 0;
     P.home = nearestHarbor().idx; env.snap(P.tod, null, world.regionWeights(boat.x, boat.z, {})); camTgt.set(boat.x, 0, boat.z); save(); $('hud').classList.remove('hidden'); state = 'play'; hud();
     setTimeout(() => $('fade').classList.remove('on'), 250); const el = $('seaBanner'); el.innerHTML = to === 'hel' ? '<b>☠ HELHEIM ☠</b><small>The realm of the dead</small>' : '<b>⚓ MIDGARD ⚓</b><small>The world of the living</small>'; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); sfx.horn();
     say(to === 'hel' ? 'You pass through Hel\'s Gate into the realm of the dead. Every kill here gives souls 👻. ' + (P.res.s ? '' : 'Spend them at Helheim\'s harbours, or back in Midgard.') : 'You rise through the gate into Midgard, the world of the living.', 6); }, 1100); }
@@ -1134,7 +1145,7 @@ function abortFight() { clearBroadside(); clearLegend(); if (boat.air) { boat.ai
 function sink() { if (state !== 'play') return; state = 'sunk'; clearBroadside(); clearLegend(); if (boat.air) { boat.air = null; if (ship.mask) ship.mask.visible = true; } battle = null; fishing = null; minis.close(); const lost = {}; for (const k of ['w', 'i', 'g', 'f']) { lost[k] = Math.floor(P.res[k] / 2); P.res[k] -= lost[k]; }
   const old = P.wreck, any = lost.w + lost.i + lost.g + lost.f > 0; EV.ambush = null; if (any) { P.wreck = { x: boat.x, z: boat.z, res: lost, realm: P.realm }; placeWreck(); }
   $('sunkText').innerHTML = 'Your ship goes down beneath the waves. The gods send you back to ' + homeHarbor().name + ' with a new hull. ' + (any ? 'Half your cargo went down with the wreck: ' + wreckSum(lost) + '.<br><br>Sail back to the ☠ on the map and SALVAGE it to get it all back, or hire a salvage crew at any harbour.' + (old ? ' Your older wreck is lost to the deep.' : '') : 'Your hold was empty, so nothing was lost.'); $('hud').classList.add('hidden'); $('sunk').classList.remove('hidden'); sfx.over(); setBattle(false); }
-$('sunkBtn').onclick = () => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); const h = homeHarbor(); P.hp = maxHp(); setThrottle(0, true); helm.angle = 0; boat.x = h.dock.x + Math.cos(h.dir) * 10; boat.z = h.dock.z + Math.sin(h.dir) * 10; boat.v = 0; boat.wp = null; for (const m of [...mons]) removeMon(m); $('sunk').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; hud(); save(); };
+$('sunkBtn').onclick = () => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); const h = homeHarbor(); P.hp = maxHp(); setThrottle(0, true); helm.angle = 0; [boat.x, boat.z, boat.yaw] = sailOut(h); boat.v = 0; boat.wp = null; for (const m of [...mons]) removeMon(m); $('sunk').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; hud(); save(); };
 function winGame() { if (state !== 'play') { setTimeout(winGame, 1000); return; } P.won = true; state = 'won'; $('hud').classList.add('hidden'); $('won').classList.remove('hidden'); $('wonTitle').innerHTML = "PAT'S<br>REIGN"; $('wonText').innerHTML = 'The Kraken, Jormungandr and the Elder One have fallen. Every fjord sings of Pat, ruler of the monster sea.<br><br>But the saga is not over: the shipwrights will now build you a <b>Busse</b>, and ' + (P.tier >= 4 ? 'Hel\'s Gate in the Mist Sea stands open for your ship. Helheim waits.' : 'Hel\'s Gate in the Mist Sea opens for a Drakkar. Helheim waits.') + ' Slain legends rise again, stronger, in their lairs.<br><br>' + P.kills + (P.kills === 1 ? ' foe' : ' foes') + ' slain.'; sfx.horn(); save(); }
 $('wonBtn').onclick = () => { $('won').classList.add('hidden'); $('paused').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; };
 const SAVE = 'pr_save';
@@ -1146,7 +1157,7 @@ function cleanSave(s) {
   const num = (v, lo, hi, d = lo) => (typeof v === 'number' && isFinite(v) ? clamp(v, lo, hi) : d), int = (v, lo, hi, d = lo) => Math.round(num(v, lo, hi, d));
   const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {}), arr = (v) => (Array.isArray(v) ? v : []);
   const SKINS = ['pats', 'ghost', 'treasure', ...RAIDER_PALS.map((p) => p.name), ...Object.values(HEL_PALS).map((p) => p.name)], skin = (v) => (SKINS.includes(v) ? v : 'pats');
-  const ICONS = [...Object.values(LANDMARK).map((l) => l[0]), '🦴', '⚓', '🐚'], text = (v) => (typeof v === 'string' ? v : '').replace(/[<>&"'`]/g, '').slice(0, 200), has = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
+  const ICONS = [...Object.values(LANDMARK).map((l) => l[0]), ...Object.values(LANDMARK_HEL).map((l) => l[0]), '🦴', '⚓', '🐚'], text = (v) => (typeof v === 'string' ? v : '').replace(/[<>&"'`]/g, '').slice(0, 200), has = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
   const res = (r) => { r = obj(r); return { w: int(r.w, 0, 1e7), i: int(r.i, 0, 1e7), g: int(r.g, 0, 1e7), f: int(r.f, 0, 1e7), s: int(r.s, 0, 1e7) }; };
   const cell = (c) => [int(arr(c)[0], 0, 4), int(arr(c)[1], 0, 3)], E = HALF - 20, nIsl = world.islands.length;
   const tier = int(s.tier, 0, SHIP_TIERS.length - 1), up = {}; for (const k in P.up) up[k] = int(obj(s.up)[k], 0, Math.min(UPG[k] ? UPG[k].max : 3, tier + 1));
@@ -1399,7 +1410,7 @@ $('howTut').onclick = () => { $('how').classList.add('hidden'); tutForce = true;
 
 // ---------- the four seas: a banner when you cross into one, falling snow or ash, volcano smoke and embers, storm flicker ----------
 const rw = {}; let curSea = 'home', stormT = 5;
-const SEA_INTRO_HEL = { home: ['☠ GJÖLL ☠', 'The black river of the dead'], frost: ['❄ NIFLHEL ❄', 'Frozen mist where the dead wander'], storm: ['🔥 MUSPELHEIM 🔥', 'Seas of fire and burning ships'], mist: ['🦴 NÁSTRÖND 🦴', 'The corpse shore, where Nidhögg feeds'], warm: ['💀 GINNUNGAGAP 💀', 'Shores of bare bone over the abyss'] };
+const SEA_INTRO_HEL = { home: ['☠ GJÖLL ☠', 'The black river of the dead'], frost: ['❄ NIFLHEL ❄', 'Frozen mist where the dead wander'], storm: ['🔥 MUSPELHEIM 🔥', 'Seas of fire and burning ships'], mist: ['🦴 NÁSTROND 🦴', 'The corpse shore, where Nidhögg feeds'], warm: ['💀 GINNUNGAGAP 💀', 'Shores of bare bone over the abyss'] };
 const SEA_INTRO = { home: ['⚓ HOME WATERS ⚓', 'Green isles around Patsholm'], frost: ['❄ THE FROST SEA ❄', 'Ice floes, snow peaks and frost wyrms'], storm: ['🌋 THE STORM SEA 🌋', 'Fire mountains, black rock and lightning'], mist: ['🌫 THE MIST SEA 🌫', 'Dead marshes, old stones and ghost lights'], warm: ['🌴 THE WARM SEA 🌴', 'White sands, palms and coral reefs'] };
 function seaBanner(k) { const el = $('seaBanner'), I = (P.realm === 'hel' ? SEA_INTRO_HEL : SEA_INTRO)[k]; el.innerHTML = '<b>' + I[0] + '</b><small>' + I[1] + '</small>'; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); sfx.horn(); }
 const fall = (() => { const n = 700, pos = new Float32Array(n * 3), vel = new Float32Array(n); for (let i = 0; i < n; i++) { pos[i * 3] = rnd(-45, 45); pos[i * 3 + 1] = rnd(0, 40); pos[i * 3 + 2] = rnd(-45, 45); vel[i] = rnd(0.6, 1.4); }
