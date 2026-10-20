@@ -1,6 +1,6 @@
 # Pats Reign: project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.5.0. Where older notes or memory
+READ THIS FIRST after a context compaction. Current as of 2026-10-20, version 0.7.2. Where older notes or memory
 disagree with this file, this file wins.
 
 ## Where things are
@@ -39,7 +39,34 @@ disagree with this file, this file wins.
   only": upgrades are never lost); v0.4.0: monster redesigns from Sean's roster notes (see Monsters below); v0.4.1-0.4.4:
   half-wheel helm + sail telegraph, phone and tablet layouts, home-screen app, battle cues by the action, iPad top inset;
   v0.4.5: tornadoes lift and fling, vortex sizes, STOP after a win; v0.5.0: boarding, prize ships, treasure maps and
-  digs, the ghost ship and Draugr's Bane, the HELM camera.
+  digs, the ghost ship and Draugr's Bane, the HELM camera; v0.5.1-0.5.4: tutorial, short HOW TO PLAY, iPad sound fixes,
+  safe save codes (cleanSave + CSP), crew mending, MUSIC switch, a song per sea, SAIL TO DOCK; v0.6.0-0.6.9: the action
+  ship battle (a battle line, fleets join), visible ship damage, one-handed controls with a side swap, battle zoom and
+  lighter fog, keyboard play (W/S notches, Space, C, E, mini-game keys), BACK on the telegraph, chase view to start,
+  the legends always rise (young ones or papa); v0.7.0-0.7.2: live legend fights (Kraken siege, Jormungandr hunt, Elder
+  One ward) with special moves, and lair waves. Each has its own section below.
+
+## Where we left off (2026-10-20, v0.7.2, before a compaction)
+- Live and pushed: v0.7.2 (main is clean and level with origin). Every request from the 2026-10-19/20 sessions is built,
+  tested in the browser and deployed; each version has its own section below (v0.5.1 to v0.7.2).
+- The newest work, which Sean has not played yet: the three live legend fights (Kraken tentacle siege with the grab,
+  Jormungandr's hunt with the coil and lightning, the Elder One's rune ward with the lift and slam) and the lair waves.
+  They were tested with bots that fire automatically, so expect him to ask for balance changes. The knobs:
+  Kraken slam 0.6 x dmg, tentacle hits 3, eye 2.4 x attack, grab chance 0.28 (enraged 0.4), break-free 5 hits in 3.5 s;
+  Jormungandr strike 1.1 x dmg, lock time 1.0 s, exposed 3.2 s, coil chance 0.3, electrocute 1.5 x dmg;
+  Elder lash 0.8 x dmg, open 4 s at 0.3 x attack, eye-flash window 0.55 s, slam 1.6 x dmg; legends get 1.5x hull in
+  action fights; lair waves every 60-110 s, papa chance 0.2 + 0.07 a wave (max 0.6).
+- Open offers Sean has not answered: making whirlpools easier to escape at FULL sail (a weaker pull, or a break-free
+  push when pointed outward). Sean asked how to get out of whirlpools; the answer was FULL sail straight out early, ride
+  it out (it closes in 40-55 s, only the eye hurts), or upgrade Sails / Oars & Crew.
+- Ideas Sean raised that are only done for the legends: ordinary octopus / squid grabbing and pulling the ship under,
+  ordinary sea serpents wrapping and electrocuting. He framed them as boss moves ("special moves like that for the
+  bosses"), so they live in the legend fights; extending them to normal monsters would be new work.
+- Sean's preferences learned this session: no fixed-level sea zones (monsters scale with the ship everywhere); fights
+  should be engaging and tough, a different style per boss; avoid constant circling or spinning cameras (motion
+  sickness); one-handed controls with a side swap; everything playable from the keyboard on PC; the in-game music can
+  be switched off for his own (MUSIC off lets Spotify play on iOS); he restarts or stops the dev server himself at
+  times, and said I can restart it.
 
 ## v0.5.0: boarding, prize ships, treasure maps, the ghost ship, the HELM view (Sean: "go in the order you feel is best")
 - Grappling Hooks: UPG.hooks (3 levels, capped at ship tier + 1 like every upgrade). HOOK_NEED(v): ship size 0-1 needs I,
@@ -360,30 +387,32 @@ disagree with this file, this file wins.
   LOAD needs a second tap within 4 s on the same text, then reloads the page.
 - src/tornado.js: Dead City twisters + `waterspout` and `seastorm` skins. fullscreen.js, perf.js: from Dead City.
 
-## Controls (v0.4.1)
-- Ship's wheel: a big half-wheel centred across the bottom (hub just below the screen edge; layoutHelm sizes it:
-  R = clamp(min(W*0.4 phone / W*0.3 wide, H*0.28), 100, 240)); swipe along it to turn (0.8 x the finger's angle around the
-  hub), rudder = sign*|angle/HMAX|^1.4, HMAX 2.4. Only the wheel takes touches (clip-path circle + radius check). It stays
-  where you leave it; double-tap centres it. Sean's idea after iPad testing (v0.4.1).
-- Sail telegraph above the wheel: tap STOP / ROW / HALF / FULL (0, 0.3, 0.6, 1; slide sideways too). STOP cancels a
-  course. No control needs a downward swipe (iPad Safari exits full screen on those).
-- Layout (v0.4.3, Sean's phone layout): phones (html:not(.tabletHud), shorter side < 700, portrait or landscape) get a
-  small wheel (R = clamp(min(W*0.24, H*0.15), 64, 105)) bottom centre, the telegraph stacked up the left with FULL on top,
-  the minimap bottom right with the action buttons above it, a bigger pause top right with the sea chart button and
-  TOP/CHASE under it, and the compass on the left under the ship name. Tablets (html.tabletHud): big wheel centred,
-  telegraph above it, bigger map bottom left and buttons bottom right. Tablets also keep 28px clear at the top (--padTop):
-  the iPad status bar is drawn over the page and iPadOS reports no safe-area inset for it (Sean saw the battery cover the HUD). helmLift shifts the camera view up
-  (setViewOffset) by 0.9 x the wheel height so the ship clears the controls; battles use their own offset.
-- iPad full screen: Safari's own swipe-down exits element fullscreen and a page cannot stop it. The fix is the home-screen
-  web app: public/manifest.webmanifest (display fullscreen) + icons (icon-180/192/512, a gold wheel with PR) +
-  apple-mobile-web-app tags; fullscreen.js skips the Fullscreen API when standalone and shows an Add to Home Screen tip
-  on the title screen on iOS.
-- Courses: tap the sea, tap the corner minimap (whole world, bottom-left), or open the sea chart (🗺 button: pinch
-  zoom to 8x, drag to pan, tap to set). Setting a course raises the sail if it was down. Hands off the wheel = the
-  helmsman turns it toward the mark and around land (`steerAround`). Arriving furls the sails.
-- FIRE (spears, or ballista once bought) auto-aims; context button: DOCK / FIGHT / SALVAGE / FISH / SLOW.
-- Pinch or mouse wheel zooms the sea view; view button cycles TOP / CHASE / HELM (captain's eye, v0.5.0). Keyboard: A/D wheel, W/S sails, space fire.
-- HUD: hull bar, timber/iron/gold/fish, ship name, sea, weather, Thor timer; compass top-right once bought.
+## Controls (current, v0.7.2)
+- Ship's wheel: a big half-wheel centred across the bottom (hub just below the screen edge; layoutHelm sizes it: phone
+  R = clamp(min(W*0.24, H*0.15), 64, 105), tablet R = clamp(min(W*0.3, H*0.28), 100, 240)); swipe along it to turn,
+  rudder = sign*|angle/HMAX|^1.4, HMAX 2.4. Only the wheel takes touches. It stays where you leave it; double-tap centres
+  it. While backing (BACK) the wheel steers like reversing a car.
+- One-handed layout (v0.6.3): every control on one side (default right): pause at the end of the top row; chart 🗺,
+  view (TOP / CHASE / HELM) and ⚓ DOCK under it; SPEARS / the action button above the sail telegraph; the telegraph a
+  column at the bottom edge, FULL on top: FULL / HALF / ROW / STOP / BACK (THR_LV -0.22, 0, 0.3, 0.6, 1; BACK is red).
+  The minimap and the ⇄ swap button sit on the other side; ⇄ mirrors everything (html.leftHand, localStorage pr_hand).
+  Tablets keep 28px clear at the top (--padTop). helmLift shifts the camera view up by the wheel height; battles use
+  their own offset ('broad' for the action fights puts the fight at 40% of the screen).
+- iPad full screen: the home-screen web app (manifest display fullscreen, icons, apple tags); fullscreen.js shows an Add
+  to Home Screen tip on iOS. No control needs a downward swipe.
+- Courses: tap the sea, the minimap, or the sea chart (pinch / drag / tap). ⚓ DOCK (SAIL TO DOCK) plans a route around the
+  islands to the nearest harbour, sails it at FULL, flees fights, docks on arrival; STOP or a new course ends it.
+- The game starts in the CHASE view at zoom 1.6. Pinch or the mouse wheel zooms (0.3-2.6); each battle has its own zoom
+  starting at 1, and your sailing zoom comes back after.
+- Keyboard: W / S (or up / down) step the telegraph one notch, held they run through; A / D the wheel; Space throws a
+  spear ahead (aims only at a monster within 0.55 rad of the bow, else straight on) and fires in every fight; C cycles the
+  view; E opens and shuts the sea chart; in the mini-games Space = FIRE / THROW / the middle block / cast and hold to
+  reel, A / D = dodge or pull left / right, W = block too, F = fire pot, B = board; 1-4 tap the Elder One's runes.
+- The SPEARS button still auto-aims at the nearest monster; the context button shows DOCK / FIGHT / SALVAGE / FISH / LAND /
+  SLOW. Pause works everywhere, fights included.
+- Sound: SOUND and MUSIC switches on the title and pause screens (MUSIC off = no saga music and the iOS audio session goes
+  'ambient' so other apps keep playing). The pause menu also has ⚔ BATTLES: ACTION / CLASSIC (localStorage pr_broad).
+- HUD: hull bar, timber / iron / gold / fish, ship name, sea, weather, buffs (Thor, Bifröst, Cursed, 🔨 Crew mending).
 
 ## Rules as built
 - Ships: Faering, Karvi, Snekkja, Skeid, Drakkar. Hull 100 x 1.75^tier x (1 + 0.25 x armour). Speeds 9 to 13.
@@ -447,7 +476,30 @@ disagree with this file, this file wins.
 - `setTimeout` messages (fleet kills, war chest) run in real time, so `__pr.step` alone won't show them: wait ~1.5 s.
 - `cat > file` with no heredoc waits on stdin forever; long heredocs still break here, so write patch files with Write.
 - A test that calls `minis.close()` mid-battle leaves `battle` set and blocks events; use `boat.grace = 99` instead.
+- Never append a `// comment` to code you splice into the middle of a long one-line function: it swallows the rest of
+  that line. It bit five times on 2026-10-19/20, and `node --check` can still pass while the game breaks at runtime.
+  Put comments on their own line, and run `node tools/scan-comments.cjs` (flags any line where code follows a comment;
+  the helm comment block and the SpineTube comment in geom.js are the two known false positives).
+- Check syntax with `node --input-type=module --check < src/main.js` after every patch.
+- Deploy check: poll the live index for the main bundle and grep it with `grep -F '"0.7.2"'` (a plain grep of 0.7.2
+  treats the dots as wildcards and gave a false positive once).
+- Dev server: preview_start `game` runs on 5174 (5173 is taken). `.claude/launch.json` also has `built` (vite preview on
+  4173) to test the real build with its Content-Security-Policy.
+- A browser javascript_tool call that runs longer than ~45 s fails ("Internal error"); split long simulations into
+  several calls. Freeze for screenshots with `__pr.timeScale = 0` (then wait 2 s); `__pr.step` also runs the camera.
+- Spawn tests: override Math.random briefly (e.g. `Math.random = () => 0.9`) to force a young legend or papa, then
+  restore it. Teleporting the boat next to a lair or harbour triggers their messages and spawns; teleporting can also
+  leave the test save in odd places (clear pr_save in the test browser if needed).
+- `window.__pr` now also has: startBroadside, broadFire, endBroadside, broadSwap, BROAD, planRoute, autoDock, cleanSave,
+  killMon, giveMap, prizeChoice, startDig, boardInfo, startAir, liftK, pods, spawnPod, EV, startEvent, wreck, sink.
+- New names must not collide with existing ones (ringGeo was taken by the lightning rings; the legend ring is lgRingGeo).
 
 ## Ideas not built yet
-- Crew management, ship naming, quests from harbour jarls, trade routes between harbours, co-op raids, more boss
-  phases, sea birds over the Warm Sea, itch.io zip like Dead City.
+- From Sean, not yet done: special grabs / wraps for ordinary octopus, squid and sea serpents (only the legends have
+  them); an easier whirlpool escape (offered, unanswered).
+- Loose ends: the roster artifact does not show the prize ship skins, the dig, the young legends or the legend fights;
+  the treasure dig has no keyboard control; the lair waves have no HUD counter; the classic mini-game battle still
+  exists behind ⚔ BATTLES: CLASSIC (keep it working when changing battle code).
+- Bigger ideas: crew management, ship naming, quests from harbour jarls, trade routes between harbours, co-op raids,
+  sea birds over the Warm Sea, a song file from the device as music (offered option 1), volume sliders, an itch.io zip
+  like Dead City.
