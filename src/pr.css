@@ -317,3 +317,10 @@ html:not(.tabletHud) #broad .bSide { max-width: 106px; } html:not(.tabletHud) #b
 html:not(.tabletHud) #acts { bottom: calc(208px + env(safe-area-inset-bottom, 0)); }
 html.tabletHud #acts { bottom: calc(260px + env(safe-area-inset-bottom, 0)); }
 html:not(.tabletHud) #broad .bStrip { bottom: calc(204px + env(safe-area-inset-bottom, 0)); }
+/* v0.8.0: short landscape phones. The right-hand column (pause, chart, view, dock, the context and fire buttons, the sail
+   telegraph) was taller than the screen, so DOCK sat on the fire button. There, the context and fire buttons move beside
+   the telegraph, which keeps the chart, view and dock column clear */
+@media (max-height: 460px) {
+  html:not(.tabletHud) #acts { bottom: calc(30px + env(safe-area-inset-bottom, 0)); right: calc(max(8px, env(safe-area-inset-right, 0px)) + 68px); }
+  html.leftHand:not(.tabletHud) #acts { right: auto; left: calc(max(8px, env(safe-area-inset-left, 0px)) + 68px); }
+}
