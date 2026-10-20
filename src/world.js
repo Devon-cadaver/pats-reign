@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { M, part, grp, rod, V, rand, SPH, SPH_LO, CON, CYL, CYL6, BOX, RBX, TOR, HEMI, canvasTex } from './geom.js';
 import { mergeParts } from './perf.js';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export const WORLD = 1200, HALF = WORLD / 2, SHORE_RES = 512;
 export const REGIONS = { home: { name: 'Home Waters', danger: 0 }, frost: { name: 'Frost Sea', danger: 1 }, storm: { name: 'Storm Sea', danger: 1 }, mist: { name: 'Mist Sea', danger: 1 }, warm: { name: 'Warm Sea', danger: 1 } };
@@ -63,13 +63,19 @@ export function buildWorld(scene, seed = 20261019) {
   }
   // lone sea stacks and icebergs out in open water
   for (let k = 0; k < 70; k++) { const x = (r() - 0.5) * (WORLD - 40), z = (r() - 0.5) * (WORLD - 40); if (!clear(x, z, 4)) continue; const reg = regionAt(x, z); if (reg === 'frost' && r() < 0.7) bergs.push({ x, z, s: 3 + r() * 6, rot: r() * 6.28 }); else rocks.push({ x, z, s: 1 + r() * 2.2, h: 2 + r() * 6 }); }
+  // the Frost Sea is full of icebergs
+  for (let k = 0, n = 0; k < 600 && n < 34; k++) { const x = (r() - 0.5) * (WORLD - 40), z = -HALF + 20 + r() * (HALF - 120); if (regionAt(x, z) !== 'frost' || !clear(x, z, 6) || bergs.some((b) => Math.hypot(b.x - x, b.z - z) < 22)) continue; bergs.push({ x, z, s: 3 + r() * 7, rot: r() * 6.28 }); n++; }
   for (const rk of rocks) stamp(rk.x, rk.z, () => rk.s, rk.s, 5);
   for (const b of bergs) stamp(b.x, b.z, () => b.s * 0.9, b.s, 6);
-  // instanced sea stacks
-  { const g = new THREE.DodecahedronGeometry(1, 1); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const y = p.getY(i); p.setXYZ(i, p.getX(i) * (1 + Math.sin(i * 1.7) * 0.15) * (1 - Math.max(0, y) * 0.35), y, p.getZ(i) * (1 + Math.cos(i * 2.3) * 0.15) * (1 - Math.max(0, y) * 0.35)); } g.translate(0, 0.3, 0); g.computeVertexNormals();
-    const im = new THREE.InstancedMesh(g, M(0x5e5c58, 'flat'), rocks.length), mt = new THREE.Matrix4(), q = new THREE.Quaternion(); rocks.forEach((rk, i) => { q.setFromAxisAngle(V(0, 1, 0), i * 1.3); mt.compose(V(rk.x, -0.8, rk.z), q, V(rk.s, rk.h * 0.6, rk.s)); im.setMatrixAt(i, mt); }); group.add(im); }
-  { const g = new THREE.IcosahedronGeometry(1, 1); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const y = p.getY(i), k = 1 + Math.sin(i * 3.1) * 0.25; p.setXYZ(i, p.getX(i) * k, y > 0 ? y * (1.2 + Math.cos(i * 1.9) * 0.6) : y * 0.6, p.getZ(i) * k); } g.computeVertexNormals();
-    const im = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ color: 0xe8f4fc, flatShading: true, emissive: 0x16303c }), Math.max(1, bergs.length)), mt = new THREE.Matrix4(), q = new THREE.Quaternion(); bergs.forEach((b, i) => { q.setFromAxisAngle(V(0, 1, 0), b.rot); mt.compose(V(b.x, -0.6, b.z), q, V(b.s, b.s * 0.9, b.s * 0.8)); im.setMatrixAt(i, mt); }); im.count = bergs.length; group.add(im); }
+  // sea stacks and icebergs: solid, watertight shapes (corners are moved by a noise of their position, so faces that
+  // share a corner stay joined), in a few different shapes each
+  const pick = (list, i) => list[i % list.length];
+  { const geos = [1, 2, 3].map((sd) => stackGeo(sd)), ims = geos.map((g) => new THREE.InstancedMesh(g, ROCK_MAT, Math.max(1, rocks.length))), cnt = [0, 0, 0], mt = new THREE.Matrix4(), q = new THREE.Quaternion(), tint = new THREE.Color();
+    rocks.forEach((rk, i) => { const k = i % 3, im = ims[k]; q.setFromAxisAngle(V(0, 1, 0), i * 1.3); mt.compose(V(rk.x, -0.35, rk.z), q, V(rk.s, Math.max(rk.h * 0.75, rk.s * 1.2), rk.s * (0.85 + (i % 4) * 0.08))); im.setMatrixAt(cnt[k], mt); im.setColorAt(cnt[k], tint.setScalar(0.88 + ((i * 37) % 10) * 0.025)); cnt[k]++; });
+    ims.forEach((im, k) => { im.count = cnt[k]; if (cnt[k]) group.add(im); }); void pick; }
+  { const geos = [4, 5].map((sd) => bergGeo(sd)), ims = geos.map((g) => new THREE.InstancedMesh(g, BERG_MAT, Math.max(1, bergs.length))), cnt = [0, 0], mt = new THREE.Matrix4(), q = new THREE.Quaternion();
+    bergs.forEach((b, i) => { const k = i % 2, im = ims[k]; q.setFromAxisAngle(V(0, 1, 0), b.rot); mt.compose(V(b.x, -0.5, b.z), q, V(b.s, b.s * 0.9, b.s * 0.8)); im.setMatrixAt(cnt[k], mt); cnt[k]++; });
+    ims.forEach((im, k) => { im.count = cnt[k]; if (cnt[k]) group.add(im); }); }
   // trees: one instanced mesh per kind
   const treeGeo = { pine: () => { const parts = []; const tr = new THREE.CylinderGeometry(0.12, 0.18, 1.2, 6); tr.translate(0, 0.6, 0); paint(tr, 0x5a3a22); parts.push(tr); for (let i = 0; i < 3; i++) { const c = new THREE.ConeGeometry(1.1 - i * 0.28, 1.5, 7); c.translate(0, 1.4 + i * 0.75, 0); paint(c, [0x2a5a2a, 0x2f6a30, 0x3a7a38][i]); parts.push(c); } return mergeGeometries(parts); },
     dead: () => { const parts = []; const tr = new THREE.CylinderGeometry(0.08, 0.2, 3, 5); tr.translate(0, 1.5, 0); paint(tr, 0x3a3430); parts.push(tr); for (let i = 0; i < 4; i++) { const b = new THREE.CylinderGeometry(0.03, 0.07, 1.3, 4); b.rotateZ(0.9); b.rotateY(i * 1.6); b.translate(Math.cos(i * 1.6) * 0.4, 1.8 + i * 0.3, -Math.sin(i * 1.6) * 0.4); paint(b, 0x3a3430); parts.push(b); } return mergeGeometries(parts); },
@@ -148,3 +154,31 @@ function lair(key, r) { const g = new THREE.Group(), st = grp(g);
   else if (key === 'kraken') { const bone = M(0xe0d8c4); for (let k = 0; k < 10; k++) { const a = (k / 10) * 6.28; const p = grp(st, Math.cos(a) * 46, -1, Math.sin(a) * 46); p.rotation.set(0, -a, 0.35); part(p, CON(), bone, 3, 22 + r() * 8, 3, 0, 10, 0, 0, 0, 0.25); } for (let k = 0; k < 5; k++) { const p = grp(st, (r() - 0.5) * 40, -1, (r() - 0.5) * 40); p.rotation.set(0.8, r() * 6, 0.6); part(p, CYL(), M(0x3a2414), 1, 12, 1, 0, 3, 0); } }
   else { const stone = M(0x4a5a52, 'flat'), rune = M(0x7affc8, 'glow'); for (let k = 0; k < 10; k++) { const a = (k / 10) * 6.28, x = Math.cos(a) * 46, z = Math.sin(a) * 46; const p = grp(st, x, -1, z); p.rotation.y = -a; part(p, RBX(), stone, 3.5, 16, 3.5, 0, 7, 0); part(p, BOX(), rune, 0.2, 9, 1.4, 1.8, 8, 0); } }
   flattenInto(st); mergeParts(st); return g; }
+
+// ---------- rock and ice shapes ----------
+const ROCK_MAT = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+const BERG_MAT = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: 0x0e2a36 });
+const nz3 = (x, y, z, s) => Math.sin(x * 1.7 + s) * Math.cos(z * 1.3 - s * 0.7) * 0.5 + Math.sin(y * 2.3 + x * 0.9 + s * 1.3) * 0.3 + Math.sin((x + z) * 3.1 + y * 1.1 + s * 2.1) * 0.2;
+function sphereBase(detail) { let g = new THREE.IcosahedronGeometry(1, detail); g.deleteAttribute('normal'); g.deleteAttribute('uv'); g = mergeVertices(g, 1e-4); return g; }
+// a sea stack: a tapering pillar of layered stone with ledges, dark wet rock at the waterline, moss and bird-white on top
+function stackGeo(seed) { const g = sphereBase(3), p = g.attributes.position, n = p.count, col = new Float32Array(n * 3), C = new THREE.Color();
+  const stone = [0x6e6a62, 0x625e57, 0x77726a, 0x5a5751], wet = new THREE.Color(0x2e3430), algae = new THREE.Color(0x3a4a34), moss = new THREE.Color(0x56763a), guano = new THREE.Color(0xe8e4da);
+  for (let i = 0; i < n; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), rr = Math.hypot(x, z) || 1e-6;
+    let t = Math.sign(y) * Math.pow(Math.abs(y), 0.5); const band = Math.round(t * 5); t += (band / 5 - t) * 0.55; // ledges
+    const h = (t + 1) / 2, w = nz3(x * 2.2, y * 2.2, z * 2.2, seed), taper = 1 - h * 0.42;
+    const rad = (rr < 1e-5 ? 0 : 1) * Math.pow(rr, 0.55) * taper * (1 + w * 0.22) * (1 + Math.sin(band * 2.7 + seed) * 0.06);
+    const ny = -0.35 + h * 1.35 + (h > 0.92 ? w * 0.06 : 0);
+    p.setXYZ(i, (x / rr) * rad, ny, (z / rr) * rad);
+    C.setHex(stone[(band + 9 + seed) % 4]).multiplyScalar(0.9 + w * 0.15);
+    if (ny < 0.16) C.lerp(ny < 0.02 ? wet : algae, ny < 0.02 ? 0.85 : 0.55);
+    if (h > 0.9 && w > -0.25) C.lerp(moss, 0.7); else if (Math.abs(t - band / 5) < 0.02 && w > 0.3 && h > 0.3) C.lerp(guano, 0.8);
+    col[i * 3] = C.r; col[i * 3 + 1] = C.g; col[i * 3 + 2] = C.b; }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals(); return g; }
+// an iceberg: a flattened block below the water, jagged peaks above, white snow over glassy blue ice
+function bergGeo(seed) { const g = sphereBase(3), p = g.attributes.position, n = p.count, col = new Float32Array(n * 3), C = new THREE.Color();
+  const snow = new THREE.Color(0xf6fbff), ice = new THREE.Color(0xa8dcef), deep = new THREE.Color(0x3a8ab8);
+  for (let i = 0; i < n; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), w = nz3(x * 2.6, y * 2.6, z * 2.6, seed), w2 = nz3(x * 6, y * 6, z * 6, seed + 3);
+    const r = 1 + w * 0.28 + w2 * 0.06, ny = y > 0 ? y * (0.9 + Math.max(0, w) * 1.4 + w2 * 0.15) : y * 0.55;
+    p.setXYZ(i, x * r, ny, z * r); const up = y > 0.35 + w2 * 0.2;
+    C.copy(up ? snow : ice).lerp(deep, ny < 0.15 ? 0.6 : 0).multiplyScalar(0.94 + w2 * 0.12); col[i * 3] = C.r; col[i * 3 + 1] = C.g; col[i * 3 + 2] = C.b; }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals(); return g; }
