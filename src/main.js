@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { createOcean, createFoam } from './ocean.js';
 import { createEnv } from './env.js';
-import { buildShip, SHIP_TIERS, PLAYER_PAL, RAIDER_PALS, GHOST_PAL, TREASURE_PAL } from './ship.js';
+import { buildShip, SHIP_TIERS, PLAYER_PAL, RAIDER_PALS, GHOST_PAL, TREASURE_PAL, addCargo } from './ship.js';
 import { makeMonster, SPECIES } from './monsters.js';
 import { buildWorld, WORLD, HALF, REGIONS, LAIRS } from './world.js';
 import { createMinis } from './minigames.js';
@@ -395,7 +395,6 @@ function fleetDown(id) { const f = EV.fleets[id]; if (!f) return; f.killed++; if
   delete EV.fleets[id]; const k = P.tier + 1; setTimeout(() => { reward({ w: 25 * k, i: 12 * k, g: 60 * k }, boat.x, 4, boat.z); say('<b>⚔ THE FLEET IS BROKEN! ⚔</b> Their war chest is yours.', 4.5); sfx.horn(); }, 1200); }
 
 // treasure knarr: a fat merchant ship runs from you, dumping cargo as you close in. Catch it and board her.
-function addCargo(s) { const t = s.t; for (let i = 0; i < 6; i++) { const z = (i / 5 - 0.5) * t.L * 0.45, x = (i % 2 ? 1 : -1) * t.B * 0.16; const c = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.5), M(0x7a4a22)); c.position.set(x, s.deckY + 0.3, z); s.body.add(c); const l = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.12, 0.54), M(0xe6b43a, 'glow')); l.position.set(x, s.deckY + 0.6, z); s.body.add(l); } }
 function treasureShip() { for (let tries = 0; tries < 10; tries++) { const a = boat.yaw + rnd(-1.2, 1.2), d = rnd(70, 95), x = boat.x + Math.sin(a) * d, z = boat.z + Math.cos(a) * d; if (!openAt(x, z, 10)) continue;
     const v = clamp(P.tier, 1, 3), mon = spawnMon({ type: 'raider', v, lv: P.tier + 0.2 }, x, z, { pal: TREASURE_PAL, merchant: true });
     Object.assign(mon, { treasure: true, flee: 75, dropT: 3, name: '💰 Treasure Knarr', yaw: Math.atan2(x - boat.x, z - boat.z) }); mon.dmg = Math.round(mon.dmg * 0.45);

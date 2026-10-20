@@ -147,6 +147,8 @@ function serpentHead(parent, sc, pal, ghost) { const h = grp(parent); h.scale.se
 
 // ---------- the ship ----------
 // up = { shields, armor, ballista, fire, ram, sail } (levels); pal = colours; returns the group and handles for animation
+// treasure chests with glowing gold lids along the deck (the treasure knarr)
+export function addCargo(s) { const t = s.t; for (let i = 0; i < 6; i++) { const z = (i / 5 - 0.5) * t.L * 0.45, x = (i % 2 ? 1 : -1) * t.B * 0.16; const c = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.5), M(0x7a4a22)); c.position.set(x, s.deckY + 0.3, z); s.body.add(c); const l = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.12, 0.54), M(0xe6b43a, 'glow')); l.position.set(x, s.deckY + 0.6, z); s.body.add(l); } }
 export function buildShip(tier = 0, up = {}, pal = PLAYER_PAL, seed = 1) {
   const t = SHIP_TIERS[Math.max(0, Math.min(4, tier))], ghost = !!pal.ghost, r = rand(seed * 977 + tier * 31);
   const root = new THREE.Group(), body = grp(root), st = grp(body); // st: static parts (merged)

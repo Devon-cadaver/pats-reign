@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { createOcean, createFoam } from './ocean.js';
 import { createEnv } from './env.js';
-import { buildShip, SHIP_TIERS, RAIDER_PALS, GHOST_PAL } from './ship.js';
+import { buildShip, SHIP_TIERS, RAIDER_PALS, GHOST_PAL, TREASURE_PAL, addCargo } from './ship.js';
 import { createTwisters } from './tornado.js';
 
 const canvas = document.getElementById('c');
@@ -26,6 +26,7 @@ function btn(group, text, fn) { const b = document.createElement('button'); b.te
 SHIP_TIERS.forEach((t, i) => btn('subj', '⛵' + (i + 1), () => showShip(i)));
 RAIDER_PALS.forEach((p, i) => btn('subj', '☠' + (i + 1), () => showShip(Math.min(4, 1 + i), p, { shields: 2, armor: i > 1 ? 1 : 0, ballista: 1, fire: 0, ram: 0 })));
 btn('subj', '👻', () => showShip(3, GHOST_PAL, { shields: 2, armor: 0, ballista: 0, fire: 0, ram: 0 }));
+btn('subj', '💰', () => { showShip(2, TREASURE_PAL, { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 2 }); addCargo(subject); setLabel(TREASURE_PAL.name, 'Runs from you, dumping cargo'); });
 export const extraButtons = (fn) => fn(btn, { scene, ocean, foam, setLabel, clearSubject, setSubject: (s, d, a, b) => { clearSubject(); subject = s; scene.add(s.g); S.dist = d; setLabel(a, b); } });
 const sep = () => { const d = document.createElement('div'); d.style.width = '100%'; d.style.height = '0'; bar.appendChild(d); };
 sep(); for (const [k, v] of Object.entries(TOD)) btn('tod', k, () => { S.tod = v; });
@@ -48,7 +49,7 @@ function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.asp
 showShip(0); env.snap(S.tod, S.wx);
 let last = performance.now(), time = 0, wakeT = 0, flash = 0, boltT = 2;
 const center = new THREE.Vector3(), focus = new THREE.Vector3();
-function frame(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now; time += dt;
+function frame(now, manual) { const dt = Math.min(0.05, (now - last) / 1000); last = now; time += dt;
   if (S.spin) S.yaw += dt * 0.12;
   // the subject rides the waves
   if (subject) { const g = subject.g, len = subject.len || 6, beam = subject.beam || 2; const tl = ocean.tiltAt(0, 0, g.rotation.y, len, beam); g.position.y += (tl.y - g.position.y) * Math.min(1, dt * 5); subject.body.rotation.x = -tl.pitch * 0.8; subject.body.rotation.z = -tl.roll * 0.8;
@@ -63,7 +64,7 @@ function frame(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now
   env.apply(S.tod, S.wx, dt, flash * flash);
   ocean.update(dt, center, camera); foam.update(dt);
   const tgt = new THREE.Vector3(0, subject ? (subject.focusY ?? 1.5) : 1.5, 0); if (subject && subject.follow) { focus.lerp(subject.follow(), Math.min(1, dt * 3)); tgt.x = focus.x; tgt.z = focus.z; } camera.position.set(tgt.x + Math.sin(S.yaw) * Math.cos(S.pitch) * S.dist, Math.sin(S.pitch) * S.dist + 1, tgt.z + Math.cos(S.yaw) * Math.cos(S.pitch) * S.dist); center.set(tgt.x, 0, tgt.z); camera.lookAt(tgt);
-  renderer.render(scene, camera); requestAnimationFrame(frame); }
+  renderer.render(scene, camera); if (!manual) requestAnimationFrame(frame); }
 requestAnimationFrame(frame);
-window.__sc = { S, showShip, ocean, env, scene, camera, renderer, get subject() { return subject; } };
+window.__sc = { step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) { const now = performance.now(); last = now - dt * 1000; frame(now, true); } }, S, showShip, ocean, env, scene, camera, renderer, get subject() { return subject; } };
 import('./showcase-monsters.js').then((m) => m.install && m.install(extraButtons)).catch((e) => console.warn('monsters not ready', e));

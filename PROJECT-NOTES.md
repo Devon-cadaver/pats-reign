@@ -10,6 +10,13 @@ disagree with this file, this file wins.
   .github/workflows/deploy.yml, about 1 minute.
 - Built on the Dead City stack (D:\ClaudeCode\010_2026-10-16_newgame, repo Devon-cadaver/office-outbreak):
   Three.js 0.170 + Vite 6, plain JS, synthesized audio, no image or sound files.
+- Monster roster ("Pats Reign Bestiary"): private artifact https://claude.ai/artifact/VvRgowx4LA95MUwBJDazNT (db
+  capability). Sean writes notes and flags "Needs a redesign" per monster; READ THEM with ArtifactData list, collection
+  "notes" (doc ids: general, sp-<species> for a whole family, <species>-<variant index> e.g. eel-0, ship-raider-0..3,
+  ship-ghost-0, ship-treasure-0; body { text, redesign, at }). Built by `node tools/build-roster.cjs` from
+  release/roster-img/*.jpg into release/pats-reign-roster.html, then republished to the same URL (publish that file path,
+  or pass the url from another session). Pictures: showcase.html with `window.__roster = { back }` (serpent-type
+  monsters swim straight for a side portrait), `__sc.step(n)`, sea shot then the ocean hidden for the full-body shot.
 - Screenshots sent to Sean live in previews/ (01-11 first art pass, 20-27 first gameplay, 30-31 rocks, 40-46 v0.2.0,
   50-56 v0.3.0 sea events, wreck, save code).
 
