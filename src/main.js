@@ -593,7 +593,7 @@ function jormFire(L, mon) { if (L.mode !== 'exposed' && !(L.mode === 'coil' && L
 const RUNES = ['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ'], RUNE_COL = [0xff6a4a, 0x6ad0ff, 0x9fe86a, 0xffd24a];
 const runeTex = RUNES.map((r, i) => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.strokeStyle = '#fff'; g.lineWidth = 7; g.beginPath(); g.arc(64, 64, 56, 0, Math.PI * 2); g.stroke();
   g.fillStyle = '#fff'; g.font = 'bold 74px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(r, 64, 66); g.font = 'bold 26px sans-serif'; g.fillText(String(i + 1), 104, 22); return new THREE.CanvasTexture(c); });
-const runeGeo = (() => { const g = new THREE.PlaneGeometry(1, 1); g.rotateX(-Math.PI / 2); return g; })(), wardGeo = new THREE.SphereGeometry(1, 24, 16), wispGeo = new THREE.SphereGeometry(1, 10, 8);
+const runeGeo = new THREE.PlaneGeometry(1, 1), wardGeo = new THREE.SphereGeometry(1, 24, 16), wispGeo = new THREE.SphereGeometry(1, 10, 8);
 // the Elder's eyes (the head sits 7.6 R up the torso, the eyes 1.6 R forward of it)
 function elderEye(mon) { const R = mon.size / 4.5, sy = Math.sin(mon.yaw), cy = Math.cos(mon.yaw), f = 2.4 * R; return [mon.x + sy * f, mon.g.position.y + 6.6 * R, mon.z + cy * f, R]; }
 function elderStart(L, mon) { const t = T(), R = mon.size / 4.5, dist = (L.young ? 15 : 21) + t.L * 0.5;
@@ -601,7 +601,7 @@ function elderStart(L, mon) { const t = T(), R = mon.size / 4.5, dist = (L.young
   const ward = new THREE.Mesh(wardGeo, new THREE.MeshBasicMaterial({ color: 0xb06aff, transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending })); scene.add(ward);
   // four runes on the water round your ship: two toward the Elder, two toward the camera
   const rr = t.L * 0.5 + 5.5, runes = [-0.7, 0.7, -2.4, 2.4].map((da, i) => { const a = boat.yaw + da, x = boat.x + Math.sin(a) * rr, z = boat.z + Math.cos(a) * rr;
-    const m = new THREE.Mesh(runeGeo, new THREE.MeshBasicMaterial({ map: runeTex[i], color: RUNE_COL[i], transparent: true, opacity: 0.55, depthTest: false, depthWrite: false })); m.renderOrder = 7; m.position.set(x, ocean.heightAt(x, z) + 0.4, z); m.scale.setScalar(4); scene.add(m); return { m, x, z, lit: 0 }; });
+    const m = new THREE.Mesh(runeGeo, new THREE.MeshBasicMaterial({ map: runeTex[i], color: RUNE_COL[i], transparent: true, opacity: 0.55, depthTest: false, depthWrite: false })); m.renderOrder = 7; m.position.set(x, ocean.heightAt(x, z) + 1.6, z); m.scale.setScalar(4); scene.add(m); return { m, x, z, lit: 0, da, rr }; });
   Object.assign(L, { R, ward, runes, mode: 'ward', mt: 0, dur: L.young ? 6 : 7.5, seqLen: L.young ? 2 : 3, seq: [], si: 0, wisps: [], wispT: 1.2, lift: null, mark: legendRing(0xffd24a, eyeRingGeo), liftNext: rnd(0.3, 0.5) });
   L.mark.visible = false; mon.stState.rise = 1; mon.stState.dive = 0; }
 function elderHint(txt) { const h = $('bHint'); if (h) h.textContent = txt; }
@@ -612,7 +612,7 @@ function elderRune(i) { const L = battle && battle.legend; if (!L || L.kind !== 
   else { L.mode = 'ward'; L.mt = 0; L.dur = 4; R.m.material.color.setHex(0xff2a2a); flash = 0.6; sfx.zap(); damage(battle.mon.dmg * 0.8 * (1 - defense()), 'Wrong rune! ' + battle.mon.name + ' lashes out!'); if (battle) elderHint('Shoot the ghost lights before they reach you! Then watch the runes…'); } }
 function updateElder(dt) { const L = battle.legend, mon = battle.mon, st = mon.stState, t = T(), enraged = mon.hp < mon.maxHp * 0.5; L.mt += dt;
   const [ex, ey, ez, R] = elderEye(mon); L.ward.position.set(mon.x, mon.g.position.y + 5 * R, mon.z); L.ward.scale.setScalar(R * 6.5 * (1 + 0.03 * Math.sin(battle.t * 3)));
-  for (const [i, Rn] of L.runes.entries()) { Rn.lit = Math.max(0, Rn.lit - dt); Rn.m.material.opacity = Rn.lit > 0 ? 1 : L.mode === 'input' ? 0.75 : 0.45; Rn.m.scale.setScalar(4 * (1 + Rn.lit * 0.6)); if (Rn.lit <= 0) Rn.m.material.color.setHex(RUNE_COL[i]); }
+  for (const [i, Rn] of L.runes.entries()) { Rn.lit = Math.max(0, Rn.lit - dt); Rn.m.material.opacity = Rn.lit > 0 ? 1 : L.mode === 'input' ? 0.75 : 0.45; if (Rn.da != null && !boat.dunk) { const a = boat.yaw + Rn.da, k = Math.min(1, dt * 2); Rn.x += (boat.x + Math.sin(a) * Rn.rr - Rn.x) * k; Rn.z += (boat.z + Math.cos(a) * Rn.rr - Rn.z) * k; Rn.m.position.set(Rn.x, ocean.heightAt(Rn.x, Rn.z) + 1.6, Rn.z); } Rn.m.quaternion.copy(camera.quaternion); Rn.m.scale.setScalar(Math.max(4, camera.position.distanceTo(Rn.m.position) * 0.085) * (1 + Rn.lit * 0.6)); if (Rn.lit <= 0) Rn.m.material.color.setHex(RUNE_COL[i]); }
   // ghost lights drift at your ship while the ward is up
   if (L.mode === 'ward') { L.wispT -= dt; if (L.wispT <= 0) { elderWisp(L, mon); L.wispT = (L.young ? 1.3 : enraged ? 0.5 : 0.75) * rnd(0.8, 1.2); } st.attack += (0.15 - st.attack) * Math.min(1, dt * 2);
     if (L.mt > L.dur) { L.mode = 'show'; L.mt = 0; L.seq = Array.from({ length: L.seqLen }, () => (Math.random() * 4) | 0); L.si = 0; elderHint('Watch the runes it lights…'); sfx.groan && sfx.groan(); } }
