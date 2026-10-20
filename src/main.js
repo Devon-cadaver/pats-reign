@@ -380,14 +380,15 @@ function broadArrow(color) { const m = new THREE.Mesh(arrowGeo, new THREE.MeshBa
 const inFight = (mon) => !!battle && (battle.mon === mon || (!!battle.broad && battle.broad.foes.includes(mon)));
 const tierOf = (mon) => SHIP_TIERS[mon.e.v] || SHIP_TIERS[2];
 function startBroadside(mon) {
-  const t = T(), foes = [mon, ...mons.filter((m) => m !== mon && m.naval && !m.dead && !m.boss && !m.treasure && !m.air && !mon.treasure && (m.state === 'chase' || (mon.fleet && m.fleet === mon.fleet)) && Math.hypot(m.x - boat.x, m.z - boat.z) < 90).slice(0, 3)];
-  const Lmax = Math.max(...foes.map((f) => tierOf(f).L)), Bmax = Math.max(...foes.map((f) => tierOf(f).B)), gap = 9 + (t.B + Bmax) * 1.1, spacing = Lmax + 7, Lh = 20 + ((foes.length - 1) * spacing) / 2 + Lmax * 0.5;
-  // the line runs across the line between you and her (so she starts beside you); try other headings and centres for open water
-  const toHer = Math.atan2(mon.x - boat.x, mon.z - boat.z), mx = (boat.x + mon.x) / 2, mz = (boat.z + mon.z) / 2; let F = null;
-  for (let c = 0; c < 24 && !F; c++) { const th = toHer + Math.PI / 2 + [0, 0.45, -0.45, 0.9, -0.9, 1.35, -1.35, 1.57][c % 8], sh = Math.floor(c / 8) * 18, ax = Math.sin(th), az = Math.cos(th), cx = Math.sin(th - Math.PI / 2), cz = Math.cos(th - Math.PI / 2), ox = mx + cx * sh * (c % 2 ? 1 : -1), oz = mz + cz * sh * (c % 2 ? 1 : -1);
-    let ok = true; for (let u = -(Lh + Lmax); ok && u <= Lh + Lmax; u += 5) for (const v of [-(gap / 2 + t.B + 3), 0, gap / 2 + Bmax + 3]) { const x = ox + ax * u + cx * v, z = oz + az * u + cz * v; if (Math.abs(x) > HALF - 25 || Math.abs(z) > HALF - 25 || world.blockAt(x, z, 1)) { ok = false; break; } }
-    if (ok) F = { ox, oz, ax, az, cx, cz }; }
-  if (!F) return false;
+  const t = T(), all = [mon, ...mons.filter((m) => m !== mon && m.naval && !m.dead && !m.boss && !m.treasure && !m.air && !mon.treasure && (m.state === 'chase' || (mon.fleet && m.fleet === mon.fleet)) && Math.hypot(m.x - boat.x, m.z - boat.z) < 90).slice(0, 3)];
+  // the line runs across the line between you and her (so she starts beside you); try other headings and centres for open
+  // water, then a shorter run-up, then fewer foes (the rest join the chase afterwards)
+  const toHer = Math.atan2(mon.x - boat.x, mon.z - boat.z), mx = (boat.x + mon.x) / 2, mz = (boat.z + mon.z) / 2; let F = null, foes, Lmax, Bmax, gap, spacing, Lh;
+  for (let nf = all.length; nf >= 1 && !F; nf--) for (const run of [20, 12]) { if (F) break; foes = all.slice(0, nf); Lmax = Math.max(...foes.map((f) => tierOf(f).L)); Bmax = Math.max(...foes.map((f) => tierOf(f).B)); gap = 9 + (t.B + Bmax) * 1.1; spacing = Lmax + 7; Lh = run + ((foes.length - 1) * spacing) / 2 + Lmax * 0.5;
+    for (let c = 0; c < 48 && !F; c++) { const th = toHer + Math.PI / 2 + [0, 0.45, -0.45, 0.9, -0.9, 1.35, -1.35, 1.57][c % 8], sh = (Math.floor(c / 8) % 3) * 18, al = c >= 24 ? 30 : 0, ax = Math.sin(th), az = Math.cos(th), cx = Math.sin(th - Math.PI / 2), cz = Math.cos(th - Math.PI / 2), sg = c % 2 ? 1 : -1, ox = mx + cx * sh * sg + ax * al * sg, oz = mz + cz * sh * sg + az * al * sg;
+      let ok = true; for (let u = -(Lh + Lmax); ok && u <= Lh + Lmax; u += 5) for (const v of [-(gap / 2 + t.B + 3), 0, gap / 2 + Bmax + 3]) { const x = ox + ax * u + cx * v, z = oz + az * u + cz * v; if (Math.abs(x) > HALF - 25 || Math.abs(z) > HALF - 25 || world.blockAt(x, z, 1)) { ok = false; break; } }
+      if (ok) F = { ox, oz, ax, az, cx, cz }; } }
+  if (!F) { say('⚔ No sea room for a battle line here: <b>close quarters!</b>', 3); return false; }
   const B = { ...F, gap, spacing, Lh, foes, yC: -gap / 2, eC: gap / 2, sp: 0, vp: 0, anchor: Lh * 0.7, ve: 0, mode: 'move', target: -Lh * 0.75, holdT: 0, stopNext: Math.random() < 0.5, sweeps: 0, swap: null, k: 0, reload: 0.8, start: [[boat.x, boat.z], ...foes.map((f) => [f.x, f.z])], camYaw: Math.atan2(F.cx, F.cz), my: broadArrow(0xffd24a), shots: [], burn: new Map() };
   for (const f of foes) { f.bx = { reload: 2 + Math.random(), err: 0, last: null, aimT: 0, arrow: broadArrow(0xff4a3a) }; f.state = 'chase'; }
   battle = { mon, t: 0, broad: B }; boat.wp = null; helm.held = false; setBattle(true); if ((boat.throttle || 0) < 0.3) setThrottle(0.6, true);
@@ -478,8 +479,9 @@ function endBroadside(result) { const B = battle && battle.broad; if (!B) return
   if (result === 'win') setThrottle(0, true);
   else if (result === 'flee') { damage(Math.max(...foes.map((f) => f.dmg)) * 0.5 * (1 - defense()), 'You break away under fire!'); for (const f of foes) f.stun = 7; boat.boost = 3.5; boat.v = topSpeed(); setThrottle(1, true); }
   else if (result === 'board' && target) { if (boardInfo(target)) return; for (const f of foes) if (f !== target) f.stun = 9; startBattle(target, true, { classic: true, board: true }); } }
-$('pauseBtn').addEventListener('click', () => { const b = $('broadToggle'); if (b) b.textContent = '⚔ BATTLES: ' + (BROAD.on ? 'ACTION' : 'CLASSIC'); });
-{ const b = document.createElement('button'); b.id = 'broadToggle'; b.className = 'ghost'; b.onclick = () => { BROAD.on = !BROAD.on; try { localStorage.setItem('pr_broad', BROAD.on ? '1' : '0'); } catch (e) { /* ignore */ } b.textContent = '⚔ BATTLES: ' + (BROAD.on ? 'ACTION' : 'CLASSIC'); }; $('paused').insertBefore(b, $('saveQuit')); }
+const broadLabel = () => { const b = $('broadToggle'); if (!b) return; b.textContent = '⚔ ACTION BATTLES: ' + (BROAD.on ? 'ON' : 'OFF (classic)'); b.classList.toggle('on', BROAD.on); b.classList.toggle('ghost', !BROAD.on); };
+$('pauseBtn').addEventListener('click', broadLabel);
+{ const b = document.createElement('button'); b.id = 'broadToggle'; b.onclick = () => { BROAD.on = !BROAD.on; try { localStorage.setItem('pr_broad', BROAD.on ? '1' : '0'); } catch (e) { /* ignore */ } broadLabel(); say(BROAD.on ? '⚔ Action battles ON: ship fights are fought on the battle line.' : '⚔ Action battles OFF: ship fights use the classic aim bar.', 3); }; $('paused').insertBefore(b, $('saveQuit')); broadLabel(); }
 
 // ---------- LEGEND FIGHTS: each legend (and its young) fights its own way, live on the water ----------
 // KRAKEN, the tentacle siege: it holds your ship fast. Tentacles burst up around you (a red ring warns where), rear back and
