@@ -194,6 +194,8 @@ function serpentHead(parent, sc, pal, ghost) { const h = grp(parent); h.scale.se
   part(h, SPH(), main, 0.36, 0.3, 0.7, 0, 0, 0.18); part(h, SPH(), main, 0.26, 0.2, 0.3, 0, -0.02, 0.5); for (const s of [-1, 1]) { part(h, SPH(), M(ghost ? G.glow : 0xe6b43a, ghost ? 'glow' : 'skin'), 0.09, 0.07, 0.07, s * 0.12, 0.08, 0.32); part(h, CON(), acc, 0.04, 0.22, 0.12, s * 0.12, 0.16, -0.05, -1.1, 0, -s * 0.4); }
   for (let i = 0; i < 4; i++) part(h, CON(), acc, 0.05, 0.16, 0.12, 0, 0.14 - i * 0.02, 0.1 - i * 0.14, -1.3); return h; }
 
+// rune glow by level: violet IV, gold V, Muspel orange VI, Yggdrasil green VII, Bifrost ice VIII
+const RUNE_C = (l) => (l >= 8 ? 0x9adfff : l >= 7 ? 0x7dff9a : l >= 6 ? 0xff6a2a : l >= 5 ? 0xffd24a : 0xb48aff);
 // ---------- the ship ----------
 // up = { shields, armor, ballista, fire, ram, sail } (levels); pal = colours; returns the group and handles for animation
 // treasure chests with glowing gold lids along the deck (the treasure knarr)
@@ -256,11 +258,11 @@ export function buildShip(tier = 0, up = {}, pal = PLAYER_PAL, seed = 1) {
     for (const s of [-1, 1]) for (let i = 0; i < perSide; i++) { const z = -t.L * 0.32 + (t.L * 0.64 * (i + 0.5)) / perSide, u = z / t.L + 0.5, q = Ln.sec(u, 0.93), pc = pal.shields[(i + (s > 0 ? 0 : 1)) % pal.shields.length];
       const sg = grp(st, s * (q.x + 0.06), q.y, z); sg.rotation.z = s * -Math.PI / 2; sg.rotation.y = 0;
       part(sg, DISC(), M(lvl === 1 ? 0x9a6a3a : pc[0]), sr * 2, 0.04, sr * 2, 0, 0, 0); if (lvl >= 2) { const hh = part(sg, HALF(), M(pc[1]), sr * 1.96, sr * 1.96, 1, 0, 0.022, 0, -Math.PI / 2); hh.rotation.z = (i % 2) * Math.PI / 2; }
-      part(sg, SPH_LO(), lvl >= 4 ? M(lvl >= 5 ? 0xffd24a : 0xb48aff, 'glow') : lvl >= 3 ? gold : iron, sr * 0.5, sr * 0.4, sr * 0.5, 0, 0.03, 0); if (lvl >= 3) part(sg, TOR(), iron, sr * 2, sr * 2, 0.6, 0, 0.02, 0, Math.PI / 2); } }
+      part(sg, SPH_LO(), lvl >= 4 ? M(RUNE_C(lvl), 'glow') : lvl >= 3 ? gold : iron, sr * 0.5, sr * 0.4, sr * 0.5, 0, 0.03, 0); if (lvl >= 3) part(sg, TOR(), iron, sr * 2, sr * 2, 0.6, 0, 0.02, 0, Math.PI / 2); } }
   // iron plating along the waterline
   if (up.armor) { const n = Math.round(t.L * 1.1); for (const s of [-1, 1]) for (let i = 0; i < n; i++) { const z = -t.L * 0.38 + (t.L * 0.76 * (i + 0.5)) / n, u = z / t.L + 0.5, v = Ln.vAt(u, 0.12), q = Ln.sec(u, v), q2 = Ln.sec(u, Math.min(1, v + 0.15));
       const pl = grp(st, s * (q.x + 0.05), q.y + 0.04, z); pl.rotation.z = s * -Math.atan2(q2.x - q.x, q2.y - q.y) * 0.6; part(pl, BOX(), up.armor >= 4 ? M(0x2e3038, 'metal') : iron, 0.04, 0.32 + Math.min(3, up.armor) * 0.12, t.L * 0.76 / n * 0.92, 0, 0, 0);
-      if (up.armor >= 2) for (const dy of [-0.12, 0.12]) part(pl, SPH_LO(), up.armor >= 4 ? M(up.armor >= 5 ? 0xffd24a : 0xb48aff, 'glow') : M(0x9aa0a8), 0.05, 0.05, 0.05, s * 0.025, dy, 0); } }
+      if (up.armor >= 2) for (const dy of [-0.12, 0.12]) part(pl, SPH_LO(), up.armor >= 4 ? M(RUNE_C(up.armor), 'glow') : M(0x9aa0a8), 0.05, 0.05, 0.05, s * 0.025, dy, 0); } }
   // ram
   if (up.ram) { const rg = grp(st, 0, 0.0, half * 0.98); part(rg, CON(), iron, 0.32 * t.B / 2.6 * (1 + up.ram * 0.3), 1.1 + up.ram * 0.4, 0.22 * t.B / 2.6 * (1 + up.ram * 0.3), 0, 0, 0.5, Math.PI / 2); part(rg, TOR(), iron, 0.4 * t.B / 2.6, 0.4 * t.B / 2.6, 0.8, 0, 0, 0.05); }
   // ballista at the bow
@@ -268,7 +270,7 @@ export function buildShip(tier = 0, up = {}, pal = PLAYER_PAL, seed = 1) {
   if (up.ballista) { const bz = t.L * 0.33, u = bz / t.L + 0.5; ballista = grp(body, 0, deckY + t.D * 0.35, bz); const bs = 0.7 + Math.min(4, up.ballista) * 0.18 + Math.min(5, tier) * 0.12; ballista.scale.setScalar(bs);
     part(ballista, BOX(), dwood, 0.2, 0.5, 0.2, 0, 0.25, 0); part(ballista, BOX(), wood, 0.22, 0.16, 1.3, 0, 0.55, 0.1); for (const s of [-1, 1]) { rod(ballista, dwood, V(0, 0.6, 0.55), V(s * 0.65, 0.66, 0.35), 0.045); part(ballista, SPH_LO(), iron, 0.1, 0.1, 0.1, s * 0.66, 0.66, 0.35); }
     const str = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([V(-0.65, 0.66, 0.35), V(0, 0.64, -0.2), V(0, 0.64, -0.2), V(0.65, 0.66, 0.35)]), new THREE.LineBasicMaterial({ color: 0xd8c8a0 })); ballista.add(str);
-    const bolt = grp(ballista, 0, 0.66, 0.2); part(bolt, CYL6(), wood, 0.05, 1.2, 0.05, 0, 0, 0, Math.PI / 2); part(bolt, CON(), up.ballista >= 4 ? M(up.ballista >= 5 ? 0xffd24a : 0xb48aff, 'glow') : iron, 0.09, 0.22, 0.09, 0, 0, 0.66, Math.PI / 2); ballista.userData.bolt = bolt; void u;
+    const bolt = grp(ballista, 0, 0.66, 0.2); part(bolt, CYL6(), wood, 0.05, 1.2, 0.05, 0, 0, 0, Math.PI / 2); part(bolt, CON(), up.ballista >= 4 ? M(RUNE_C(up.ballista), 'glow') : iron, 0.09, 0.22, 0.09, 0, 0, 0.66, Math.PI / 2); ballista.userData.bolt = bolt; void u;
     if (up.ballista >= 3) { const b2 = ballista.clone(); b2.position.z = -t.L * 0.3; b2.rotation.y = Math.PI; body.add(b2); } }
   // fire pots near the mast
   const potGlow = [];

@@ -38,7 +38,7 @@ export function applyCode(data) { const old = {}; for (const k of keys()) old[k]
 function summarize(raw) {
   let s = null; try { s = JSON.parse(raw || 'null'); } catch { /* ignore */ } if (!s || typeof s !== 'object') return 'No voyage saved yet. Set sail first!';
   const n = (v, hi) => (typeof v === 'number' && isFinite(v) ? Math.max(0, Math.min(hi, Math.round(v))) : 0), o = (v) => (v && typeof v === 'object' ? v : {});
-  const ups = Object.values(o(s.up)).reduce((a, b) => a + n(b, 5), 0), legends = ['kraken', 'jorm', 'rlyeh', 'hafgufa', 'surtr', 'nidhogg'].filter((k) => Object.prototype.hasOwnProperty.call(o(s.legends), k) && s.legends[k] === true).length, r = o(s.res);
+  const ups = Object.values(o(s.up)).reduce((a, b) => a + n(b, 8), 0), legends = ['kraken', 'jorm', 'rlyeh', 'hafgufa', 'surtr', 'nidhogg'].filter((k) => Object.prototype.hasOwnProperty.call(o(s.legends), k) && s.legends[k] === true).length, r = o(s.res);
   return '🐉 ' + SHIP_TIERS[n(s.tier, SHIP_TIERS.length - 1)].name + ' · ⚒ ' + ups + ' upgrades · 🪙 ' + n(r.g, 1e7) + ' · 🪵 ' + n(r.w, 1e7) + ' · ⚙️ ' + n(r.i, 1e7) + (n(r.s, 1e7) ? ' · 👻 ' + n(r.s, 1e7) : '') + ' · ⚔ ' + n(s.kills, 1e7) + ' slain · 👑 ' + Math.min(6, legends) + ' legends' + (s.realm === 'hel' ? ' · in Helheim' : '') + (s.wreck ? ' · ☠ a wreck to raise' : '');
 }
 

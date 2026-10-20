@@ -33,7 +33,7 @@ export function createMinis({ sfx, hooks }) {
     const hpDraw = () => { $('mgYouHp').style.width = clamp(you.hp / you.maxHp, 0, 1) * 100 + '%'; $('mgFoeHp').style.width = clamp(foe.hp / foe.maxHp, 0, 1) * 100 + '%'; $('mgYouTxt').textContent = Math.ceil(Math.max(0, you.hp)) + ' / ' + Math.round(you.maxHp); $('mgFoeTxt').textContent = Math.ceil(Math.max(0, foe.hp)) + ' / ' + Math.round(foe.maxHp); };
     hpDraw(); banner(o.intro || (foe.naval ? 'SHIP BATTLE!' : 'BATTLE!'), '#ff6a3a'); sfx.horn && sfx.horn();
     function aimUI() { stage.innerHTML = ''; btns.innerHTML = ''; side.className = 'mgSide'; S.zone = 0.18 + Math.random() * 0.64; S.mark = Math.random(); S.dir = Math.random() < 0.5 ? 1 : -1;
-      const zw = clamp((you.zone || 0.16) * (you.thor ? 1.5 : 1), 0.08, 0.4);
+      const zw = clamp((you.zone || 0.16) * (you.thor ? 1.5 : 1), 0.08, 0.5);
       cue.innerHTML = `<div class="mgHint">${foe.naval ? 'Aim at their hull' : 'Aim for the weak spot'} · shot ${S.shots + 1} of ${S.maxShots}</div><div class="track" id="mgTrack"><div class="zone" id="mgZone"></div><div class="zone crit" id="mgCrit"></div><div class="needle" id="mgNeedle"></div></div>`;
       const z = $('mgZone'), c = $('mgCrit'); z.style.left = (S.zone - zw / 2) * 100 + '%'; z.style.width = zw * 100 + '%'; c.style.left = (S.zone - zw * 0.17) * 100 + '%'; c.style.width = zw * 34 + '%'; S.zw = zw;
       const fb = el('button', 'mgBig', you.weapon || 'FIRE'); fb.onclick = shoot; btns.appendChild(fb); $('mgTrack').onpointerdown = (e) => { e.preventDefault(); shoot(); };
