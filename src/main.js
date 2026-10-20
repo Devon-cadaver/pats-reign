@@ -209,10 +209,13 @@ function updateMons(dt) {
     if (state === 'play' && !battle && !fishing && !boat.air && boat.grace <= 0 && mon.stun <= 0 && mon.rise >= 1 && d < mon.size * 0.7 + T().L * 0.42) contact(mon);
   }
 }
+// smoke and sparks from a burning ship
+function shipSmoke(s, dt) { if (!s.dmg || s.dmg.k < 0.55) return; for (const p of s.fireSpots()) { if (Math.random() < dt * 4) smoke.add(p.x, p.z, { spray: true, y: p.y + 1, vx: rnd(-0.4, 0.4), vz: rnd(-0.4, 0.4), vy: rnd(1.5, 2.6), g: -0.1, s: rnd(1.2, 2), grow: 1.4, life: 3.5, a: 0.45 });
+  if (Math.random() < dt * 6) embers.add(p.x + rnd(-0.4, 0.4), p.z + rnd(-0.4, 0.4), { spray: true, y: p.y + 0.6, vx: rnd(-1, 1), vz: rnd(-1, 1), vy: rnd(3, 5), g: 3, s: 0.3, grow: 0, life: 0.8, a: 1 }); } }
 function animMon(mon, dt, st) { if (mon.attT >= 0) { mon.attT += dt; st.attack = Math.sin(Math.min(1, mon.attT / 0.9) * Math.PI); if (mon.attT > 0.9) { mon.attT = -1; st.attack = 0; } } else st.attack = Math.max(0, st.attack - dt * 2);
   st.dive = mon.dive; st.rise = mon.rise; st.hurt = Math.max(0, (st.hurt || 0) - dt * 2); mon.g.position.x = mon.x; mon.g.position.z = mon.z; mon.g.rotation.y = mon.yaw;
   if (mon.naval) { const tl = ocean.tiltAt(mon.x, mon.z, mon.yaw, mon.size * 2, mon.size * 0.4); mon.g.position.y = tl.y; mon.m.ship.body.rotation.x = -tl.pitch * 0.8; mon.m.ship.body.rotation.z = -tl.roll * 0.8; } else mon.g.position.y = ocean.heightAt(mon.x, mon.z);
-  mon.m.anim(dt, st); }
+  mon.m.anim(dt, st); if (mon.naval) { mon.m.ship.setDamage(mon.dead ? 1 : 1 - (battle && battle.mon === mon && battle.foe && !battle.broad ? battle.foe.hp : mon.hp) / mon.maxHp); if (Math.hypot(mon.x - boat.x, mon.z - boat.z) < 150) shipSmoke(mon.m.ship, dt); } }
 function contact(mon) {
   const fwd = Math.atan2(mon.x - boat.x, mon.z - boat.z), head = Math.abs(angDiff(fwd, boat.yaw)) < 0.6;
   if (P.up.ram && head && boat.v > topSpeed() * 0.55) { const d = Math.round(attack() * (0.6 + 0.5 * P.up.ram) * (boat.thor > 0 ? 2 : 1)); mon.hp -= d; pop(mon.x, mon.top, mon.z, 'RAMMED −' + d, '#ffd24a'); sfx.boom(); foam.splash(mon.x, mon.z, 1.5); if (mon.hp <= 0) { killMon(mon); return; } }
@@ -727,8 +730,8 @@ chartEl.addEventListener('wheel', (e) => { e.preventDefault(); const [wx, wz] = 
 $('chartClose').onclick = closeChart;
 
 
-// ---------- tags and pops ----------
-function updateTags(dt) { for (const mon of mons) { const t = mon.tag; if (mon.dead || state === 'title') { t.style.display = 'none'; continue; } const d = Math.hypot(mon.x - boat.x, mon.z - boat.z); const sp = d < 90 && mon.rise > 0.5 ? toScreen(mon.x, mon.g.position.y + mon.top + 1.2, mon.z) : null; if (!sp || (wx.type === 'fog' && wx.k > 0.5 && d > 40)) { t.style.display = 'none'; continue; }
+// ---------- tags and pops ---------- (an enemy in a broadside has her bar at the top instead)
+function updateTags(dt) { for (const mon of mons) { const t = mon.tag; if (mon.dead || state === 'title' || (battle && battle.broad && battle.mon === mon)) { t.style.display = 'none'; continue; } const d = Math.hypot(mon.x - boat.x, mon.z - boat.z); const sp = d < 90 && mon.rise > 0.5 ? toScreen(mon.x, mon.g.position.y + mon.top + 1.2, mon.z) : null; if (!sp || (wx.type === 'fog' && wx.k > 0.5 && d > 40)) { t.style.display = 'none'; continue; }
     t.style.display = 'block'; t.style.left = sp[0] + 'px'; t.style.top = sp[1] + 'px'; const html = '<span style="color:' + (mon.naval ? '#ffb03a' : danger(mon.lv)) + '">' + mon.name + ' · ' + (mon.lv - P.tier > 1.6 ? '💀 Lv ' + (Math.round(mon.lv) + 1) : 'Lv ' + (Math.round(mon.lv) + 1)) + '</span>' + (mon.hp < mon.maxHp ? '<i><b style="width:' + clamp(mon.hp / mon.maxHp, 0, 1) * 100 + '%"></b></i>' : ''); if (t._h !== html) { t.innerHTML = html; t._h = html; } }
   for (let i = pops.length - 1; i >= 0; i--) { const p = pops[i]; p.t += dt; const sp = toScreen(p.x, p.y + p.t * 2.5, p.z); if (!sp || p.t > p.life) { p.el.remove(); pops.splice(i, 1); continue; } p.el.style.left = sp[0] + 'px'; p.el.style.top = sp[1] + 'px'; p.el.style.opacity = Math.min(1, (p.life - p.t) * 2); } }
 
@@ -766,6 +769,7 @@ function updateBoat(dt) {
   boat.shake = Math.max(0, boat.shake - dt); const sh = boat.shake * 0.6;
   ship.g.position.set(boat.x + rnd(-sh, sh), boat.y, boat.z + rnd(-sh, sh)); ship.g.rotation.y = boat.yaw; ship.body.rotation.x = -boat.pitch; ship.body.rotation.z = boat.roll + Math.sin(time * 9) * sh * 0.1 + (helm.angle / HMAX) * Math.min(1, boat.v / 8) * 0.07;
   ship.anim(dt, { speed: boat.v, time, night: isNight(), sail: boat.sailK ?? 0 });
+  ship.setDamage(1 - (battle && battle.you && !battle.broad ? battle.you.hp : P.hp) / maxHp()); shipSmoke(ship, dt);
   if (boat.thor > 0) { ship.sailMat.emissive.setHex(0x1a6aff); ship.sailMat.emissiveIntensity = 0.4 + Math.abs(Math.sin(time * 9)) * 0.5; if (Math.random() < dt * 10) foam.add(boat.x + rnd(-t.B, t.B), boat.z + rnd(-t.L / 2, t.L / 2), { spray: true, y: boat.y + rnd(1, t.mast), vx: rnd(-2, 2), vz: rnd(-2, 2), vy: rnd(1, 3), s: 0.4, life: 0.4, a: 1 }); } else if (boat.bifrost > 0) { ship.sailMat.emissive.setHex(0x1aff8a); ship.sailMat.emissiveIntensity = 0.25 + Math.abs(Math.sin(time * 3)) * 0.3; } else if (ship.sailMat.emissiveIntensity !== 0) { ship.sailMat.emissive.setHex(0); ship.sailMat.emissiveIntensity = 0; }
   // wake and bow spray
   boat.wakeT = (boat.wakeT || 0) - dt; if (boat.v > 1.5 && boat.wakeT <= 0) { boat.wakeT = 0.09; const fx = Math.sin(boat.yaw), fz = Math.cos(boat.yaw), k = boat.v / t.speed; for (const s of [-1, 1]) foam.add(boat.x + fx * t.L * 0.42 + fz * s * t.B * 0.4, boat.z + fz * t.L * 0.42 - fx * s * t.B * 0.4, { vx: fz * s * 1.6 * k - fx * 0.5, vz: -fx * s * 1.6 * k - fz * 0.5, s: 0.5 + t.B * 0.25, grow: 1 + k, life: 3, a: 0.55 * k });
@@ -784,8 +788,8 @@ $('viewBtn').onclick = () => { viewMode = viewMode === 'top' ? 'chase' : viewMod
 function updateCamera(dt) { const t = T(); let tgt, dist, pitch;
   if (state === 'title') { const a = time * 0.06; tgt = V(boat.x, 2, boat.z); dist = t.L * 2.2 + 14; pitch = 0.28; camYaw = a; }
   else if (battle && battle.broad) { // the action ship battle: from inside the rings, side-on to your ship, looking out across her ring
-    const B = battle.broad, ux = Math.sin(B.ap), uz = Math.cos(B.ap), hfov = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect, W = Math.max(22, B.eT.L * 2.4, t.L * 2.4);
-    tgt = V(boat.x + ux * B.gap * 0.5, 1.2, boat.z + uz * B.gap * 0.5); dist = clamp(W / (2 * hfov), 22, 60); pitch = 0.32; camYaw += angDiff(B.ap, camYaw) * Math.min(1, dt * 2.5); }
+    const B = battle.broad, ux = Math.sin(B.ap), uz = Math.cos(B.ap), hfov = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect, W = Math.max(18, B.eT.L * 2.2, t.L * 2.2);
+    tgt = V(boat.x + ux * B.gap * 0.5, 1.2, boat.z + uz * B.gap * 0.5); dist = clamp(W / (2 * hfov), 16, 60); pitch = 0.28; camYaw += angDiff(B.ap, camYaw) * Math.min(1, dt * 2.5); }
   else if (battle && battle.mon.giant) { // frame your ship against one of the giant's eyes (the kraken's eye is about a ship long)
     const mon = battle.mon, Rk = mon.size / 6, sy = Math.sin(mon.yaw), cy = Math.cos(mon.yaw), lx = 0.9 * Rk, lz = 1.15 * Rk, ex = mon.x + lx * cy + lz * sy, ez = mon.z + lz * cy - lx * sy, de = Math.hypot(ex - boat.x, ez - boat.z);
     tgt = V((boat.x + ex) / 2, Rk * 0.3, (boat.z + ez) / 2); dist = de * 0.5 + t.L * 1.8 + 12; pitch = 0.16; const want = Math.atan2(ex - boat.x, ez - boat.z); camYaw += angDiff(want, camYaw) * Math.min(1, dt * 1.5); }

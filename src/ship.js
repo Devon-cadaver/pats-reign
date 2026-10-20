@@ -244,6 +244,35 @@ export function buildShip(tier = 0, up = {}, pal = PLAYER_PAL, seed = 1) {
   if (lv >= 3 && !ghost) for (const sd of [-1, 1]) { const q = Ln.sec(0.78, Ln.vAt(0.78, deckY + 0.2)), bx = sd * Math.max(0.3, q.x - 0.45), bz = t.L * 0.28; for (const a of [0, 2.1, 4.2]) rod(st, iron, V(bx + Math.cos(a) * 0.3, deckY, bz + Math.sin(a) * 0.3), V(bx, deckY + 0.9, bz), 0.04); const bowl = part(st, CYL(), iron, 0.75, 0.3, 0.75, bx, deckY + 1.0, bz); void bowl; part(st, TOR(), M(0x3a3a3e), 0.8, 0.8, 1.4, bx, deckY + 1.15, bz, Math.PI / 2); const fl = part(body, CON(), M(0xff8a2a, 'glow'), 0.55, 0.9, 0.55, bx, deckY + 1.55, bz); const fl2 = part(body, CON(), M(0xffe27a, 'glow'), 0.3, 0.6, 0.3, bx, deckY + 1.45, bz); fl.visible = fl2.visible = false; braziers.push(fl, fl2); }
   // merge the static parts: flatten nested groups first so each material becomes one mesh
   flatten(st); mergeParts(st);
+  // ---------- battle damage you can see: holes and cracks in the strakes, a torn sail, fires on deck ----------
+  // setDamage(k), k = share of the hull lost (0..1): every mark has its own threshold, so they come and go as the hull is
+  // hurt and mended; the sail tears in stages; fireSpots() tells main.js where to send smoke and sparks up
+  const dmg = { k: -1, stage: -1, marks: [], fires: [] };
+  { const holeMat = new THREE.MeshBasicMaterial({ color: ghost ? 0x0a1a12 : 0x140b06, side: THREE.DoubleSide }), rimMat = new THREE.MeshBasicMaterial({ color: ghost ? 0x3a6a52 : 0x9a7048, side: THREE.DoubleSide });
+    const jag = (n, rx, ry, rough) => { const s = new THREE.Shape(); for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, f = 1 - rough * r(); if (i) s.lineTo(Math.cos(a) * rx * f, Math.sin(a) * ry * f); else s.moveTo(Math.cos(a) * rx * f, Math.sin(a) * ry * f); } s.closePath(); return new THREE.ShapeGeometry(s); };
+    const N = 8 + tier * 2;
+    for (let i = 0; i < N; i++) { const side = i % 2 ? 1 : -1, u = 0.18 + r() * 0.64, crack = r() < 0.45, y = 0.15 + r() * Math.max(0.2, Ln.top(u) - 0.45), q = Ln.sec(u, Ln.vAt(u, y));
+      const g = grp(body, side * (q.x + 0.04), y, Ln.z(u)); g.rotation.y = side * Math.PI / 2; g.rotation.z = (r() - 0.5) * (crack ? 1.4 : 0.6); // facing out of the side
+      const sz = (0.18 + r() * 0.2) * Math.min(1.6, t.D);
+      if (crack) g.add(new THREE.Mesh(jag(9, sz * 2.4, sz * 0.22, 0.6), holeMat));
+      else { g.add(new THREE.Mesh(jag(10, sz * 1.25, sz, 0.45), rimMat)); const h = new THREE.Mesh(jag(9, sz, sz * 0.8, 0.5), holeMat); h.position.z = 0.012; g.add(h); }
+      g.visible = false; dmg.marks.push({ g, at: 0.12 + (i / N) * 0.7 + r() * 0.06 }); }
+    const fl = new THREE.MeshBasicMaterial({ color: 0xff7a1a, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }), core = new THREE.MeshBasicMaterial({ color: 0xffd25a, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending });
+    const nF = 2 + Math.min(2, tier);
+    for (let i = 0; i < nF; i++) { const z = (r() - 0.5) * t.L * 0.6, u = z / t.L + 0.5, q = Ln.sec(u, Ln.vAt(u, deckY + 0.2)), x = (r() - 0.5) * Math.max(0.2, q.x - 0.3) * 1.2, s = (0.5 + r() * 0.4) * Math.min(1.8, 0.6 + t.B * 0.25);
+      const f = grp(body, x, deckY + 0.05, z), o = new THREE.Mesh(new THREE.ConeGeometry(0.35 * s, 1.3 * s, 7), fl), c = new THREE.Mesh(new THREE.ConeGeometry(0.2 * s, 0.8 * s, 6), core); o.position.y = 0.6 * s; c.position.y = 0.4 * s; f.add(o, c);
+      f.visible = false; dmg.fires.push({ f, o, c, at: 0.55 + (i / nF) * 0.3, ph: r() * 6 }); } }
+  // the sail: an alpha map with ragged holes, then a long rip up from the foot
+  let tornTex = null; const tear = (stage) => { if (ghost) return;
+    if (!tornTex) { const cv = document.createElement('canvas'); cv.width = cv.height = 128; tornTex = new THREE.CanvasTexture(cv); tornTex.userData.cv = cv; }
+    const g2 = tornTex.userData.cv.getContext('2d'), rr = rand(seed * 131 + 7); g2.fillStyle = '#fff'; g2.fillRect(0, 0, 128, 128); g2.fillStyle = g2.strokeStyle = '#000';
+    for (let i = 0; i < [0, 0, 2, 4, 7][stage]; i++) { const cx = 14 + rr() * 100, cy = 12 + rr() * 96, rad = 5 + rr() * 9; g2.beginPath(); for (let k = 0; k < 10; k++) { const a = (k / 10) * Math.PI * 2, f = 0.55 + rr() * 0.45; if (k) g2.lineTo(cx + Math.cos(a) * rad * f, cy + Math.sin(a) * rad * f); else g2.moveTo(cx + Math.cos(a) * rad * f, cy + Math.sin(a) * rad * f); } g2.closePath(); g2.fill(); }
+    if (stage >= 3) { let x = 30 + rr() * 68, y = 128; g2.lineWidth = stage >= 4 ? 7 : 5; g2.beginPath(); g2.moveTo(x, y); while (y > (stage >= 4 ? 26 : 62)) { y -= 7 + rr() * 8; x += (rr() - 0.5) * 14; g2.lineTo(x, y); } g2.stroke(); }
+    tornTex.needsUpdate = true; sailMat.alphaMap = stage >= 2 ? tornTex : null; sailMat.alphaTest = stage >= 2 ? 0.5 : 0; sailMat.needsUpdate = true; };
+  function setDamage(k) { k = Math.max(0, Math.min(1, k || 0)); if (Math.abs(k - dmg.k) < 0.01) return; dmg.k = k;
+    for (const m of dmg.marks) m.g.visible = k >= m.at; for (const f of dmg.fires) f.f.visible = k >= f.at;
+    const stage = k < 0.3 ? 0 : k < 0.45 ? 1 : k < 0.6 ? 2 : k < 0.78 ? 3 : 4; if (stage !== dmg.stage) { dmg.stage = stage; tear(stage); } }
+  const fireSpots = () => dmg.fires.filter((f) => f.f.visible).map((f) => f.f.getWorldPosition(new THREE.Vector3()));
   let mask = null;
   // water mask: an invisible lid at the gunwale drawn after the ship and before the sea, so waves never show inside the hull
   { const nU = 30, mp = [], mi = []; for (let i = 0; i <= nU; i++) { const u = i / nU, q = Ln.sec(u, 1), x = Math.max(0.01, q.x - 0.03); mp.push(-x, q.y - 0.02, Ln.z(u), x, q.y - 0.02, Ln.z(u)); }
@@ -259,8 +288,9 @@ export function buildShip(tier = 0, up = {}, pal = PLAYER_PAL, seed = 1) {
     billow += (0.55 + k * 0.6 - billow) * Math.min(1, dt * 1.5); sail.scale.z = (billow + Math.sin(time * 1.7) * 0.04) * (0.3 + 0.7 * sailK); sail.scale.y = 0.16 + 0.84 * sailK;
     const fp = flag.geometry.attributes.position; for (let i = 0; i < fp.count; i++) { const x = fp.getX(i); fp.setZ(i, Math.sin(time * 6 + x * 5) * 0.08 * (-x / t.B) * 2); } fp.needsUpdate = true;
     for (const l of lamps) l.visible = ghost || night; braziers.forEach((b, i) => { b.visible = night; b.scale.y = (i % 2 ? 0.6 : 0.9) * (0.85 + Math.sin(time * 11 + i * 2) * 0.15); }); for (const gl of potGlow) gl.scale.setScalar(0.1 * (0.85 + Math.sin(time * 9 + gl.position.x * 7) * 0.15));
+    for (const f of dmg.fires) if (f.f.visible) { const fl = 0.8 + Math.sin(time * 13 + f.ph) * 0.15 + Math.sin(time * 23 + f.ph * 2) * 0.08; f.o.scale.set(1, fl, 1); f.c.scale.set(1, 1.9 - fl, 1); f.o.rotation.y = time * 2 + f.ph; }
   }
-  return { g: root, body, t, tier, anim, len: t.L, beam: t.B, mastTop, deckY, sail, ballista, bowZ: half * 1.06, sailMat, hull, mask };
+  return { g: root, body, t, tier, anim, len: t.L, beam: t.B, mastTop, deckY, sail, ballista, bowZ: half * 1.06, sailMat, hull, mask, setDamage, fireSpots, dmg };
 }
 
 function flatten(st) { st.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(st.matrixWorld).invert(); const list = []; st.traverse((o) => { if (o.isMesh && o.parent !== st) list.push(o); });

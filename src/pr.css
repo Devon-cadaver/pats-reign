@@ -243,3 +243,4 @@ html.tabletHud #broad .bFire { width: 160px; height: 160px; font-size: 30px; } h
 #broad .bStrip span { position: absolute; left: 50%; top: 34px; transform: translateX(-50%); white-space: nowrap; font-size: 12px; font-weight: 800; color: #ff7a5a; text-shadow: 0 1px 3px #000; transition: opacity .15s; }
 html.tabletHud #broad .bStrip { bottom: calc(200px + env(safe-area-inset-bottom, 0)); height: 36px; }
 #broad .bStrip span { left: auto; right: 4px; top: auto; bottom: 36px; transform: none; }
+#broad .bSide { max-width: 118px; } #broad .bSide .mgBoard { font-size: 11px; padding: 6px 8px; line-height: 1.2; white-space: normal; text-align: center; } html.tabletHud #broad .bSide { max-width: 210px; } html.tabletHud #broad .bSide .mgBoard { font-size: 14px; }

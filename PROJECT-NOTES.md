@@ -170,6 +170,20 @@ disagree with this file, this file wins.
 - Tested: on-time PERFECT 21, late 0; she hit 2 of 2 passes at first (34 each), so her damage went x1.5 -> x1 and her aim
   error wider; win, flee and board end cleanly with no arrows left; phone and tablet layouts.
 
+## v0.6.1: ship damage you can see (Sean: torn sails, fires, holes and cracks)
+- ship.js buildShip: setDamage(k) with k = share of the hull lost. Hull marks (8 + 2 x tier, both sides, placed on the real
+  hull side with Ln.sec / Ln.vAt): jagged dark holes with a splintered rim, or long thin cracks; each has its own threshold
+  between 0.12 and 0.88. Sail: a 128 px alpha map (sailMat.alphaMap, alphaTest 0.5) redrawn per stage: stage 2 (k >= 0.45)
+  2 holes, stage 3 (0.6) 4 holes and a rip from the foot, stage 4 (0.78) 7 holes and a long rip; the ghost hull's sails
+  are left alone. Fires: 2-4 flame cones (additive) on deck from k 0.55-0.85, flickering in anim(); fireSpots() gives their
+  world positions. Everything returns to clean as the hull is repaired or mended.
+- main.js: your ship shows P.hp (or battle.you.hp during a classic battle); every enemy ship shows its hull (battle.foe.hp
+  during a classic battle); shipSmoke(s, dt) sends smoke and sparks up from the fires (k >= 0.55, ships within 150).
+- Broadside polish: camera closer (W = max(18, 2.2 L), min distance 16, pitch 0.28) so ships are bigger; the board button
+  is compact so it never covers FIRE; her floating name tag is hidden in a broadside (her bar is at the top).
+- Gotcha (twice this session): a // comment appended to a long one-line function cuts off the rest of that line; node
+  --check can still pass (the next lines close the braces) while the game breaks at runtime. Put comments on their own line.
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster
