@@ -2,8 +2,8 @@
 
 **Title:** Valhalla's Tide
 **Short description (tagline):** A Viking saga of the monster sea. Sail, fight sea serpents and krakens, grow your longship, and cross Hel's Gate into the realm of the dead.
-**Kind:** HTML (plays in the browser). Upload `valhallas-tide-v1.0.0-html5.zip`, tick "This file will be played in the browser".
-**Viewport:** 1280 × 720, tick "Fullscreen button" and "Mobile friendly" (the game is built for phones too; it has one-handed controls).
+**Kind of project:** HTML. Upload `valhallas-tide-v1.0.0-html5.zip` and tick **"This file will be played in the browser"** on that upload.
+**Embed options:** "Embed in page", **Viewport dimensions 1280 × 720** (leave it blank and itch says "No dimensions provided or detected"), tick **Fullscreen button** and **Mobile friendly**; leave "Automatically start on page load" off (the game needs a tap to start its sound). Frame options: no scrollbars. The zip must have forward-slash paths inside (build it with tar.exe or 7-Zip, not PowerShell Compress-Archive, which writes backslashes that itch cannot read).
 **Cover:** `cover-630x500.png`. **Screenshots:** the nine in `shots/`. **Banner (custom theme):** `banner-960x400.png`. **Social:** `social-1200x630.png`.
 **Genre:** Action, Adventure. **Tags:** vikings, naval, sea-monsters, roguelite, ship-building, singleplayer, mobile, browser, 3d, norse-mythology.
 **Pricing:** free (or pay what you want).

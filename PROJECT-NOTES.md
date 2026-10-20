@@ -583,7 +583,9 @@ disagree with this file, this file wins.
 - v1.0.0 (the rename and the itch.io release): Valhalla's Tide; logo public/logo.svg (a longship on a curling wave
   beneath the sun), rendered to the icons and release/itch (cover 630x500, banner 960x400, social 1200x630, icon 1024,
   nine 1920x1080 screenshots, an 8 s 9:16 gameplay clip, video-prompts.md) by scratchpad logo-render.cjs / itchshots.cjs /
-  clip.cjs; the itch zip is the plain vite build (base ./, index.html at the root): release/itch/valhallas-tide-v1.0.0-html5.zip.
+  clip.cjs; the itch zip is the plain vite build (base ./, index.html at the root, showcase left out): release/itch/valhallas-tide-v1.0.0-html5.zip,
+  made with C:/Windows/System32/tar.exe -a -c -f (PowerShell Compress-Archive writes backslash paths that itch cannot read;
+  git-bash tar makes a tarball). Tested unzipped under /html/12345/ inside a 1280x720 iframe (how itch serves it): loads and plays.
   The repo and the Pages URL keep the pats-reign name. The Bestiary is release/valhallas-tide-bestiary.html (same artifact URL).
 
 ## Pages and modules
