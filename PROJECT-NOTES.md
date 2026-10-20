@@ -1,6 +1,6 @@
 # Pats Reign: project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-20, version 0.7.2. Where older notes or memory
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 0.8.1. Where older notes or memory
 disagree with this file, this file wins.
 
 ## Where things are
@@ -44,30 +44,32 @@ disagree with this file, this file wins.
   ship battle (a battle line, fleets join), visible ship damage, one-handed controls with a side swap, battle zoom and
   lighter fog, keyboard play (W/S notches, Space, C, E, mini-game keys), BACK on the telegraph, chase view to start,
   the legends always rise (young ones or papa); v0.7.0-0.7.2: live legend fights (Kraken siege, Jormungandr hunt, Elder
-  One ward) with special moves, and lair waves. Each has its own section below.
+  One ward) with special moves, and lair waves; v0.8.0 (overnight): the end game: Helheim, three bigger ships, rune
+  upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
+  Each has its own section below.
 
-## Where we left off (2026-10-20, v0.7.2, before a compaction)
-- Live and pushed: v0.7.2 (main is clean and level with origin). Every request from the 2026-10-19/20 sessions is built,
-  tested in the browser and deployed; each version has its own section below (v0.5.1 to v0.7.2).
-- The newest work, which Sean has not played yet: the three live legend fights (Kraken tentacle siege with the grab,
-  Jormungandr's hunt with the coil and lightning, the Elder One's rune ward with the lift and slam) and the lair waves.
-  They were tested with bots that fire automatically, so expect him to ask for balance changes. The knobs:
-  Kraken slam 0.6 x dmg, tentacle hits 3, eye 2.4 x attack, grab chance 0.28 (enraged 0.4), break-free 5 hits in 3.5 s;
-  Jormungandr strike 1.1 x dmg, lock time 1.0 s, exposed 3.2 s, coil chance 0.3, electrocute 1.5 x dmg;
-  Elder lash 0.8 x dmg, open 4 s at 0.3 x attack, eye-flash window 0.55 s, slam 1.6 x dmg; legends get 1.5x hull in
-  action fights; lair waves every 60-110 s, papa chance 0.2 + 0.07 a wave (max 0.6).
-- Open offers Sean has not answered: making whirlpools easier to escape at FULL sail (a weaker pull, or a break-free
-  push when pointed outward). Sean asked how to get out of whirlpools; the answer was FULL sail straight out early, ride
-  it out (it closes in 40-55 s, only the eye hurts), or upgrade Sails / Oars & Crew.
-- Ideas Sean raised that are only done for the legends: ordinary octopus / squid grabbing and pulling the ship under,
-  ordinary sea serpents wrapping and electrocuting. He framed them as boss moves ("special moves like that for the
-  bosses"), so they live in the legend fights; extending them to normal monsters would be new work.
-- Sean's preferences learned this session: no fixed-level sea zones (monsters scale with the ship everywhere); fights
-  should be engaging and tough, a different style per boss; avoid constant circling or spinning cameras (motion
-  sickness); one-handed controls with a side swap; everything playable from the keyboard on PC; the in-game music can
-  be switched off for his own (MUSIC off lets Spotify play on iOS); he restarts or stops the dev server himself at
-  times, and said I can restart it.
-
+## Where we left off (2026-10-21 morning, v0.8.x, after the overnight end-game build)
+- Sean's overnight request (2026-10-20): put Opus and Sonnet agents on bug and exploit testing, play every part, judge the
+  loop's fun; build what a long end game needs: bigger ships, upgrades, hull and sail designs, and a second map, the
+  Underworld (every ship and monster undead and slightly harder; a burning sky by day, a purple swirling abyss by night).
+  "Run through the night. Test as you go."
+- Done and live (see the v0.8.0 section below): Helheim (second world, its own seas, harbours, legends, sky, music),
+  Hel's Gate in Midgard's Mist Sea (opens with a Drakkar), undead monsters and draugr fleets, souls, rune upgrade levels
+  4 and 5, the Busse / Ormen Lange / Naglfar, the shipwright (9 hulls, 12 sails with perks, ship names), bounties, Pat's
+  saga (deeds and titles), Pat's Hall (gold sink), reborn legends, ordinary octopus grabs and serpent coils, plus the
+  tester fixes (spawns follow the ship at every size, fire pots take a shot, legends only die in their fights, many UI,
+  save and memory fixes). Deployed as v0.8.0, later fixes as v0.8.1 (see below).
+- Sean has played none of it yet. Expect balance feedback. The knobs: lair waves and rebirths (lairSpawn), souls per
+  kill (killMon: 2 + 2 x (level - size)), rune level prices (UPG), TIER_COST 5-7, HALL, bounty pay (makeBounty), monster
+  hull x1.3 (spawnMon), DELTA (spawn levels), pots (potK, 1 + floor(level / 2) a battle), Jormungandr's lock 1.9 s.
+- Testers: their full reports were delivered as messages in the 2026-10-20 session; the important findings and what
+  was done about each are in the v0.8.0 section. qa/BRIEF.md and qa/BRIEF080.md in that session's scratchpad describe
+  the set-up (Playwright from the npx cache, a frozen build on its own port per wave).
+- Open offers Sean has not answered: an easier whirlpool escape.
+- Sean's preferences (unchanged): no fixed-level sea zones (monsters scale with the ship everywhere: now from your ship's
+  level at every size); fights engaging and tough, a different style per boss; no constant circling or spinning cameras;
+  one-handed controls with a side swap; everything playable from the keyboard on PC; music can be switched off; he
+  restarts the dev server himself at times and said I can restart it.
 ## v0.5.0: boarding, prize ships, treasure maps, the ghost ship, the HELM view (Sean: "go in the order you feel is best")
 - Grappling Hooks: UPG.hooks (3 levels, capped at ship tier + 1 like every upgrade). HOOK_NEED(v): ship size 0-1 needs I,
   2-3 needs II, 4 (Drakkar) needs III; the ghost ship needs III + Draugr's Bane + night. boardInfo(mon) returns null (can
@@ -335,6 +337,155 @@ disagree with this file, this file wins.
 - Tested: a Drakkar bot (perfect runes, Space every 0.27 s) after 90 s had the Elder at 2% and 472 of 938 hull left
   (5 ward breaks, 5 lifts: 2 drops, 2 slams).
 
+## v0.8.0 and v0.8.1: Helheim, the end game (Sean, 2026-10-20 overnight)
+- Sean: "put a few agents from opus and sonnet on bug testing and exploit testing ... create larger ships ... ship
+  upgrades and designing with new hulls and sails ... a second map ... the underworld where every ship is a version of
+  undead and so are the monsters. Burning sky at day, purple swirling abyss at night. All mobs are slightly harder."
+  v0.8.0 went live mid-night; v0.8.1 carries the later fixes.
+- Testers: six background agents. Wave 1 on a frozen v0.7.2 build (vite preview of scratchpad/snap072 on port 4180):
+  exploit + economy (Opus), game loop / progression analyst (Opus), sailing + UI bugs (Sonnet), combat + boss bugs
+  (Sonnet). Wave 2 on a frozen v0.8.0 build (snap080 on 4181): Helheim bugs (Sonnet), end-game fun and balance (Opus).
+  Each drove its own headless Chromium with Playwright (the package in the npx cache 9833c18b2d85bc59, executablePath the
+  installed chromium_headless_shell-1248, with --use-angle=swiftshader). Subagents may not write report files, so each
+  sent its report back as its final message; the shared brief is qa/BRIEF.md (+ BRIEF080.md) in that session's
+  scratchpad. Reuse the set-up for future test rounds (give each wave a frozen build on its own port so edits to src/ do
+  not reload their pages).
+- Two realms. `worlds = { mid, hel }`, `let world` is the one you sail in; buildWorld(scene, seed, realm) builds Helheim
+  (seed 6661013) the first time you cross (about 1 s, behind the fade) and keeps both after; setRealm(realm) swaps the
+  world group, the shore map (ocean.setShore), env looks (env.setRealm), gates, clears monsters, spots, floats, spouts,
+  pods and events, and re-marks beaten lairs. P.realm is saved; load() calls setRealm. A new voyage resets to Midgard.
+- Helheim's map (world.js): the same five-sea layout with the dead's version of each: Gjöll (centre, black stone, dead
+  trees, Gjallarhöfn), Niflhel (north, pale frost, dead white trees), Muspelheim (east, burnt black rock and lava),
+  Nástrond (west, bruise-purple marsh, soul lights), Ginnungagap (south, bone shores, bone reefs). BIOME_HEL,
+  STACK_PAL_HEL, REGIONS_HEL, HARBOR_NAMES_HEL (Gjallarhöfn, Niflvik, Hrimgard, Surtsholm, Nástrond, Bonestrand; other
+  positions than Midgard's), village() in dark wood with purple fires and whale-rib fences, soul lights in every sea, dead
+  / charred / bone trees. Lairs (LAIRS_HEL): Hafgufa's Deep (-60, -520, ice-bone spires), Surtr's Forge (520, 250,
+  obsidian pillars with molten crowns), Nidhögg's Roots (-440, 380, dead roots of the World Tree).
+- The sky (ocean.js SKY_FRAG, uHel and uTime): by day fbm fire clouds rolling over an ember horizon; by night a purple
+  abyss, log-spiral arms of violet light turning round a black heart at the zenith. env.js LOOKS_HEL (day / dawn / dusk /
+  night), REGION_LOOKS_HEL (water tints, Niflhel / Muspelheim / Nástrond haze), WEATHER_HEL (ember storm, ash rain, grave
+  mist, with their own water). Ash falls everywhere, embers in Muspelheim, rime in Niflhel; rain falls as grey ash.
+- The gates (hel.js makeGate): Hel's Gate at GATES.mid (-548, 190) in Midgard's Mist Sea (open water; Midgard's islands
+  were not moved), the gate home at GATES.hel (62, 36) by Gjallarhöfn. A ring of eight rune stones, a log-spiral shader
+  disc and a beam; sealed it smoulders (k 0.25). The context button (🌀 HEL / 🌅 HOME) within 20 + L x 0.3 opens #gate;
+  below a Drakkar it only says the gate is sealed. crossRealm: purple #fade 1.1 s, setRealm, the ship 32 out from the
+  other gate facing the centre, grace 6 s, home = the nearest harbour, a realm banner. P.beenHel; leaving a harbour with
+  a Drakkar before you have been says where the gate is. 🌀 / 🌅 on the maps.
+- Undead (monsters.js UNDEAD, undeadPal, makeMonster(type, v, scale, sea)): Helheim's sea picks the kind: Drowned (rot
+  green), Rime-dead (pale blue), Burning (charred, ember glow), Corpse (bruise purple), Bone (bare bone, violet glow);
+  the colours mix toward the sea's own, the eyes glow and 'rings' glow bands show like ribs. Ships: HEL_PALS in ship.js
+  (Draugr Longships, Rime Wraiths, Muspel Burners, Corpse-ships of Nástrond, The Bone Fleet, Hel's Soul Barge) through a
+  generalised ghost colour table (GH0 / G, pal.gc). Undead shed soul-light (soulFx). Everything in Helheim is +0.5 level.
+- Past the Drakkar the seas keep growing: lvShift() = max(0, tier - 4) (+0.5 in Helheim); spawnTable uses the tier-4
+  table with every level raised by the shift; raider sizes follow (up to Naglfar); monsters grow 7% a size; at most 10
+  roaming (+2 at night). Fishing-bite sharks, dig guardian crabs, serpent ambushes and fleets follow your level too.
+- Souls (P.res.s, 👻): undead kills give max(1, round((0.6 + lv x 0.35) x ship 1.5 x young 3 x barge 3 x perk)); a
+  Helheim legend 150; soul orbs (30% of floats in Helheim) 1 each; Helheim treasure spots 2-5; fleets 4 x (tier + 1);
+  bounties; deeds. Never lost on sinking. HUD shows 👻 once you have any or are in Helheim; costs show 👻 as a 4th part.
+- Upgrades (UPG): rune levels 4 and 5 for shields, armour, ballista, fire pots, sail, oars (ram 3, hooks 4, nets 4),
+  costs [w, i, g, souls]. SH_DEF [0, .12, .24, .36, .42, .48], AR_DEF [0, .08, .16, .24, .27, .30], MEND up to 0.007.
+  Looks: glowing violet (4) / gold (5) shield bosses, dark rune-iron plates with glowing rivets, glowing bolt tips.
+  Pat's sail grows two more stages (purple and gold at 4, black with a ring of glowing runes at 5).
+- Ships (ship.js SHIP_TIERS 5-7): Busse (L 26.5, royal head, 1300 / 650 / 2600), Ormen Lange (L 30, a great gold wyrm
+  head with a gold crest, 2400 / 1300 / 5000 + 300 souls), Naglfar (L 34, a bone skull figurehead with violet eyes, iron
+  nails studding stem and stern, 4000 / 2400 / 9000 + 800 souls, only once Hafgufa, Surtr and Nidhögg are slain: P.helWon).
+  HOOK_NEED 4 for sizes 6-8; shipValue up to 9000.
+- Helheim's legends (LAIR_NAMES / LAIR_NEED / YOUNG_NAMES, legendLv = Midgard level + 2.6): Hafgufa (kraken siege, need
+  Busse, lv 7.6, scale x1.15), Surtr the Burning (the Elder One's ward, need Ormen Lange, lv 8.2), Nidhögg (Jormungandr's
+  hunt, need Ormen Lange, lv 8.8, the Ashen variant). Fight messages use the legend's own name. All three: helWin()
+  ("HEL'S REIGN", Naglfar unlocked). legendCount(hel); the pause screen shows both realms' counts.
+- The shipwright (harbour card 🎨 -> #wright bottom sheet): HULLS (oak, pine, ash, tar, iron, gilded, dragon, bone,
+  naglfar) and SAILS (pats, stripes, raven, sun, wolf, serpent, gold, kraken, elder, hel, surtr, nidhogg), each a perk via
+  perk(k) (spd turn hp def atk gold sight mend fire thor fish souls curse) applied in maxHp, topSpeed, turnRate, defense,
+  attack, sightRange, MEND, fire burn, Thor, fishing, souls, the curse. Bought (got.cost) or left by a slain legend
+  (got.legend: Jormungandr -> Dragon-scale hull, Kraken -> Kraken ink sail, Elder One -> Elder sign sail, Hafgufa ->
+  Nail-hull, Surtr -> Surtr's flame sail, Nidhögg -> Nidhögg's wings). Looks: HULL_LOOK (plank colours and top strakes)
+  and new sail textures in sailTexture. Only on Pat's own ships (shipPal). Tap a card to preview; the camera swings round
+  the ship and fits her into the space above the sheet (viewOff 'wright', wrF).
+- Bounties (makeBounty, bountyHit, bountyCard): hunt N of a species (BTYPE), sink or take N ships, slay N in a sea, fish N
+  spots, break a fleet, slay a legend's young. One at a time, counted only in the realm taken, claimed at any harbour, pay
+  v x 22 x 1.45^tier gold + timber + iron (+ v x 2 souls in Helheim). Offers are kept per harbour until taken. HUD: 📜 n/N.
+- Pat's saga (DEEDS, sagaCheck, drawSaga; pause menu 📜 PAT'S SAGA): 12 deeds in 3-4 ranks (Monster Slayer, Shark Hunter,
+  Serpent Bane, Terror of the Deep, Ship Breaker, Fisher, Treasure Hunter, Bounty Hunter, Legend Slayer, Soul Reaper,
+  Master Shipwright, Lord of Ships); each rank pays 60 x rank^2 x (tier + 1) gold (+ 8 x rank^2 souls once you have
+  souls); the best deed gives a title on the pause screen. P.st counts kills by kind, ships, fish, digs, souls.
+- Smaller: HUD lair wave counter, keyboard digging (arrows / WASD + Space / Enter), "Hel's bounty", no porpoises or
+  northern lights in Helheim, the treasure knarr is Hel's Soul Barge there, frame time never negative.
+- Showcase: ⛵6-8 ships, 💀1-6 Helheim fleets, 🌍 Midgard / 🔥 Helheim looks, `window.__undead = '<sea>'` before a monster
+  button shows its undead version.
+- Save: realm, hull, sailD, owned, bounty, bounties, st, beenHel (cleanSave whitelists all of them; upgrades are also
+  capped at tier + 1 on load now).
+- Tester fixes in v0.8.0 (wave 1 reports; the agents could not write files, their reports came back as messages):
+  - Spawns (loop analyst: the old table ran out at level 5, a Drakkar saw 45-70% green, a Naglfar nothing): a species may
+    spawn while its own level <= size + 1.7, weighted toward your size (gaussian, sigma 1.5); levelled() sets its level to
+    max(own, size + DELTA) with DELTA -1 / -0.5 / 0 / +0.5 / +1 / +1.5 at 20 / 20 / 25 / 15 / 12 / 8%; a beast 1.5+ levels
+    above its own is 'Dread' (Midgard) and 6% bigger a level; raiders come in sizes around yours (up to Naglfar).
+    lvShift() is no longer used by spawns.
+  - Monster damage above level 4 grows 1.75x a level (keeps pace with the hull); sea monsters have 1.3x hull (ships and
+    legends unchanged); monster iron 2 + 3 x level.
+  - Fire Pots (they were free extra shots): a pot takes one of the volley's three shots, one pot a volley at most, pots a
+    battle = 1 + floor(level / 2), hit 2.2 / 2.4 / 2.6 / 2.8 / 3.0 x by level (x perk). Measured after: a Snekkja without
+    a ballista beats a same-level beast in about 7 s with one enemy turn (6% hull); fully upgraded, still one volley.
+  - Defence tops out at 0.7 (0.85 with Thor's Fury); rune levels SH_DEF 0.40 / 0.44, AR_DEF 0.26 / 0.28; rune ballista
+    +15% a level.
+  - Legends die only in their own fights: spears and bolts outside it "shrug off" (and make it chase), lightning and the
+    ram skip bosses, a legend left alone 20 s heals; legend FLEE costs 1.2 x dmg, stuns it 2.5 s and turns you away from
+    it; killMon returns if the monster is already dead (lightning used to pay a kill twice); BATTLES: CLASSIC no longer
+    changes legend fights.
+  - Legends pay 70 x 1.6^level gold + 40 iron more; after a legend falls the lair rests 60-110 s; a slain legend can rise
+    again in wave 2+ ("<name> Reborn", chance 0.12 + 0.06 a wave, max 0.4, only for a big enough ship) at +0.5 level per
+    rebirth, five times, paying 25% more each time (P.reborn).
+  - Kiting: a beast you shoot turns and sprints at 1.1 x your top speed for 3.5 s (enrage). The ram does at most 60% of a
+    beast's hull. The treasure knarr / soul barge escapes at 1.3 x your speed when her time runs out and throws at most six
+    loads.
+  - Jormungandr: the red ring is the real hit area (r = 0.3 L + 3, hit if within r + B/2) and the lock lasts 1.9 s (1.4
+    enraged, 2.4 young), so stopping or turning hard gets you out; it now really dives while it stalks (animMon leaves the
+    pose to updateJorm); its FLEE was under the minimap: legend fights hide the minimap and the ⇄ button.
+  - The greyed BOARD button no longer ends a ship fight; the battle line frames every fleet ship within 34 along the line.
+  - The Elder One's lift no longer creeps the ship into it (it eases back after a drop or slam).
+  - Quitting: SAVE & QUIT is disabled in a fight or mini-game ("FINISH THE FIGHT FIRST"); begin() always ends any fight
+    (abortFight); updateBattle never runs on the title; no autosave inside a fight; arrows landing in a menu do nothing;
+    a hull at 0 out of a fight sinks you next tick; win screens wait until you are sailing and close the pause menu.
+  - Harbour: a second tap on the same spot within 0.4 s is dropped (hbLock); the REPAIR card stays ("Your hull is sound")
+    so cards never move under your finger; prize ships sell for [40, 110, 240, 480, 900, 1700, 3200, 6000] (x1.5 ghost,
+    x1.25 treasure); SAIL HER keeps the hull fraction, needs a refit of half her build price if she is bigger than your
+    ship, and obeys the ship locks (shipLock: Busse needs P.won, Naglfar P.helWon); the trader sells 15 x (size + 1) iron
+    for 6 gold each and 20 x (size + 1) timber for 3 each (x (1 + 0.15 x size)).
+  - The Busse is built only once the Kraken, Jormungandr and the Elder One are slain. Rune level 4 costs timber, iron and
+    gold only (a goal for the Skeid and the Drakkar); level 5 adds 70-90 souls.
+  - Lanterns: at night +1 fishing spot a level and 25% treasure spots (was purely cosmetic).
+  - Saves: the home harbour is found by idx (it swapped Frostvik and Ravenfjord on every load); cleanSave text and keys are
+    type- and own-property checked ('constructor' as a design key used to crash perk()); a save that throws is kept as
+    pr_save_bad and CONTINUE is hidden; a ship saved inside land is put back at her home harbour; upgrades are capped at
+    tier + 1 on load.
+  - Save codes: longer than 20,000 characters refused; unpacking stops at 256 KB (a small code could expand to 400 M
+    characters); pr_save over 100 KB refused; applyCode puts the old voyage back if the new one cannot be stored; the
+    summary shows only what will load.
+  - Memory: removeMon frees the monster's own geometry and materials (disposeTree; the shared cached ones are marked
+    userData.shared in geom.js and ship.js), as do lightning bolts, warning rings and rebuilt ships (geometry count stays
+    flat over 20 rebuilds).
+  - UI: on short landscape phones (<= 460 px tall) the context and fire buttons sit beside the telegraph (DOCK covered the
+    fire button), and at <= 360 px DOCK sits beside the view button; the treasure dig fits a landscape phone (grid sized by
+    height, scrolls); the tutorial card stops short of the view button; the wheel stays clear of the minimap in portrait;
+    the wheel centres only on a real double TAP; held C / E do not repeat; keys let go on window blur; HELM view zoom moves
+    the eye back and up; DOCK plans with the hull's own clearance; the title leads with CONTINUE VOYAGE and NEW VOYAGE
+    takes a second tap within 4 s (it deletes the save); frame time is never negative (it set Thor and Cursed at start).
+  - Pat's Hall (Patsholm only, HALL): five stages for 2k / 5k / 10k / 20k / 40k gold (+ timber, iron): a fourth mooring,
+    fish +2 gold, 10% off upgrade and ship gold, crew mend +25%, +5% damage and hull.
+- Later the same night (after v0.8.0 went live):
+  - Ordinary fights: an octopus can wrap its arms round your hull and a serpent or leviathan coil round your ship (22%
+    of the first attack of a round; foe.special 'grab' / 'coil' from startBattle). Hack at it fast (the 🪓 HACK AT IT
+    button, Space or any dodge key or swipe) 5 + min(5, round(0.7 x level)) times in 2.8 s to break free; too slow and it
+    drags you under / crushes you for 1.4 x a hit (minigames.js specialUI, breakTap, answer 'G').
+  - Ship battles: when her reckoning crosses she takes aim for 0.8 s (SHE AIMS flashes) and fires at the locked spot; a
+    speed change on the telegraph during the aim makes two volleys in three fall wide (measured: steady 6 hits of 6
+    volleys, reacting 2 of 7). Her reckoning leads you by the flight time + 0.8 s.
+  - The Elder One's runes face the camera, are sized by their distance (about 30 px on a phone) and follow your ship
+    round after it is thrown.
+  - The sunstone (Compass II) also points to your nearest treasure map's ✕ and your wreck.
+  - Name your ship: ✎ NAME HER on the shipwright sheet (prompt, markup stripped, 20 letters), shown in the HUD; saved
+    as shipName.
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster
@@ -387,7 +538,7 @@ disagree with this file, this file wins.
   LOAD needs a second tap within 4 s on the same text, then reloads the page.
 - src/tornado.js: Dead City twisters + `waterspout` and `seastorm` skins. fullscreen.js, perf.js: from Dead City.
 
-## Controls (current, v0.7.2)
+## Controls (current, v0.8.1)
 - Ship's wheel: a big half-wheel centred across the bottom (hub just below the screen edge; layoutHelm sizes it: phone
   R = clamp(min(W*0.24, H*0.15), 64, 105), tablet R = clamp(min(W*0.3, H*0.28), 100, 240)); swipe along it to turn,
   rudder = sign*|angle/HMAX|^1.4, HMAX 2.4. Only the wheel takes touches. It stays where you leave it; double-tap centres
@@ -412,10 +563,17 @@ disagree with this file, this file wins.
   SLOW. Pause works everywhere, fights included.
 - Sound: SOUND and MUSIC switches on the title and pause screens (MUSIC off = no saga music and the iOS audio session goes
   'ambient' so other apps keep playing). The pause menu also has ⚔ BATTLES: ACTION / CLASSIC (localStorage pr_broad).
-- HUD: hull bar, timber / iron / gold / fish, ship name, sea, weather, buffs (Thor, Bifröst, Cursed, 🔨 Crew mending).
+- HUD: hull bar, timber / iron / gold / fish (and 👻 souls once you have any or are in Helheim), ship name, sea, weather,
+  buffs (Thor, Bifröst, Cursed, 🔨 Crew mending, ⚔ Lair wave n, 📜 bounty n/N).
+- v0.8.0: the title leads with CONTINUE VOYAGE when there is a save; NEW VOYAGE then needs a second tap within 4 s. SAVE &
+  QUIT is disabled during a fight or mini-game. Near Hel's Gate (or the gate home) the context button shows 🌀 HEL / 🌅
+  HOME. Pause has 📜 PAT'S SAGA. Short landscape phones put the context and fire buttons beside the telegraph. In the
+  treasure dig, arrows / WASD move a marker and Space / Enter digs.
 
 ## Rules as built
-- Ships: Faering, Karvi, Snekkja, Skeid, Drakkar. Hull 100 x 1.75^tier x (1 + 0.25 x armour). Speeds 9 to 13.
+- Ships: Faering, Karvi, Snekkja, Skeid, Drakkar, and since v0.8.0 Busse, Ormen Lange, Naglfar. Hull 100 x 1.75^tier x
+  (1 + 0.25 x armour) (x design / hall perks). Speeds 9 to 14.8. See the v0.8.0 section for the end game's rules (spawns,
+  damage, pots, souls, realms), which override the older lines below where they differ.
 - Upgrades (UPG in main.js, costs timber/iron/gold, each capped at ship tier + 1): shields, armor, ballista, fire
   pots, ram, sail, oars, lights (Lanterns 3), compass (2: lodestone heading, sunstone harbour pointer), nets.
   Ship sizes in TIER_COST.
@@ -495,11 +653,17 @@ disagree with this file, this file wins.
 - New names must not collide with existing ones (ringGeo was taken by the lightning rings; the legend ring is lgRingGeo).
 
 ## Ideas not built yet
-- From Sean, not yet done: special grabs / wraps for ordinary octopus, squid and sea serpents (only the legends have
-  them); an easier whirlpool escape (offered, unanswered).
-- Loose ends: the roster artifact does not show the prize ship skins, the dig, the young legends or the legend fights;
-  the treasure dig has no keyboard control; the lair waves have no HUD counter; the classic mini-game battle still
-  exists behind ⚔ BATTLES: CLASSIC (keep it working when changing battle code).
-- Bigger ideas: crew management, ship naming, quests from harbour jarls, trade routes between harbours, co-op raids,
-  sea birds over the Warm Sea, a song file from the device as music (offered option 1), volume sliders, an itch.io zip
-  like Dead City.
+- From Sean, not yet done: an easier whirlpool escape (offered on 2026-10-20, unanswered).
+- From the testers, not done (lower priority): the enemy's aim in the action ship battle barely reacts to your speed
+  change ("change speed to spoil her aim" is nearly cosmetic: shrink her error while she aims); the Kraken's tentacles
+  can look pale from some angles; at zoom 2.6 in a fight the ocean mesh edge shows as a dark ring; long #msg lines run
+  under the right-hand buttons on a landscape phone; the harbour's SET SAIL is at the end of a long scroll on a phone (a
+  sticky button would help); world wrecks' "looted" timers are not saved (a reload refills them); the salvage mini-game
+  is generous (half the pulls bring up the whole wreck); waterspouts are the most CPU-heavy weather (check on an iPhone).
+- Loop analyst ideas not built: a bestiary (collect every variant, rewards at 25/50/75/100%), Ragnarök depth after Hel
+  (an endless ladder of harder seas), a finale legend (Hel herself), Helheim hazards per sea (lava seams, blade shoals,
+  grinding floes), soul tides (night rings worth double souls), a captain's log, renown titles.
+- Loose ends: the roster artifact shows none of the v0.5-v0.8 content (prize skins, young legends, undead, Helheim
+  fleets, the new ships); the classic mini-game battle still exists behind ⚔ BATTLES: CLASSIC (ship fights only now).
+- Bigger ideas: crew management, quests from harbour jarls (beyond bounties), trade routes between harbours, co-op raids,
+  sea birds over the Warm Sea, a song file from the device as music, volume sliders, an itch.io zip like Dead City.
