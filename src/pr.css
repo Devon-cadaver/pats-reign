@@ -89,7 +89,7 @@ button:disabled { opacity: .45; filter: grayscale(.6); }
 .timer i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #ff5a3a, #ffd24a); }
 .mgFlee { position: absolute; right: 12px; bottom: calc(100% - 4px); pointer-events: auto; }
 #mini { position: fixed; }
-.mgBanner { position: fixed; left: 50%; top: 30%; transform: translate(-50%, -50%); font: 800 30px Georgia, serif; text-shadow: 0 3px 8px #000, 0 0 3px #000; pointer-events: none; animation: bannerIn 1.1s ease-out forwards; white-space: nowrap; z-index: 12; }
+.mgBanner { position: fixed; left: 50%; top: 31%; transform: translate(-50%, -50%); font: 800 30px Georgia, serif; text-shadow: 0 3px 8px #000, 0 0 3px #000; pointer-events: none; animation: bannerIn 1.1s ease-out forwards; white-space: nowrap; z-index: 12; }
 @keyframes bannerIn { 0% { transform: translate(-50%, -50%) scale(.4); opacity: 0; } 15% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; } 30% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -70%) scale(1); } }
 .reelWrap { display: flex; gap: 12px; align-items: stretch; height: 30vh; }
 .reel { position: relative; width: 70px; border: 2px solid var(--gold); border-radius: 12px; background: linear-gradient(#2a6a8a, #0a2a3a); overflow: hidden; touch-action: none; }
@@ -152,3 +152,17 @@ html.tabletHud #viewBtn { left: 64px; font-size: 14px; } html.tabletHud .act { w
 
 #map { touch-action: none; z-index: 2; }
 .fsBtn { left: auto; right: 10px; }
+
+/* battle cues next to the action: under the fight (the battle camera centres it about a quarter of the way down) */
+#mini.battle { min-height: 36vh; }
+.mgCue { position: fixed; left: 50%; top: 39%; transform: translateX(-50%); width: min(92vw, 460px); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; z-index: 11; }
+.mgCue .track { pointer-events: auto; width: 100%; max-width: none; }
+.mgCue .mgHint, .mgCue .mgWarn { background: #050b10b0; padding: 3px 10px; border-radius: 8px; }
+.mgCue .timer { width: 80%; }
+.mgSide { position: fixed; top: 22%; font-size: 64px; line-height: 1; color: #f2d27a; text-shadow: 0 0 18px #f2d27a, 0 3px 8px #000; pointer-events: none; z-index: 11; display: none; }
+.mgSide.on { display: block; animation: sidePulse .5s ease-in-out infinite alternate; }
+.mgSide.L { left: max(10px, env(safe-area-inset-left, 0px)); } .mgSide.R { right: max(10px, env(safe-area-inset-right, 0px)); }
+@keyframes sidePulse { from { opacity: .55; } to { opacity: 1; } }
+html.tabletHud .mgCue .mgPrompt { font-size: 40px; } html.tabletHud .mgSide { font-size: 96px; }
+/* during a battle, fishing or salvage: the sea map, its buttons and sailing messages step aside for the mini-game */
+body.busy #map, body.busy #chartBtn, body.busy #viewBtn, body.busy #msg { display: none; }

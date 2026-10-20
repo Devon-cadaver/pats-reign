@@ -237,12 +237,12 @@ function startBattle(mon, firstStrike) {
   const gap = mon.giant ? mon.size * 0.36 + T().L * 0.3 : T().L * 0.25 + mon.size * 0.75 + 4; let side = boat.yaw + Math.PI / 2; const toFoe = Math.atan2(mon.x - boat.x, mon.z - boat.z);
   for (const c of [toFoe, boat.yaw + Math.PI / 2, boat.yaw - Math.PI / 2, boat.yaw + Math.PI, boat.yaw, toFoe + 2.4, toFoe - 2.4]) { const x = boat.x + Math.sin(c) * gap, z = boat.z + Math.cos(c) * gap; if (!world.blockAt(x, z, mon.size * 0.6 + 2) && !world.blockAt((x + boat.x) / 2, (z + boat.z) / 2, 2)) { side = c; break; } }
   mon.bx = boat.x + Math.sin(side) * gap; mon.bz = boat.z + Math.cos(side) * gap; battle.side = side;
-  $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden');
+  $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy');
   const foe = { name: mon.name, lvShow: Math.round(mon.lv) + 1, lv: Math.round(mon.lv * 10) / 10, hp: mon.hp, maxHp: mon.maxHp, dmg: mon.dmg, naval: mon.naval, boss: mon.boss, attacks: mon.boss ? 3 : mon.lv >= 3 ? 2 : 1, attackNames: ATK[mon.type] };
   const you = { hp: P.hp, maxHp: maxHp(), def: defense(), atk: attack(), zone: 0.15 + P.up.ballista * 0.04, fire: P.up.fire ? P.up.fire + 1 : 0, thor: boat.thor > 0, shots: 3, weapon: P.up.ballista ? 'BALLISTA' : 'SPEARS' };
   battle.foe = foe; battle.you = you;
   minis.battle({ foe, you, youName: T().name, firstStrike, intro: mon.boss ? mon.name.toUpperCase() + '!' : mon.treasure ? 'BOARD HER!' : mon.ambush ? 'AMBUSH!' : mon.fleet ? 'FLEET BATTLE!' : undefined }, (res) => {
-    P.hp = Math.max(0, you.hp); mon.hp = foe.hp; setBattle(false); boat.grace = 3.5; $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); const b = battle; battle = null; hud();
+    P.hp = Math.max(0, you.hp); mon.hp = foe.hp; setBattle(false); boat.grace = 3.5; $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); const b = battle; battle = null; hud();
     if (res.result === 'win') { killMon(mon); }
     else if (res.result === 'flee') { mon.stun = 7; boat.boost = 3.5; boat.v = topSpeed(); setThrottle(1, true); say('You row hard and break away!'); }
     if (res.result === 'sunk' || P.hp <= 0) { sink(); return; } void b; });
@@ -283,15 +283,15 @@ function actionContext() { if (battle || fishing) return null; const v = boat.v;
 let ctx = null;
 function doAction() { if (!ctx || state !== 'play') return; if (ctx.kind === 'dock') openHarbor(ctx.h); else if (ctx.kind === 'fight') startBattle(ctx.mon, true); else if (ctx.kind === 'fish') startFishing(ctx.s); else if (ctx.kind === 'salvage') startSalvage(ctx.w); else if (ctx.kind === 'slow') say('Tap STOP or ROW to slow down first.'); }
 const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(0, 0, 0), V(0, 0, 0)]), new THREE.LineBasicMaterial({ color: 0xf2e6c8 })); line.visible = false; scene.add(line);
-function startFishing(s) { fishing = { s }; boat.wp = null; $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); line.visible = true;
-  minis.fish({ kind: s.kind, nets: P.up.nets, tier: P.tier, biteChance: 0.07 }, (res) => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); line.visible = false; fishing = null; boat.grace = 2.5;
+function startFishing(s) { fishing = { s }; boat.wp = null; $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy'); line.visible = true;
+  minis.fish({ kind: s.kind, nets: P.up.nets, tier: P.tier, biteChance: 0.07 }, (res) => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); line.visible = false; fishing = null; boat.grace = 2.5;
     const k = 1 + P.tier * 0.6, q = res.q || 0.4;
     if (res.result === 'catch') { const r = s.kind === 'fish' ? { f: Math.round(2 + P.up.nets * 1.5 + q * 3 + P.tier) } : s.kind === 'flotsam' ? { w: Math.round((5 + q * 6) * k * (1 + P.up.nets * 0.2)), i: Math.round((1 + q * 3) * k) } : { g: Math.round((18 + q * 40) * k * (1 + P.up.nets * 0.15)) }; reward(r, s.x, 2.5, s.z); removeSpot(s); }
     else if (res.result === 'bite') { removeSpot(s); const lv = Math.max(0, P.tier + rnd(-0.3, 0.6)), vi = MLV.shark.reduce((bi, l, i) => (Math.abs(l - lv) < Math.abs(MLV.shark[bi] - lv) ? i : bi), 0); const mon = spawnMon({ type: 'shark', v: vi, lv: MLV.shark[vi] }, s.x, s.z); mon.state = 'chase'; startBattle(mon, false); } }); }
 function removeSpot(s) { scene.remove(s.g); const i = spots.indexOf(s); if (i >= 0) spots.splice(i, 1); }
 function fishCast() { if (!fishing) return; foam.splash(fishing.s.x, fishing.s.z, 0.6); sfx.splash(0.5); }
-function startSalvage(w) { const mine = w === 'mine'; if (mine) w = P.wreck; if (!w) return; fishing = { s: w }; $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden');
-  minis.salvage({ tier: P.tier }, (res) => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); fishing = null;
+function startSalvage(w) { const mine = w === 'mine'; if (mine) w = P.wreck; if (!w) return; fishing = { s: w }; $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy');
+  minis.salvage({ tier: P.tier }, (res) => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); fishing = null;
     if (mine) { const frac = res.result === 'done' ? 1 : clamp(res.frac || 0, 0, 1) * 0.8; if (P.wreck && frac > 0.05) { takeWreck(frac, w.x, w.z); say(P.wreck ? 'You raise part of your cargo. The rest still lies below.' : 'You raise all the cargo from your wreck! ☠', 3.5); } return; }
     const k = (1 + P.tier * 0.6) * (res.frac || 0); if (res.result !== 'stop' || res.frac > 0.3) { reward({ w: Math.round(rnd(10, 20) * k), i: Math.round(rnd(4, 10) * k), g: Math.round(rnd(20, 45) * k) }, w.x, 3, w.z); w.looted = time + 480; } }); }
 
@@ -496,7 +496,7 @@ function updateLairs() { for (const L of world.lairs) { if (L.beaten || P.legend
 function sink() { if (state !== 'play') return; state = 'sunk'; battle = null; fishing = null; minis.close(); const lost = {}; for (const k of ['w', 'i', 'g', 'f']) { lost[k] = Math.floor(P.res[k] / 2); P.res[k] -= lost[k]; }
   const old = P.wreck, any = lost.w + lost.i + lost.g + lost.f > 0; EV.ambush = null; if (any) { P.wreck = { x: boat.x, z: boat.z, res: lost }; placeWreck(); }
   $('sunkText').innerHTML = 'Your ship goes down beneath the waves. The gods send you back to ' + homeHarbor().name + ' with a new hull. ' + (any ? 'Half your cargo went down with the wreck: ' + wreckSum(lost) + '.<br><br>Sail back to the ☠ on the map and SALVAGE it to get it all back, or hire a salvage crew at any harbour.' + (old ? ' Your older wreck is lost to the deep.' : '') : 'Your hold was empty, so nothing was lost.'); $('hud').classList.add('hidden'); $('sunk').classList.remove('hidden'); sfx.over(); setBattle(false); }
-$('sunkBtn').onclick = () => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); const h = homeHarbor(); P.hp = maxHp(); setThrottle(0, true); helm.angle = 0; boat.x = h.dock.x + Math.cos(h.dir) * 10; boat.z = h.dock.z + Math.sin(h.dir) * 10; boat.v = 0; boat.wp = null; for (const m of [...mons]) removeMon(m); $('sunk').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; hud(); save(); };
+$('sunkBtn').onclick = () => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); const h = homeHarbor(); P.hp = maxHp(); setThrottle(0, true); helm.angle = 0; boat.x = h.dock.x + Math.cos(h.dir) * 10; boat.z = h.dock.z + Math.sin(h.dir) * 10; boat.v = 0; boat.wp = null; for (const m of [...mons]) removeMon(m); $('sunk').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; hud(); save(); };
 function winGame() { P.won = true; state = 'won'; $('hud').classList.add('hidden'); $('won').classList.remove('hidden'); $('wonText').innerHTML = 'The Kraken, Jormungandr and the Elder One have fallen. Every fjord sings of Pat, ruler of the monster sea.<br><br>' + P.kills + ' foes slain.'; sfx.horn(); save(); }
 $('wonBtn').onclick = () => { $('won').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; };
 const SAVE = 'pr_save';

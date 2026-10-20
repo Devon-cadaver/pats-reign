@@ -20,12 +20,15 @@ export function createMinis({ sfx, hooks }) {
     open('battle'); const foe = o.foe, you = o.you; const S = { phase: 'intro', t: 0, shots: 0, maxShots: you.shots || 3, mark: 0, dir: 1, zone: 0.5, attacks: 0, maxAtk: 1, prompt: null, fire: you.fire || 0, ended: false, taken: 0 };
     const top = el('div', 'mgTop'); top.innerHTML = `<div class="hpRow"><b>${o.youName}</b><div class="hp you"><i id="mgYouHp"></i></div><span id="mgYouTxt"></span></div><div class="vs">⚔</div><div class="hpRow"><b>${foe.name} <small>Lv ${foe.lvShow ?? foe.lv}</small></b><div class="hp foe"><i id="mgFoeHp"></i></div><span id="mgFoeTxt"></span></div>`; root.appendChild(top);
     const stage = el('div', 'mgStage'); root.appendChild(stage); const btns = el('div', 'mgBtns'); root.appendChild(btns);
+    // cues sit just under the fight itself (the battle camera puts it in the top part of the screen), so your eyes stay on
+    // the action; the buttons stay at the bottom under your thumbs
+    const cue = el('div', 'mgCue'); root.appendChild(cue); const side = el('div', 'mgSide'); root.appendChild(side);
     const flee = el('button', 'ghost mgFlee', 'FLEE'); flee.onclick = () => end('flee'); root.appendChild(flee);
     const hpDraw = () => { $('mgYouHp').style.width = clamp(you.hp / you.maxHp, 0, 1) * 100 + '%'; $('mgFoeHp').style.width = clamp(foe.hp / foe.maxHp, 0, 1) * 100 + '%'; $('mgYouTxt').textContent = Math.ceil(Math.max(0, you.hp)) + ' / ' + Math.round(you.maxHp); $('mgFoeTxt').textContent = Math.ceil(Math.max(0, foe.hp)) + ' / ' + Math.round(foe.maxHp); };
     hpDraw(); banner(o.intro || (foe.naval ? 'SHIP BATTLE!' : 'BATTLE!'), '#ff6a3a'); sfx.horn && sfx.horn();
-    function aimUI() { stage.innerHTML = ''; btns.innerHTML = ''; S.zone = 0.18 + Math.random() * 0.64; S.mark = Math.random(); S.dir = Math.random() < 0.5 ? 1 : -1;
+    function aimUI() { stage.innerHTML = ''; btns.innerHTML = ''; side.className = 'mgSide'; S.zone = 0.18 + Math.random() * 0.64; S.mark = Math.random(); S.dir = Math.random() < 0.5 ? 1 : -1;
       const zw = clamp((you.zone || 0.16) * (you.thor ? 1.5 : 1), 0.08, 0.4);
-      stage.innerHTML = `<div class="mgHint">${foe.naval ? 'Aim at their hull' : 'Aim for the weak spot'} · shot ${S.shots + 1} of ${S.maxShots}</div><div class="track" id="mgTrack"><div class="zone" id="mgZone"></div><div class="zone crit" id="mgCrit"></div><div class="needle" id="mgNeedle"></div></div>`;
+      cue.innerHTML = `<div class="mgHint">${foe.naval ? 'Aim at their hull' : 'Aim for the weak spot'} · shot ${S.shots + 1} of ${S.maxShots}</div><div class="track" id="mgTrack"><div class="zone" id="mgZone"></div><div class="zone crit" id="mgCrit"></div><div class="needle" id="mgNeedle"></div></div>`;
       const z = $('mgZone'), c = $('mgCrit'); z.style.left = (S.zone - zw / 2) * 100 + '%'; z.style.width = zw * 100 + '%'; c.style.left = (S.zone - zw * 0.17) * 100 + '%'; c.style.width = zw * 34 + '%'; S.zw = zw;
       const fb = el('button', 'mgBig', you.weapon || 'FIRE'); fb.onclick = shoot; btns.appendChild(fb); $('mgTrack').onpointerdown = (e) => { e.preventDefault(); shoot(); };
       if (S.fire > 0) { const fp = el('button', 'mgFire', '🔥 FIRE POT ×' + S.fire); fp.onclick = firePot; btns.appendChild(fp); } }
@@ -39,16 +42,17 @@ export function createMinis({ sfx, hooks }) {
       const what = naval ? { L: 'Ram from port!', R: 'Ram from starboard!', U: 'Arrow volley!' }[d] : (foe.attackNames || { L: 'swings from the right', R: 'swings from the left', U: 'rears up to slam' })[d];
       const win = Math.max(0.55, (foe.boss ? 1.05 : 1.35) - foe.lv * 0.08) * (you.thor ? 1.25 : 1);
       S.prompt = { d, t: 0, win, done: false }; hooks.foeAct(d);
-      stage.innerHTML = `<div class="mgWarn">${foe.name} ${what}</div><div class="mgPrompt">${d === 'U' ? '⬆ BRACE ⬆' : 'DODGE ' + DIRS[d]}</div><div class="timer"><i id="mgTimer"></i></div>`;
+      cue.innerHTML = `<div class="mgWarn">${foe.name} ${what}</div><div class="mgPrompt">${d === 'U' ? '⬆ BRACE ⬆' : 'DODGE ' + DIRS[d]}</div><div class="timer"><i id="mgTimer"></i></div>`;
+      if (d !== 'U') { side.className = 'mgSide on ' + d; side.textContent = DIRS[d]; }
       for (const k of ['L', 'U', 'R']) { const b = el('button', 'mgDir' + (k === d ? ' lit' : ''), k === 'U' ? '🛡' : DIRS[k]); b.onpointerdown = (e) => { e.preventDefault(); answer(k); }; btns.appendChild(b); } }
-    function answer(k) { const P = S.prompt; if (S.phase !== 'defend' || !P || P.done) return; P.done = true;
+    function answer(k) { const P = S.prompt; if (S.phase !== 'defend' || !P || P.done) return; P.done = true; side.className = 'mgSide';
       let dmg = foe.dmg * (1 - you.def) * (0.85 + Math.random() * 0.3);
       if (k === P.d) { dmg = P.d === 'U' ? dmg * 0.25 : 0; banner(P.d === 'U' ? 'BRACED!' : 'DODGED!', '#7dff3a'); sfx.pickup(); }
       else if (k === 'U') { dmg *= 0.5; banner('BLOCKED −' + Math.round(dmg), '#9fd6ff'); sfx.hit(); }
       else { banner('HIT −' + Math.round(dmg), '#ff5a3a'); sfx.hurt(); }
       dmg = Math.round(dmg); if (dmg > 0) { you.hp -= dmg; S.taken += dmg; hooks.hurt(dmg); } hpDraw(); S.attacks++; S.phase = 'defFx'; S.t = 0; }
     function end(result) { if (S.ended) return; S.ended = true; if (result === 'flee') { const dmg = Math.round(foe.dmg * (1 - you.def) * 0.5); you.hp -= dmg; S.taken += dmg; hooks.hurt(dmg); }
-      banner(result === 'win' ? (foe.naval ? 'SHIP TAKEN!' : 'SLAIN!') : result === 'flee' ? 'ESCAPED' : 'SINKING!', result === 'win' ? '#7dff3a' : '#ff5a3a'); S.phase = 'over'; S.t = 0; S.result = result; }
+      cue.innerHTML = ''; side.className = 'mgSide'; banner(result === 'win' ? (foe.naval ? 'SHIP TAKEN!' : 'SLAIN!') : result === 'flee' ? 'ESCAPED' : 'SINKING!', result === 'win' ? '#7dff3a' : '#ff5a3a'); S.phase = 'over'; S.t = 0; S.result = result; }
     // swipes anywhere on the overlay answer a dodge
     let sw = null; root.onpointerdown = (e) => { sw = [e.clientX, e.clientY]; }; root.onpointerup = (e) => { if (!sw || S.phase !== 'defend') return; const dx = e.clientX - sw[0], dy = e.clientY - sw[1]; sw = null; if (Math.hypot(dx, dy) < 40) return; answer(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'L' : 'R') : (dy < 0 ? 'U' : 'U')); };
     cur = { update(dt) { S.t += dt;

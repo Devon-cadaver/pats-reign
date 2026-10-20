@@ -1,6 +1,6 @@
 # Pats Reign: project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.4.1. Where older notes or memory
+READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.4.2. Where older notes or memory
 disagree with this file, this file wins.
 
 ## Where things are
@@ -74,7 +74,10 @@ disagree with this file, this file wins.
   Sea stacks in each sea's stone (`STACK_PAL`), 6 harbour villages on flattened plateaus, 16 wrecks, 3 lairs
   (Kraken's Maw NE, Serpent's Coil N, R'lyeh SW), collision `blockAt`, region-tinted 512px map canvas,
   `update()` bobs floes and floats wisps. Exposes `volcanoes` for smoke.
-- src/minigames.js: Battle (aim bar weak spot CRITICAL/HIT/GRAZE/MISS, fire pots, dodge prompts L/R/U, flee),
+- src/minigames.js: Battle (aim bar weak spot CRITICAL/HIT/GRAZE/MISS, fire pots, dodge prompts L/R/U, flee). Since
+  v0.4.2 (Sean: keep eyes on the action) the aim bar, attack line, DODGE/BRACE prompt and timer sit in .mgCue at 39% from
+  the top, just under the fight, with a big pulsing side arrow (.mgSide) for left/right dodges; buttons stay at the bottom;
+  body.busy hides the map, its buttons and sailing messages during any mini-game.
   Fishing (cast meter, then hold REEL to keep the catch in the net box), Salvage (alternate pulls, tension).
 - src/music.js: synthesized saga. Sailing: D Dorian 6/8 ballad at 66 bpm (drone, frame drum, lyre, lur horn, choir).
   Battle: 138 bpm war drums, ostinato, horn calls, "HU!" war cries, choir. `startSaga()`, `setBattle(on)`.
