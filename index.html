@@ -21,7 +21,7 @@
     <div class="top">
       <div class="row1">
         <div id="hull"><i id="hullFill"></i><span id="hullTxt">100</span></div>
-        <div id="res"><span>🪵<b id="rW">0</b></span><span>⚙️<b id="rI">0</b></span><span>🪙<b id="rG">0</b></span><span>🐟<b id="rF">0</b></span></div>
+        <div id="res"><span>🪵<b id="rW">0</b></span><span>⚙️<b id="rI">0</b></span><span>🪙<b id="rG">0</b></span><span>🐟<b id="rF">0</b></span><span id="rSw" class="hidden">👻<b id="rS">0</b></span></div>
         <button id="pauseBtn" class="ghost">❚❚</button>
       </div>
       <div class="row2"><span id="shipName">Faering</span><span id="region">Home Waters</span><span id="wxTxt"></span><span id="buff"></span></div>
@@ -68,6 +68,8 @@
       <p><b>🪝 Boarding and treasure.</b> With Grappling Hooks, board a ship under 40% hull to plunder or claim her. A treasure map marks an ✕: sail there, LAND and dig.</p>
       <p><b>☠ Sinking.</b> Half your cargo sinks with the wreck. SALVAGE it at the ☠ or pay a harbour crew. Upgrades are never lost.</p>
       <p><b>💾 Save code.</b> Carry your voyage to another device.</p>
+      <p><b>☠ Helheim.</b> With a Drakkar, sail into Hel's Gate 🌀 far out in the Mist Sea to reach Helheim, the realm of the dead: undead monsters and draugr ships, all a little stronger. Kills there give souls 👻 for rune upgrades (levels 4 and 5), designs and the greatest ships (the Busse, the Ormen Lange and Naglfar). Slay Hafgufa, Surtr and Nidhögg to build Naglfar. The 🌅 gate beside Gjallarhöfn takes you home.</p>
+      <p><b>🎨 Shipwright.</b> At any harbour, fit a hull and a sail design, each with a small perk. Slain legends leave new ones.</p>
       <p><b>👑 Reign.</b> Slay the Kraken, Jormungandr and the Elder One. Each fights its own way (the Kraken grabs your ship with its tentacles: cut them down and strike its eye; Jormungandr hunts you from below: dodge its red ring, then shoot its head; the Elder One wards itself: repeat its runes to break the ward, and shoot its eye when it flashes if it lifts your ship). In a small ship their young usually rise instead; now and then the legend itself does: flee! Stay in a lair and tougher ones keep rising.</p>
     </div>
     <div class="howBtns"><button id="howBack" class="ghost">BACK</button><button id="howTut">▶ TUTORIAL</button></div>
@@ -84,7 +86,10 @@
   <div id="chart" class="screen hidden"><h2>SEA CHART</h2><p class="small">Pinch to zoom, drag to look around, tap to set your course.</p><canvas id="chartCv"></canvas><button id="chartClose" class="ghost">CLOSE</button></div>
   <div id="paused" class="screen hidden"><h2>PAUSED</h2><p id="pauseText" class="small"></p><button id="resumeBtn">RESUME</button><button id="pauseCode" class="ghost">💾 SAVE CODE</button><button id="saveQuit" class="ghost">SAVE &amp; QUIT TO TITLE</button></div>
   <div id="sunk" class="screen hidden"><h1>VALHALLA<br>CALLS</h1><p id="sunkText"></p><button id="sunkBtn">RISE AGAIN</button></div>
-  <div id="won" class="screen hidden"><h1>PAT'S<br>REIGN</h1><p id="wonText"></p><button id="wonBtn">SAIL ON</button></div>
+  <div id="gate" class="screen hidden"><h2 id="gateTitle">HEL'S GATE</h2><p id="gateText"></p><button id="gateGo">DESCEND</button><button id="gateNo" class="ghost">NOT YET</button></div>
+  <div id="wright" class="hidden"><div class="wrHead"><b>🎨 SHIPWRIGHT</b><div class="wrTabs"><button id="wrHull" class="on">HULL</button><button id="wrSail">SAIL</button></div><button id="wrDone" class="ghost">DONE</button></div><p id="wrNote"></p><p id="wrRes"></p><div id="wrList"></div></div>
+  <div id="fade"></div>
+  <div id="won" class="screen hidden"><h1 id="wonTitle">PAT'S<br>REIGN</h1><p id="wonText"></p><button id="wonBtn">SAIL ON</button></div>
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>

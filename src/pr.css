@@ -126,6 +126,29 @@ button:disabled { opacity: .45; filter: grayscale(.6); }
 #compWrap { position: absolute; right: 8px; top: calc(48px + env(safe-area-inset-top, 0)); display: flex; flex-direction: column; align-items: center; gap: 1px; pointer-events: none; }
 #compass { width: 78px; height: 78px; border-radius: 50%; box-shadow: 0 2px 10px #000a; }
 #compTxt { font: 700 11px Georgia, serif; color: var(--gold2); text-shadow: 0 1px 3px #000; }
+/* v0.8.0: crossing between the realms, the gate screen, the shipwright sheet */
+#fade { position: fixed; inset: 0; z-index: 40; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 45%, #4a1070, #0a0010 72%); transition: opacity .9s ease; }
+#fade.on { opacity: 1; pointer-events: auto; }
+#gate { background: radial-gradient(ellipse at 50% 40%, #2a0a3acc, #050008f0 80%); }
+#gate h2 { color: #e0b0ff; text-shadow: 0 0 12px #8a3aff, 0 2px 6px #000; }
+#wright { position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; display: flex; flex-direction: column; gap: 5px; max-height: 64vh; padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0)); background: linear-gradient(#0b1a26e6, #050b10f6); border-top: 2px solid var(--gold); }
+#wright .wrHead { display: flex; align-items: center; gap: 8px; }
+#wright .wrHead > b { flex: 1; text-align: left; color: var(--gold2); font: 800 16px Georgia, serif; letter-spacing: 2px; }
+.wrTabs { display: flex; gap: 6px; }
+.wrTabs button { padding: 6px 14px; font-size: 12px; }
+.wrTabs button:not(.on) { background: #2a1c12d8; color: var(--ink); box-shadow: none; border: 1.5px solid var(--gold); }
+#wrNote, #wrRes { margin: 0; font-size: 11px; opacity: .85; text-align: left; }
+#wrList { flex: none; display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; touch-action: pan-x; }
+#wright:not(.hidden) ~ .fsBtn, #gate:not(.hidden) ~ .fsBtn { display: none !important; }
+@media (max-height: 500px) { #wright { padding-top: 5px; gap: 3px; } #wrNote { display: none; } .wcard { width: 126px; padding: 5px 6px; gap: 1px; font-size: 11px; } .wcard .cost { font-size: 11px; } .wcard .wic { font-size: 20px; } .wcard b { font-size: 12px; } .wcard .wperk { min-height: 26px; } .wcard button { padding: 4px 10px; font-size: 11px; } }
+.wcard { flex: none; width: 136px; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px; text-align: center; font-size: 12px; cursor: pointer; background: linear-gradient(#3a2616, #22160c); border: 1.5px solid #6a4a1a; border-radius: 12px; }
+.wcard.on { border-color: #7dff3a; }
+.wcard.pv { box-shadow: inset 0 0 0 2px var(--gold2); }
+.wcard .wic { font-size: 26px; line-height: 1.1; }
+.wcard b { color: var(--gold2); font-size: 13px; }
+.wcard .wperk { opacity: .85; min-height: 30px; }
+.wcard .cost { color: #e8dcc0; } .wcard .cost .no { color: #ff7a5a; }
+.wcard button { margin-top: auto; padding: 6px 12px; font-size: 12px; }
 #seaBanner { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); text-align: center; opacity: 0; pointer-events: none; width: 92vw; }
 #seaBanner b { display: block; font: 800 26px Georgia, serif; letter-spacing: 3px; color: var(--gold2); text-shadow: 0 3px 8px #000, 0 0 3px #000; }
 #seaBanner small { display: block; font: italic 14px Georgia, serif; color: #f2e6c8; text-shadow: 0 2px 5px #000; margin-top: 4px; }

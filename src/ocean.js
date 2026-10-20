@@ -118,10 +118,26 @@ void main() {
 }`;
 
 const SKY_VERT = `varying vec3 vDir; void main() { vDir = normalize(position); vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position = p.xyww; }`;
-const SKY_FRAG = `uniform vec3 uSky, uHorizon, uSunDir, uSunCol; uniform float uSunK, uFlash, uMoon; varying vec3 vDir;
+// uHel: Helheim (0 or 1). Its sky burns by day (rolling fire clouds over an ember horizon) and by night turns to a purple
+// abyss: spiral arms of violet light wheel slowly round a black heart straight overhead
+const SKY_FRAG = `uniform vec3 uSky, uHorizon, uSunDir, uSunCol; uniform float uSunK, uFlash, uMoon, uHel, uTime; varying vec3 vDir;
+float hh(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hh(i), hh(i + vec2(1.0, 0.0)), f.x), mix(hh(i + vec2(0.0, 1.0)), hh(i + vec2(1.0, 1.0)), f.x), f.y); }
+float fbm(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { s += a * vn(p); p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; } return s; }
 void main() { vec3 d = normalize(vDir); float h = clamp(d.y, -0.1, 1.0);
   vec3 c = mix(uHorizon, uSky, pow(max(h, 0.0), 0.55)); float s = max(dot(d, uSunDir), 0.0);
-  c += uSunCol * (pow(s, 900.0) * 6.0 * (1.0 - uMoon * 0.4) + pow(s, 12.0) * 0.25) * uSunK;
+  c += uSunCol * (pow(s, 900.0) * 6.0 * (1.0 - uMoon * 0.4) + pow(s, 12.0) * 0.25) * uSunK * (1.0 - uHel * 0.55);
+  if (uHel > 0.001) { float up = max(h, 0.0);
+    vec2 q = d.xz / max(d.y + 0.14, 0.14) * 0.75; float f1 = fbm(q + vec2(uTime * 0.03, -uTime * 0.07)), f2 = fbm(q * 2.3 + f1 * 1.8 - vec2(uTime * 0.09, uTime * 0.05));
+    vec3 day = mix(vec3(0.24, 0.025, 0.012), vec3(0.95, 0.26, 0.04), smoothstep(0.32, 0.8, f2)); day = mix(day, vec3(1.0, 0.72, 0.26), smoothstep(0.74, 0.96, f2) * 0.8);
+    day = mix(uHorizon, day, smoothstep(0.0, 0.32, up));
+    float r = acos(clamp(d.y, 0.0, 1.0)) / 1.5708, ang = atan(d.z, d.x);
+    float sw = fbm(vec2(cos(ang), sin(ang)) * (1.5 + r * 3.0) + vec2(r * 3.0 - uTime * 0.06, uTime * 0.04));
+    float arms = 0.5 + 0.5 * sin(ang * 4.0 - r * 16.0 + uTime * 0.35 + sw * 4.0);
+    vec3 night = mix(vec3(0.04, 0.008, 0.08), vec3(0.4, 0.09, 0.68), smoothstep(0.35, 1.0, arms) * (0.35 + sw));
+    night += vec3(0.9, 0.42, 1.0) * smoothstep(0.34, 0.12, r) * smoothstep(0.03, 0.13, r) * 0.75;
+    night = mix(vec3(0.008, 0.0, 0.016), night, smoothstep(0.035, 0.12, r)); night = mix(uHorizon, night, smoothstep(0.0, 0.3, up));
+    c = mix(c, mix(day, night, clamp(uMoon, 0.0, 1.0)), uHel * smoothstep(-0.04, 0.06, d.y)); }
   c += vec3(0.8, 0.9, 1.0) * uFlash * 0.8; gl_FragColor = vec4(c, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -152,7 +168,7 @@ export function createOcean(scene, { size = 420, seg = 170, world = 1000, shore 
   const farMat = new THREE.ShaderMaterial({ uniforms: farU, vertexShader: VERT.replace('uniform float uTime, uAmp;', 'uniform float uTime; const float uAmp = 0.0;'), fragmentShader: FRAG, fog: true });
   const farGeo = new THREE.RingGeometry(size * 0.46, 4000, 48, 2); farGeo.rotateX(-Math.PI / 2); const far = new THREE.Mesh(farGeo, farMat); far.position.y = -0.15; far.frustumCulled = false; far.renderOrder = -2; scene.add(far);
   // sky dome
-  const skyU = { uSky: uniforms.uSky, uHorizon: uniforms.uHorizon, uSunDir: uniforms.uSunDir, uSunCol: uniforms.uSunCol, uSunK: uniforms.uSunK, uFlash: uniforms.uFlash, uMoon: { value: 0 } };
+  const skyU = { uSky: uniforms.uSky, uHorizon: uniforms.uHorizon, uSunDir: uniforms.uSunDir, uSunCol: uniforms.uSunCol, uSunK: uniforms.uSunK, uFlash: uniforms.uFlash, uMoon: { value: 0 }, uHel: { value: 0 }, uTime: uniforms.uTime };
   const sky = new THREE.Mesh(new THREE.SphereGeometry(3000, 32, 16), new THREE.ShaderMaterial({ uniforms: skyU, vertexShader: SKY_VERT, fragmentShader: SKY_FRAG, side: THREE.BackSide, depthWrite: false, fog: false }));
   sky.renderOrder = -3; sky.frustumCulled = false; scene.add(sky);
 

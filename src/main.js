@@ -5,9 +5,9 @@
 import * as THREE from 'three';
 import { createOcean, createFoam } from './ocean.js';
 import { createEnv } from './env.js';
-import { buildShip, SHIP_TIERS, PLAYER_PAL, RAIDER_PALS, GHOST_PAL, TREASURE_PAL, addCargo } from './ship.js';
+import { buildShip, SHIP_TIERS, PLAYER_PAL, RAIDER_PALS, GHOST_PAL, TREASURE_PAL, HEL_PALS, HULL_LOOK, addCargo } from './ship.js';
 import { makeMonster, SPECIES, tentacle } from './monsters.js';
-import { buildWorld, WORLD, HALF, REGIONS, LAIRS } from './world.js';
+import { buildWorld, WORLD, HALF, REGIONS, LAIRS, LAIRS_HEL, GATES } from './world.js';
 import { createMinis } from './minigames.js';
 import { createTwisters } from './tornado.js';
 import { createAurora } from './aurora.js';
@@ -17,6 +17,7 @@ import { initFullscreen } from './fullscreen.js';
 import { VERSION } from './version.js';
 import { initSaveCodes } from './savecode.js';
 import { M, V, glowVC } from './geom.js';
+import { makeGate } from './hel.js';
 
 const $ = (id) => document.getElementById(id);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, k) => a + (b - a) * k, rnd = (a, b) => a + Math.random() * (b - a);
@@ -28,32 +29,62 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPrefere
 const scene = new THREE.Scene(); scene.fog = new THREE.Fog(0xa6cade, 120, 330); scene.background = new THREE.Color(0xa6cade);
 const camera = new THREE.PerspectiveCamera(50, 1, 0.5, 6000);
 const hemi = new THREE.HemisphereLight(0xdcefff, 0x2a4a5a, 1.4); scene.add(hemi); const sun = new THREE.DirectionalLight(0xfff0d0, 1.2); scene.add(sun); scene.add(sun.target);
-const world = buildWorld(scene);
+// two worlds (v0.8.0): Midgard, and Helheim (built the first time you cross); `world` is the one you sail in
+const worlds = { mid: buildWorld(scene) }; let world = worlds.mid;
 const ocean = createOcean(scene, { size: 440, seg: 170, world: WORLD, shore: world.shore });
 const foam = createFoam(scene, ocean, 800); const env = createEnv(scene, ocean, hemi, sun);
 let flash = 0;
 const twisters = createTwisters(scene, { onBolt: () => { flash = Math.max(flash, 0.4); } });
 const minis = createMinis({ sfx, hooks: { shoot: (mult, dmg, txt, fire) => battleShoot(mult, dmg, txt, fire), hurt: (d) => battleHurt(d), foeAct: (d) => battleFoeAct(d), cast: () => fishCast(), pull: () => {} } });
-let viewOff = false, helmLift = 0; // helmLift: the view is shifted up by this many px so the ship clears the wheel
+let viewOff = false, helmLift = 0, wrF = 1.5; // helmLift: the view is shifted up by this many px so the ship clears the wheel
 // battles lift the action up the screen: the classic one to a quarter of the way down (its controls fill the bottom), the broadside to 40%
-function applyView() { if (viewOff) { const f = viewOff === 'broad' ? 1.2 : 1.5; camera.aspect = innerWidth / (innerHeight * f); camera.setViewOffset(innerWidth, innerHeight * f, 0, innerHeight * (f - 1), innerWidth, innerHeight); } else if (helmLift) { camera.aspect = innerWidth / (innerHeight + helmLift); camera.setViewOffset(innerWidth, innerHeight + helmLift, 0, helmLift, innerWidth, innerHeight); } else { camera.aspect = innerWidth / innerHeight; camera.clearViewOffset(); } camera.updateProjectionMatrix(); }
+function applyView() { if (viewOff) { const f = viewOff === 'broad' ? 1.2 : viewOff === 'wright' ? wrF : 1.5; camera.aspect = innerWidth / (innerHeight * f); camera.setViewOffset(innerWidth, innerHeight * f, 0, innerHeight * (f - 1), innerWidth, innerHeight); } else if (helmLift) { camera.aspect = innerWidth / (innerHeight + helmLift); camera.setViewOffset(innerWidth, innerHeight + helmLift, 0, helmLift, innerWidth, innerHeight); } else { camera.aspect = innerWidth / innerHeight; camera.clearViewOffset(); } camera.updateProjectionMatrix(); }
 function resize() { renderer.setSize(innerWidth, innerHeight, false); applyView(); } addEventListener('resize', resize); resize();
 
 // ---------- data: upgrades and costs [timber, iron, gold] ----------
+// costs are [timber, iron, gold] or [timber, iron, gold, souls]; levels 4 and 5 (rune levels, v0.8.0) need souls from Helheim
 const UPG = {
-  shields: { name: 'Shield Wall', icon: '🛡', max: 3, desc: ['Wooden shields along the rails', 'Painted war shields', 'Iron-rimmed shields'], eff: 'Blocks harder (−12% damage each)', cost: [[20, 5, 30], [45, 20, 90], [80, 60, 220]] },
-  armor: { name: 'Iron Plates', icon: '⛓', max: 3, desc: ['Iron bands at the waterline', 'Riveted iron plates', 'Full iron hull'], eff: '+25% hull and −8% damage each', cost: [[10, 30, 60], [25, 75, 160], [40, 150, 380]] },
-  ballista: { name: 'Ballista', icon: '🏹', max: 3, desc: ['A bow ballista', 'Heavy bolts', 'Twin ballistas'], eff: '+30% damage, longer shots, a bigger weak spot', cost: [[30, 15, 50], [60, 45, 150], [110, 100, 340]] },
-  fire: { name: 'Fire Pots', icon: '🔥', max: 3, desc: ['Two fire pots', 'Three fire pots', 'Four fire pots'], eff: 'Big burning hits in battle', cost: [[10, 10, 80], [20, 25, 190], [35, 55, 400]] },
-  ram: { name: 'Iron Ram', icon: '🐏', max: 2, desc: ['An iron ram at the bow', 'A great beaked ram'], eff: 'Ram monsters at speed for free damage', cost: [[25, 40, 110], [45, 110, 320]] },
-  sail: { name: 'Sail', icon: '⛵', max: 3, desc: ['Striped war sail', 'Fine wool sail', 'Royal sail'], eff: '+10% speed each', cost: [[30, 0, 60], [60, 10, 150], [90, 30, 330]] },
-  oars: { name: 'Oars & Crew', icon: '🚣', max: 3, desc: ['More rowers, who patch the hull at sea', 'Strong rowers: they patch it twice as fast', 'Berserker rowers: the hull mends quickly'], eff: 'Faster turns and acceleration; the crew mend the hull at sea when no one is hitting you', cost: [[25, 5, 40], [50, 20, 120], [80, 50, 280]] },
+  shields: { name: 'Shield Wall', icon: '🛡', max: 5, desc: ['Wooden shields along the rails', 'Painted war shields', 'Iron-rimmed shields', 'Rune-carved shields', 'Valkyrie shields of gold'], eff: 'Blocks harder (−12% damage a level, −6% for rune levels)', cost: [[20, 5, 30], [45, 20, 90], [80, 60, 220], [140, 120, 600, 30], [220, 200, 1200, 80]] },
+  armor: { name: 'Iron Plates', icon: '⛓', max: 5, desc: ['Iron bands at the waterline', 'Riveted iron plates', 'Full iron hull', 'Rune-iron plates', 'A dwarf-forged hull'], eff: '+25% hull and −8% damage each (−3% for rune levels)', cost: [[10, 30, 60], [25, 75, 160], [40, 150, 380], [70, 260, 700, 30], [110, 420, 1400, 80]] },
+  ballista: { name: 'Ballista', icon: '🏹', max: 5, desc: ['A bow ballista', 'Heavy bolts', 'Twin ballistas', 'Glowing rune bolts', "Gungnir's ballista"], eff: '+30% damage, longer shots, a bigger weak spot', cost: [[30, 15, 50], [60, 45, 150], [110, 100, 340], [180, 170, 750, 35], [280, 280, 1500, 90]] },
+  fire: { name: 'Fire Pots', icon: '🔥', max: 5, desc: ['Two fire pots', 'Three fire pots', 'Four fire pots', 'Five pots of Muspel fire', "Six pots of Surtr's flame"], eff: 'Big burning hits in battle', cost: [[10, 10, 80], [20, 25, 190], [35, 55, 400], [60, 90, 700, 30], [100, 150, 1400, 80]] },
+  ram: { name: 'Iron Ram', icon: '🐏', max: 3, desc: ['An iron ram at the bow', 'A great beaked ram', 'A Hel-iron ram'], eff: 'Ram monsters at speed for free damage', cost: [[25, 40, 110], [45, 110, 320], [80, 220, 800, 40]] },
+  sail: { name: 'Sail', icon: '⛵', max: 5, desc: ['Striped war sail', 'Fine wool sail', 'Royal sail', 'Royal rune sail', "Skidbladnir's sail"], eff: '+10% speed each', cost: [[30, 0, 60], [60, 10, 150], [90, 30, 330], [140, 60, 650, 30], [220, 100, 1300, 80]] },
+  oars: { name: 'Oars & Crew', icon: '🚣', max: 5, desc: ['More rowers, who patch the hull at sea', 'Strong rowers: they patch it twice as fast', 'Berserker rowers: the hull mends quickly', 'Einherjar rowers: it mends faster still', 'Valhalla oarsmen: the hull mends fastest of all'], eff: 'Faster turns and acceleration; the crew mend the hull at sea when no one is hitting you', cost: [[25, 5, 40], [50, 20, 120], [80, 50, 280], [130, 90, 600, 30], [200, 150, 1200, 80]] },
   lights: { name: 'Lanterns', icon: '🏮', max: 3, desc: ['A stern lantern', 'Bow and mast lanterns', 'Great iron fire braziers'], eff: 'Light the sea around you at night and see further', cost: [[10, 10, 40], [20, 25, 110], [40, 60, 260]] },
   compass: { name: 'Compass', icon: '🧭', max: 2, desc: ['A lodestone compass shows which way you face', 'A Viking sunstone also points to the nearest harbour, even in fog'], eff: '', cost: [[5, 10, 35], [10, 25, 120]] },
-  hooks: { name: 'Grappling Hooks', icon: '🪝', max: 3, desc: ['Iron grappling hooks: board a Faering or a Karvi', 'Barbed hooks and boarding planks: board a Snekkja or a Skeid', 'Rune-carved hooks: board anything, even a Drakkar'], eff: 'Board a ship in battle once her hull is below 40%', cost: [[20, 25, 70], [40, 70, 200], [80, 150, 450]] },
-  nets: { name: 'Nets', icon: '🕸', max: 3, desc: ['Rope nets', 'Wide nets', 'Iron-weighted nets'], eff: 'Bigger catch box, bigger catches', cost: [[20, 5, 30], [40, 15, 90], [60, 40, 200]] },
+  hooks: { name: 'Grappling Hooks', icon: '🪝', max: 4, desc: ['Iron grappling hooks: board a Faering or a Karvi', 'Barbed hooks and boarding planks: board a Snekkja or a Skeid', 'Rune-carved hooks: board a Drakkar', 'Hel-forged hooks: board the great ships, Busse to Naglfar'], eff: 'Board a ship in battle once her hull is below 40%', cost: [[20, 25, 70], [40, 70, 200], [80, 150, 450], [140, 260, 900, 40]] },
+  nets: { name: 'Nets', icon: '🕸', max: 4, desc: ['Rope nets', 'Wide nets', 'Iron-weighted nets', "Rán's own net"], eff: 'Bigger catch box, bigger catches', cost: [[20, 5, 30], [40, 15, 90], [60, 40, 200], [100, 70, 450, 20]] },
 };
-const TIER_COST = [null, [60, 20, 90], [150, 70, 250], [320, 160, 560], [650, 330, 1300]];
+// ship sizes: Busse (size 6) needs only timber, iron and gold; the Ormen Lange needs souls; Naglfar needs Helheim's three legends slain
+const TIER_COST = [null, [60, 20, 90], [150, 70, 250], [320, 160, 560], [650, 330, 1300], [1300, 650, 2600], [2400, 1300, 5000, 300], [4000, 2400, 9000, 800]];
+// the shipwright (v0.8.0): a hull and a sail design for Pat's ships, each with a small perk. eff keys: spd turn hp def atk gold
+// sight (monsters spot you later) mend fire thor fish souls curse; got: what it costs to have it built, or the legend that gives it
+const HULLS = {
+  oak: { name: 'Oak', icon: '🌳', perk: 'Sturdy and true', eff: {}, got: { cost: [0, 0, 0] } },
+  pine: { name: 'Pine', icon: '🌲', perk: '+5% speed, −5% hull', eff: { spd: 0.05, hp: -0.05 }, got: { cost: [30, 0, 150] } },
+  ash: { name: 'Ash', icon: '🪵', perk: '+12% turning', eff: { turn: 0.12 }, got: { cost: [40, 0, 120] } },
+  tar: { name: 'Black Tar', icon: '⚫', perk: 'Monsters spot you 15% later', eff: { sight: 0.15 }, got: { cost: [60, 10, 260] } },
+  iron: { name: 'Iron-bound', icon: '⛓', perk: '+10% hull, −4% speed', eff: { hp: 0.1, spd: -0.04 }, got: { cost: [40, 140, 320] } },
+  gilded: { name: 'Gilded', icon: '👑', perk: '+15% gold from kills', eff: { gold: 0.15 }, got: { cost: [80, 40, 1500] } },
+  dragon: { name: 'Dragon-scale', icon: '🐉', perk: '+5% hull and 5% less damage', eff: { hp: 0.05, def: 0.05 }, got: { legend: 'jorm' } },
+  bone: { name: 'Hel-bone', icon: '🦴', perk: 'The crew mend 40% faster, +10% souls', eff: { mend: 0.4, souls: 0.1 }, got: { cost: [0, 60, 500, 60] } },
+  naglfar: { name: 'Nail-hull', icon: '📌', perk: '+8% damage, 4% less damage', eff: { atk: 0.08, def: 0.04 }, got: { legend: 'hafgufa' } },
+};
+const SAILS = {
+  pats: { name: "Pat's crest", icon: '⚔', perk: 'Grows grander with each Sail upgrade', eff: {}, got: { cost: [0, 0, 0] } },
+  stripes: { name: 'Red and white', icon: '🟥', perk: '+3% speed', eff: { spd: 0.03 }, got: { cost: [20, 0, 80] } },
+  raven: { name: "Odin's raven", icon: '🐦‍⬛', perk: '+25% catch when fishing', eff: { fish: 0.25 }, got: { cost: [20, 0, 220] } },
+  sun: { name: "Sól's sun", icon: '☀', perk: "Thor's Fury lasts 50% longer", eff: { thor: 0.5 }, got: { cost: [20, 10, 380] } },
+  wolf: { name: 'Fenrir', icon: '🐺', perk: '+5% damage', eff: { atk: 0.05 }, got: { cost: [30, 20, 420] } },
+  serpent: { name: 'World Serpent', icon: '🐍', perk: '+6% speed', eff: { spd: 0.06 }, got: { cost: [40, 20, 900] } },
+  gold: { name: 'Cloth of gold', icon: '💰', perk: '+10% gold from kills', eff: { gold: 0.1 }, got: { cost: [0, 0, 2000] } },
+  kraken: { name: 'Kraken ink', icon: '🦑', perk: 'Fire pots burn 25% hotter', eff: { fire: 0.25 }, got: { legend: 'kraken' } },
+  elder: { name: 'Elder sign', icon: '👁', perk: 'Curses cannot touch you, 3% less damage', eff: { curse: 1, def: 0.03 }, got: { legend: 'rlyeh' } },
+  hel: { name: "Hel's shroud", icon: '☯', perk: 'Monsters spot you 20% later, +10% souls', eff: { sight: 0.2, souls: 0.1 }, got: { cost: [0, 0, 600, 80] } },
+  surtr: { name: "Surtr's flame", icon: '🔥', perk: '+8% damage', eff: { atk: 0.08 }, got: { legend: 'surtr' } },
+  nidhogg: { name: "Nidhögg's wings", icon: '🦇', perk: '+8% speed, +5% turning', eff: { spd: 0.08, turn: 0.05 }, got: { legend: 'nidhogg' } },
+};
 // monster levels per species variant, speeds, and what their attacks are called in battle
 const MLV = { shark: [0, 0.6, 1.2, 2], megalodon: [3.4, 3.8, 4.2, 4.6, 5.0], serpent: [1.3, 2, 2.4, 3, 3.6, 3, 4.1], eel: [0.4, 1, 1.6], octopus: [0.9, 1.6, 2.2, 2.8], crab: [1, 2, 3], angler: [2, 3], jelly: [0, 0.3, 0.5], leviathan: [2, 3, 4.2], kraken: [5, 5, 5], elder: [5.6, 5.6, 5.6], jormungandr: [6.2, 6.2] };
 const MSPEED = { shark: 10.5, megalodon: 9.5, serpent: 9.2, eel: 10, octopus: 7, crab: 6, angler: 7.5, jelly: 1.2, leviathan: 8.5, kraken: 6, elder: 5, jormungandr: 9 };
@@ -65,18 +96,26 @@ const VBIAS = { frost: { 'serpent:5': 5, 'leviathan:1': 3, 'megalodon:0': 2, 'oc
 const REGION_BIAS = { frost: { serpent: 2, leviathan: 2, crab: 0.5 }, storm: { eel: 3, jelly: 2, octopus: 1.5 }, mist: { angler: 3, octopus: 1.5, ghost: 3, raider: 1.5 }, warm: { shark: 2, crab: 3, jelly: 1.5 }, home: { shark: 1.5, jelly: 1.5 } };
 
 // ---------- player ----------
-const P = { tier: 0, up: { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 0, oars: 0, nets: 0, lights: 0, compass: 0, hooks: 0 }, res: { w: 20, i: 5, g: 40, f: 0 }, hp: 100, legends: {}, kills: 0, home: 0, won: false, tod: 0.16, wreck: null, prizes: [], maps: [], relics: {}, skin: 'pats' };
+const P = { tier: 0, up: { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 0, oars: 0, nets: 0, lights: 0, compass: 0, hooks: 0 }, res: { w: 20, i: 5, g: 40, f: 0, s: 0 }, hp: 100, legends: {}, kills: 0, home: 0, won: false, tod: 0.16, wreck: null, prizes: [], maps: [], relics: {}, skin: 'pats', realm: 'mid', hull: 'oak', sailD: 'pats', owned: { h: ['oak'], s: ['pats'] }, helWon: false };
 const boat = { grace: 0, x: 0, z: -20, yaw: Math.PI, v: 0, want: Math.PI, thr: 0, wp: null, fireCd: 0, thor: 0, boost: 0, spin: 0, shake: 0, hitCd: 0, y: 0, pitch: 0, roll: 0 };
 const T = () => SHIP_TIERS[P.tier];
-const MEND = [0, 0.0012, 0.0025, 0.004]; // Oars & Crew level -> share of the hull mended per second at sea (about 7%, 15%, 24% a minute)
-const maxHp = () => Math.round(100 * Math.pow(1.75, P.tier) * (1 + 0.25 * P.up.armor));
-const topSpeed = () => T().speed * (1 + 0.1 * P.up.sail) * (boat.boost > 0 ? 1.35 : 1) * (boat.bifrost > 0 ? 1.25 : 1) * (boat.pod ? 1.1 : 1);
-const turnRate = () => T().turn * (1 + 0.14 * P.up.oars);
-const defense = () => clamp(0.12 * P.up.shields + 0.08 * P.up.armor + (boat.thor > 0 ? 0.3 : 0) - (boat.curse > 0 ? 0.2 : 0), 0, 0.85);
-const attack = () => 12 * Math.pow(1.65, P.tier) * (1 + 0.3 * P.up.ballista);
+const MEND = [0, 0.0012, 0.0025, 0.004, 0.0055, 0.007]; // Oars & Crew level -> share of the hull mended per second at sea (about 7%, 15%, 24%, 33%, 42% a minute)
+// the design perks (only on Pat's own ships: a prize ship keeps her own colours and none of them)
+const perk = (k) => (P.skin !== 'pats' ? 0 : ((HULLS[P.hull] || HULLS.oak).eff[k] || 0) + ((SAILS[P.sailD] || SAILS.pats).eff[k] || 0));
+// shields and plates: the rune levels add less (it would be too easy to shrug everything off)
+const SH_DEF = [0, 0.12, 0.24, 0.36, 0.42, 0.48], AR_DEF = [0, 0.08, 0.16, 0.24, 0.27, 0.3];
+// past the Drakkar the seas keep growing with you: every species rises one level a ship size (and half a level more in Helheim)
+const lvShift = () => Math.max(0, P.tier - 4) + (P.realm === 'hel' ? 0.5 : 0);
+const maxHp = () => Math.round(100 * Math.pow(1.75, P.tier) * (1 + 0.25 * P.up.armor) * (1 + perk('hp')));
+const topSpeed = () => T().speed * (1 + 0.1 * P.up.sail) * (boat.boost > 0 ? 1.35 : 1) * (boat.bifrost > 0 ? 1.25 : 1) * (boat.pod ? 1.1 : 1) * (1 + perk('spd'));
+const turnRate = () => T().turn * (1 + 0.14 * P.up.oars) * (1 + perk('turn'));
+const defense = () => clamp(SH_DEF[P.up.shields] + AR_DEF[P.up.armor] + perk('def') + (boat.thor > 0 ? 0.3 : 0) - (boat.curse > 0 ? 0.2 : 0), 0, 0.85);
+const attack = () => 12 * Math.pow(1.65, P.tier) * (1 + 0.3 * P.up.ballista) * (1 + perk('atk'));
 const fireRange = () => (P.up.ballista ? 24 + 6 * P.up.ballista : 16) + P.tier * 2;
 let ship = null;
-function rebuildShip() { if (ship) scene.remove(ship.g); ship = buildShip(P.tier, P.up, palOf(P.skin), 7); scene.add(ship.g); ship.g.position.set(boat.x, 0, boat.z); hud(); }
+// Pat's own ships wear the shipwright's hull and sail; prize ships keep their own colours
+const shipPal = () => (P.skin === 'pats' ? { ...PLAYER_PAL, ...(HULL_LOOK[P.hull] || {}), sail: P.sailD && P.sailD !== 'pats' ? P.sailD : 'pats' } : palOf(P.skin));
+function rebuildShip() { if (ship) scene.remove(ship.g); ship = buildShip(P.tier, P.up, shipPal(), 7); scene.add(ship.g); ship.g.position.set(boat.x, boat.y || 0, boat.z); ship.g.rotation.y = boat.yaw; hud(); }
 
 // ---------- state ----------
 let state = 'title', time = 0, zoom = 1.6, viewMode = 'chase', camYaw = Math.PI, camPos = new THREE.Vector3(0, 40, 40), camTgt = new THREE.Vector3();
@@ -149,45 +188,46 @@ function setCourse(x, z) { boat.wp = { x: clamp(x, -HALF + 20, HALF - 20), z: cl
 const courseMark = new THREE.Mesh(new THREE.RingGeometry(1.6, 2.2, 32), new THREE.MeshBasicMaterial({ color: 0xffd24a, transparent: true, opacity: 0.8, depthWrite: false })); courseMark.rotation.x = -Math.PI / 2; courseMark.visible = false; scene.add(courseMark);
 
 // ---------- HUD ----------
-const rname = (k) => REGIONS[k].name;
-function hud() { P.hp = Math.min(P.hp, maxHp()); $('hullFill').style.width = clamp(P.hp / maxHp(), 0, 1) * 100 + '%'; $('hullTxt').textContent = Math.ceil(P.hp) + ' / ' + maxHp(); $('rW').textContent = P.res.w; $('rI').textContent = P.res.i; $('rG').textContent = P.res.g; $('rF').textContent = P.res.f; $('shipName').textContent = T().name; }
+const rname = (k) => (world.regions || REGIONS)[k].name;
+function hud() { P.hp = Math.min(P.hp, maxHp()); $('hullFill').style.width = clamp(P.hp / maxHp(), 0, 1) * 100 + '%'; $('hullTxt').textContent = Math.ceil(P.hp) + ' / ' + maxHp(); $('rW').textContent = P.res.w; $('rI').textContent = P.res.i; $('rG').textContent = P.res.g; $('rF').textContent = P.res.f; $('rS').textContent = P.res.s || 0; $('rSw').classList.toggle('hidden', !(P.res.s > 0 || P.realm === 'hel')); $('shipName').textContent = T().name; }
 function say(t, secs = 2.6) { const m = $('msg'); m.innerHTML = t; m.style.opacity = 1; msgT = secs; }
 function warn(t, secs = 3) { $('warn').innerHTML = t; warnT = secs; }
 const tmpV = new THREE.Vector3();
 function toScreen(x, y, z) { tmpV.set(x, y, z).project(camera); return tmpV.z < 1 ? [(tmpV.x * 0.5 + 0.5) * innerWidth, (-tmpV.y * 0.5 + 0.5) * innerHeight] : null; }
 function pop(x, y, z, text, color = '#fff', life = 1.3) { const el = document.createElement('div'); el.className = 'pop'; el.textContent = text; el.style.color = color; document.body.appendChild(el); pops.push({ el, x, y, z, t: 0, life }); }
-function reward(r, x, y, z) { const parts = []; for (const [k, ic] of [['w', '🪵'], ['i', '⚙️'], ['g', '🪙'], ['f', '🐟']]) if (r[k]) { P.res[k] += r[k]; parts.push('+' + r[k] + ic); } if (parts.length) { pop(x, y, z, parts.join(' '), '#ffe27a', 1.8); sfx.coins(); } hud(); }
+function reward(r, x, y, z) { const parts = []; for (const [k, ic] of [['w', '🪵'], ['i', '⚙️'], ['g', '🪙'], ['f', '🐟'], ['s', '👻']]) if (r[k]) { P.res[k] = (P.res[k] || 0) + r[k]; parts.push('+' + r[k] + ic); } if (parts.length) { pop(x, y, z, parts.join(' '), '#ffe27a', 1.8); sfx.coins(); } hud(); }
 function hurtFx() { const h = $('hurt'); h.classList.add('on'); setTimeout(() => h.classList.remove('on'), 120); boat.shake = 0.4; }
 const dmgLog = []; function damage(d, why) { d = Math.round(d); if (d <= 0) return; dmgLog.push([Math.round(time), d, why || '']); P.hp -= d; boat.lastHit = time; hurtFx(); sfx.hurt(); pop(boat.x, boat.y + 3, boat.z, '−' + d, '#ff6a4a'); if (why) say(why); hud(); if (P.hp <= 0 && state === 'play') sink(); }
 
 // ---------- monsters and raiders ----------
 const danger = (lv) => { const d = lv - P.tier; return d < -0.6 ? '#7dff3a' : d < 0.6 ? '#ffffff' : d < 1.6 ? '#ffb03a' : d < 3 ? '#ff4a3a' : '#d06aff'; };
-function spawnTable(region, night) { const out = [], tier = P.tier, bias = REGION_BIAS[region] || {};
-  for (const [type, lvs] of Object.entries(MLV)) { if (type === 'kraken' || type === 'elder' || type === 'jormungandr') continue; lvs.forEach((lv, v) => { if (lv > tier + 1.7 || lv < tier - 1.4) return; let w = (bias[type] || 1) * (lv > tier + 0.8 ? 0.45 : 1); if (type === 'angler') w *= night ? 3 : 0.3; if (type === 'serpent' && tier === 0) w *= 0.6; if (type === 'megalodon') w *= v === 4 ? (night ? 1 : 0.08) : 0.35; w *= (VBIAS[region] || {})[type + ':' + v] || 1; out.push({ type, v, lv, w }); }); }
-  for (let st = 0; st <= 4; st++) { const lv = st + 0.4; if (lv > tier + 1.6 || lv < tier - 1.2) continue; out.push({ type: 'raider', v: st, lv, w: 0.6 * (bias.raider || 1) }); }
-  if ((night || region === 'mist') && tier >= 2) out.push({ type: 'ghost', v: 3, lv: 3.5, w: 0.8 * (bias.ghost || 1) });
+function spawnTable(region, night) { const out = [], sh = Math.max(0, P.tier - 4), hb = P.realm === 'hel' ? 0.5 : 0, tier = P.tier - sh, bias = REGION_BIAS[region] || {};
+  for (const [type, lvs] of Object.entries(MLV)) { if (type === 'kraken' || type === 'elder' || type === 'jormungandr') continue; lvs.forEach((lv, v) => { if (lv > tier + 1.7 || lv < tier - 1.4) return; let w = (bias[type] || 1) * (lv > tier + 0.8 ? 0.45 : 1); if (type === 'angler') w *= night ? 3 : 0.3; if (type === 'serpent' && tier === 0) w *= 0.6; if (type === 'megalodon') w *= v === 4 ? (night ? 1 : 0.08) : 0.35; w *= (VBIAS[region] || {})[type + ':' + v] || 1; out.push({ type, v, lv: lv + sh + hb, w }); }); }
+  for (let st = 0; st <= 4; st++) { const lv = st + 0.4; if (lv > tier + 1.6 || lv < tier - 1.2) continue; out.push({ type: 'raider', v: Math.min(7, st + sh), lv: lv + sh + hb, w: 0.6 * (bias.raider || 1) * (hb ? 1.4 : 1) }); }
+  if ((night || region === 'mist') && tier >= 2 && !hb) out.push({ type: 'ghost', v: Math.min(7, 3 + sh), lv: 3.5 + sh, w: 0.8 * (bias.ghost || 1) });
   return out; }
 function spawnMon(e, x, z, o = {}) {
   let m, size, top, naval = false;
-  if (e.type === 'raider' || e.type === 'ghost') { const pal = e.type === 'ghost' ? GHOST_PAL : o.pal || RAIDER_PALS[(Math.random() * RAIDER_PALS.length) | 0], arm = !o.merchant; const lvl = arm ? Math.min(3, e.v) : 0; const s = buildShip(e.v, { shields: lvl, armor: arm && e.v > 2 ? 1 : 0, ballista: arm && e.v > 1 ? 1 : 0, fire: 0, ram: 0, sail: e.v }, pal, (Math.random() * 999) | 0); if (o.merchant) addCargo(s);
+  const hel = P.realm === 'hel', sea = world.regionAt(x, z);
+  if (e.type === 'raider' || e.type === 'ghost') { const pal = hel ? (o.pal === TREASURE_PAL ? HEL_PALS.barge : HEL_PALS[sea] || HEL_PALS.home) : e.type === 'ghost' ? GHOST_PAL : o.pal || RAIDER_PALS[(Math.random() * RAIDER_PALS.length) | 0], arm = !o.merchant; const lvl = arm ? Math.min(3, e.v) : 0; const s = buildShip(e.v, { shields: lvl, armor: arm && e.v > 2 ? 1 : 0, ballista: arm && e.v > 1 ? 1 : 0, fire: 0, ram: 0, sail: e.v }, pal, (Math.random() * 999) | 0); if (o.merchant) addCargo(s);
     m = { g: s.g, anim: (dt, st) => s.anim(dt, { speed: st.speed * s.t.speed, time, night: isNight() }), name: pal.name, ship: s, skinKey: e.type === 'ghost' ? 'ghost' : pal === TREASURE_PAL ? 'treasure' : pal.name }; size = s.len * 0.5; top = s.mastTop + 1; naval = true; }
-  else { m = makeMonster(e.type, e.v, o.scale || 1); size = m.size; top = m.top; }
+  else { m = makeMonster(e.type, e.v, (o.scale || 1) * (o.boss || o.lair ? 1 : 1 + 0.07 * Math.max(0, P.tier - 4)), hel ? sea : null); size = m.size; top = m.top; }
   m.g.position.set(x, 0, z); scene.add(m.g);
   const lv = e.lv, hpMax = Math.round(45 * Math.pow(1.65, lv) * (o.boss ? 0.8 : 1));
   const tag = document.createElement('div'); tag.className = 'tag'; $('tags').appendChild(tag);
   const mon = { e, m, g: m.g, type: e.type, lv, hp: hpMax, maxHp: hpMax, dmg: Math.round(9 * Math.pow(1.5, lv)), speed: (MSPEED[e.type] || (naval ? SHIP_TIERS[e.v].speed * 0.85 : 8)), size, top, naval, boss: !!o.boss, lair: o.lair || null,
     giant: !!m.giant, skinKey: m.skinKey, x, z, yaw: Math.random() * 6.28, state: o.boss ? 'rise' : 'wander', t: 0, wanderT: 0, att: 0, attT: -1, dive: o.boss ? 1 : 0, rise: o.boss ? 0 : 1, stun: 0, tag, name: m.name || SPECIES[e.type]?.variants[e.v]?.name || 'Monster', shotT: rnd(2, 4), dead: 0 };
-  mon.passive = e.type === 'jelly';
+  mon.passive = e.type === 'jelly'; mon.undead = hel;
   mons.push(mon); return mon; }
 function removeMon(mon) { scene.remove(mon.g); mon.tag.remove(); const i = mons.indexOf(mon); if (i >= 0) mons.splice(i, 1); }
 function updateSpawns(dt) { spawnT -= dt; if (spawnT > 0 || (battle && battle.legend)) return; spawnT = 1.5;
   for (const mon of [...mons]) { if (mon.boss) continue; if (Math.hypot(mon.x - boat.x, mon.z - boat.z) > 280 && !mon.dead) removeMon(mon); }
-  const maxN = 5 + P.tier + (isNight() ? 2 : 0); if (mons.filter((m) => !m.boss).length >= maxN) return;
+  const maxN = Math.min(10, 5 + P.tier) + (isNight() ? 2 : 0); if (mons.filter((m) => !m.boss).length >= maxN) return;
   const a = Math.random() * 6.28, d = rnd(95, 170), x = boat.x + Math.sin(a) * d, z = boat.z + Math.cos(a) * d; if (Math.abs(x) > HALF - 30 || Math.abs(z) > HALF - 30 || world.blockAt(x, z, 12) || Math.hypot(x, z + 40) < 70) return;
   const table = spawnTable(world.regionAt(x, z), isNight()); if (!table.length) return; let sum = table.reduce((s, e) => s + e.w, 0), pick = Math.random() * sum; let e = table[0]; for (const t of table) { pick -= t.w; if (pick <= 0) { e = t; break; } }
   if (e.type === 'jelly') { for (let k = 0; k < 3; k++) spawnMon(e, x + rnd(-8, 8), z + rnd(-8, 8)); } else spawnMon(e, x, z); }
 function isNight() { return P.tod > 0.68 && P.tod < 0.97; }
-function sightRange(mon) { let r = 34 + mon.lv * 6; if (wx.type === 'fog') r *= 0.45; if (isNight()) r *= P.skin === 'ghost' ? 0.5 : 0.8; return r; }
+function sightRange(mon) { let r = (34 + Math.min(6, mon.lv) * 6) * (1 - perk('sight')); if (wx.type === 'fog') r *= 0.45; if (isNight()) r *= P.skin === 'ghost' ? 0.5 : 0.8; return r; }
 function updateMons(dt) {
   for (const mon of [...mons]) {
     const st = mon.stState || (mon.stState = { t: 0, speed: 0, attack: 0, dive: 0, hurt: 0, rise: 1 }); st.t += dt;
@@ -212,7 +252,7 @@ function updateMons(dt) {
     mon.yaw += clamp(angDiff(want, mon.yaw), -dt * 1.6, dt * 1.6); let sp = mon.speed * spd * (mon.state === 'chase' ? 1 : 0.5); if (mon.state === 'chase' && mon.lv > P.tier + 0.5 && !mon.boss) sp = Math.min(sp, topSpeed() * 0.86); if (mon.treasure) sp = topSpeed() * (d < 25 ? 0.7 : 0.8);
     if (mon.state === 'chase') { mon.chaseT = (mon.chaseT || 0) + dt; if (mon.chaseT > 24 && d > 22 && !mon.boss && !mon.hunt) { mon.state = 'wander'; mon.chaseT = 0; mon.stun = 10; } } else mon.chaseT = 0;
     let nx = mon.x + Math.sin(mon.yaw) * sp * dt, nz = mon.z + Math.cos(mon.yaw) * sp * dt; const bl = world.blockAt(nx, nz, mon.size * 0.4); if (bl) { nx = mon.x + bl.nx * dt * 3; nz = mon.z + bl.nz * dt * 3; mon.yaw += dt * 2; } mon.x = nx; mon.z = nz;
-    st.speed = spd; animMon(mon, dt, st);
+    st.speed = spd; animMon(mon, dt, st); if (mon.undead && Math.random() < dt * 3 && d < 140) soulFx.add(mon.x + rnd(-1, 1) * mon.size * 0.5, mon.z + rnd(-1, 1) * mon.size * 0.5, { spray: true, y: mon.g.position.y + mon.top * rnd(0.2, 0.7), vx: rnd(-0.3, 0.3), vz: rnd(-0.3, 0.3), vy: rnd(0.8, 1.8), g: -0.3, s: rnd(0.25, 0.5), grow: 0.4, life: 1.8, a: 0.85 });
     // contact
     if (state === 'play' && !battle && !fishing && !boat.air && boat.grace <= 0 && mon.stun <= 0 && mon.rise >= 1 && d < mon.size * 0.7 + T().L * 0.42) contact(mon);
   }
@@ -232,10 +272,17 @@ function contact(mon) {
 function enemyArrows(mon) { for (let k = 0; k < 4; k++) setTimeout(() => { if (state !== 'play') return; launch({ x: mon.x, y: 3, z: mon.z }, { x: boat.x + rnd(-2, 2), y: 1, z: boat.z + rnd(-2, 2) }, 'arrow', () => { if (!battle) damage(mon.dmg * 0.12 * (1 - defense())); }); }, k * 120); sfx.throw(); }
 function killMon(mon) { mon.dead = 0.01; mon.tag.remove(); P.kills++; const lv = mon.lv, r = mon.naval ? { w: Math.round(12 * Math.pow(1.6, lv)), i: Math.round(3 + lv * 3), g: Math.round(16 * Math.pow(1.6, lv)) } : { i: Math.round(1 + lv * 2.5), g: Math.round(12 * Math.pow(1.6, lv)) };
   if (mon.type === 'jelly') { r.i = 0; r.g = Math.round(r.g * 0.4); } if (mon.treasure) { r.g *= 3; r.i = Math.round(r.i * 1.5); say('<b>💰 The treasure is yours!</b>', 3.5); } if (mon.ambush) r.g = Math.round(r.g * 1.5);
+  r.g = Math.round(r.g * (1 + perk('gold'))); if (mon.undead && mon.type !== 'jelly') r.s = mon.boss && mon.lair ? 150 : Math.max(1, Math.round((0.6 + lv * 0.35) * (mon.naval ? 1.5 : 1) * (mon.young ? 3 : 1) * (mon.treasure ? 3 : 1) * (1 + perk('souls'))));
   if (mon.young) { r.g = Math.round(r.g * 1.5); lairCool[mon.young] = time + rnd(60, 110); setTimeout(() => say('<b>The ' + mon.name + ' is slain!</b> ' + LAIR_NAMES[mon.young] + ' still sleeps below.', 4.5), 600); }
   reward(r, mon.x, mon.top + 1, mon.z); foam.splash(mon.x, mon.z, 2); if (mon.fleet) fleetDown(mon.fleet);
   if (mon.type === 'ghost' && !P.relics.bane && !P.maps.some((m) => m.kind === 'relic')) setTimeout(() => giveMap('relic'), 1500); else if (mon.naval && Math.random() < (mon.treasure ? 0.6 : 0.12)) setTimeout(() => giveMap(), 1600);
-  if (mon.boss && mon.lair) { P.legends[mon.lair] = true; world.lairs.find((l) => l.key === mon.lair).beaten = true; say('<b>' + mon.name.toUpperCase() + ' IS SLAIN!</b> Legends beaten: ' + Object.keys(P.legends).length + ' / 3', 5); sfx.horn(); if (Object.keys(P.legends).length >= 3 && !P.won) setTimeout(winGame, 2500); save(); } }
+  if (mon.boss && mon.lair) { P.legends[mon.lair] = true; const L0 = world.lairs.find((l) => l.key === mon.lair); if (L0) L0.beaten = true; const hel = P.realm === 'hel', n = legendCount(hel);
+    say('<b>' + mon.name.toUpperCase() + ' IS SLAIN!</b> Legends of ' + (hel ? 'Helheim' : 'Midgard') + ': ' + n + ' / 3', 5); sfx.horn(); setTimeout(() => legendDesigns(mon.lair), 5200);
+    if (!hel && n >= 3 && !P.won) setTimeout(winGame, 2500); if (hel && n >= 3 && !P.helWon) { P.helWon = true; setTimeout(helWin, 2500); } save(); } }
+const legendCount = (hel) => Object.keys(hel ? LAIRS_HEL : LAIRS).filter((k) => P.legends[k]).length;
+// a slain legend leaves something for the shipwright: its hide for a hull, its likeness for a sail
+function legendDesigns(key) { const got = []; for (const [k, d] of Object.entries(HULLS)) if (d.got.legend === key && !P.owned.h.includes(k)) { P.owned.h.push(k); got.push(d.name + ' hull'); }
+  for (const [k, d] of Object.entries(SAILS)) if (d.got.legend === key && !P.owned.s.includes(k)) { P.owned.s.push(k); got.push(d.name + ' sail'); } if (got.length) { say('🎨 New at every shipwright: the ' + got.join(' and the ') + '!', 5); save(); } }
 
 // ---------- projectiles (spears, bolts, enemy arrows) ----------
 const spearGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.6, 5); spearGeo.rotateX(Math.PI / 2); const boltGeo = new THREE.CylinderGeometry(0.09, 0.09, 2.4, 6); boltGeo.rotateX(Math.PI / 2);
@@ -270,7 +317,7 @@ function startBattle(mon, firstStrike, opts = {}) {
     P.hp = Math.max(0, you.hp); mon.hp = foe.hp; boat.lastHit = time; setBattle(false); boat.grace = 3.5; $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); const b = battle; battle = null; hud();
     if (res.result === 'win') { killMon(mon); setThrottle(0, true); } // stop after a win so the kill is right beside you
     else if (res.result === 'boarded') { setThrottle(0, true); prizeChoice(mon); }
-    if (res.cursed) { boat.curse = 60; setTimeout(() => say('☠ The draugr curse you: your defence is weakened for 60 s.', 4), 400); }
+    if (res.cursed && !perk('curse')) { boat.curse = 60; setTimeout(() => say('☠ The draugr curse you: your defence is weakened for 60 s.', 4), 400); }
     else if (res.result === 'flee') { mon.stun = 7; boat.boost = 3.5; boat.v = topSpeed(); setThrottle(1, true); say('You row hard and break away!'); }
     if (res.result === 'sunk' || P.hp <= 0) { sink(); return; } void b; });
 }
@@ -363,7 +410,7 @@ function updateBroadside(dt) { const B = battle.broad, t = T(); battle.t += dt; 
   for (let i = B.shots.length - 1; i >= 0; i--) { const s = B.shots[i]; s.t -= dt; if (s.t > 0) continue; B.shots.splice(i, 1);
     if (s.me) { let hit = -1, best = 1e9; B.foes.forEach((f, j) => { const off = Math.abs(foeAt(B, j) - s.s); if (off < tierOf(f).L / 2 + 1.5 && off < best) { best = off; hit = j; } }); const [hx, hz] = lanePos(B, s.s, B.eC);
       if (hit >= 0) { const f = B.foes[hit], perfect = best < (tierOf(f).L / 2 + 1.5) * 0.35, d = Math.round(attack() * 1.15 * (perfect ? 1.6 : 1) * (boat.thor > 0 ? 2 : 1) * rnd(0.9, 1.1)); f.hp -= d; if (f.stState) f.stState.hurt = 1; sfx.hit(); foam.splash(f.x, f.z, 1.4);
-        pop(f.x, f.g.position.y + f.top + 1, f.z, (perfect ? 'PERFECT! ' : '') + '−' + d, perfect ? '#ffd24a' : '#ffffff'); if (P.up.fire) B.burn.set(f, 3 + P.up.fire); }
+        pop(f.x, f.g.position.y + f.top + 1, f.z, (perfect ? 'PERFECT! ' : '') + '−' + d, perfect ? '#ffd24a' : '#ffffff'); if (P.up.fire) B.burn.set(f, (3 + P.up.fire) * (1 + perk('fire'))); }
       else { foam.splash(hx, hz, 0.9); sfx.splash(0.6); pop(hx, 3, hz, 'MISS', '#9ab8c8'); } }
     else if (B.foes.includes(s.f)) { const off = Math.abs(B.sp - s.s), [hx, hz] = lanePos(B, s.s, B.yC);
       if (off < hlY) { boat.shake = 0.5; damage(s.f.dmg * (off < hlY * 0.35 ? 1.25 : 1) * (1 - defense()), s.f.name + ' hits you with a volley!'); if (!battle) return; } else { foam.splash(hx, hz, 0.8); sfx.splash(0.5); } } }
@@ -612,21 +659,22 @@ function updateSea(dt) {
   for (const w of world.wrecks) if (w.looted && time > w.looted) w.looted = false;
 }
 function actionContext() { if (battle || fishing) return null; const v = boat.v;
+  { const G = world.gate; if (G && Math.hypot(G.x - boat.x, G.z - boat.z) < 20 + T().L * 0.3) return v < 6 || !gateOpen() ? { kind: 'gate', icon: P.realm === 'hel' ? '🌅' : '🌀', label: P.realm === 'hel' ? 'HOME' : 'HEL' } : { kind: 'slow', icon: '🌀', label: 'SLOW' }; }
   for (const h of world.harbors) if (Math.hypot(h.dock.x - boat.x, h.dock.z - boat.z) < 16 + T().L * 0.3) return v < 4.5 ? { kind: 'dock', h, icon: '⚓', label: 'DOCK' } : { kind: 'slow', icon: '⚓', label: 'SLOW' };
   let nearM = null, nd = 1e9; for (const mon of mons) { if (mon.dead || mon.rise < 1 || mon.type === 'jelly') continue; const d = Math.hypot(mon.x - boat.x, mon.z - boat.z); if (d < 22 + mon.size && d < nd) { nd = d; nearM = mon; } } if (nearM) return { kind: 'fight', mon: nearM, icon: '⚔', label: 'FIGHT' };
-  if (P.wreck && Math.hypot(P.wreck.x - boat.x, P.wreck.z - boat.z) < 14 + T().L * 0.3) return v < 3.5 ? { kind: 'salvage', w: 'mine', icon: '☠', label: 'SALVAGE' } : { kind: 'slow', icon: '☠', label: 'SLOW' };
+  if (wreckHere() && Math.hypot(P.wreck.x - boat.x, P.wreck.z - boat.z) < 14 + T().L * 0.3) return v < 3.5 ? { kind: 'salvage', w: 'mine', icon: '☠', label: 'SALVAGE' } : { kind: 'slow', icon: '☠', label: 'SLOW' };
   for (const w of world.wrecks) if (!w.looted && Math.hypot(w.x - boat.x, w.z - boat.z) < 14 + T().L * 0.3) return v < 3.5 ? { kind: 'salvage', w, icon: '🪝', label: 'SALVAGE' } : { kind: 'slow', icon: '🪝', label: 'SLOW' };
-  for (const m of P.maps) if (Math.hypot(m.lx - boat.x, m.lz - boat.z) < 14 + T().L * 0.3) return v < 3.5 ? { kind: 'land', m, icon: '⛏', label: 'LAND' } : { kind: 'slow', icon: '⛏', label: 'SLOW' };
+  for (const m of P.maps) if ((m.realm || 'mid') === P.realm && Math.hypot(m.lx - boat.x, m.lz - boat.z) < 14 + T().L * 0.3) return v < 3.5 ? { kind: 'land', m, icon: '⛏', label: 'LAND' } : { kind: 'slow', icon: '⛏', label: 'SLOW' };
   for (const s of spots) if (Math.hypot(s.x - boat.x, s.z - boat.z) < 9 + T().L * 0.35) return v < 3.5 ? { kind: 'fish', s, icon: s.kind === 'treasure' ? '💰' : s.kind === 'flotsam' ? '📦' : '🎣', label: 'FISH' } : { kind: 'slow', icon: '🎣', label: 'SLOW' };
   return null; }
 let ctx = null;
-function doAction() { if (!ctx || state !== 'play') return; if (autoOn() && ctx.kind !== 'dock') autoDock(false); if (ctx.kind === 'dock') openHarbor(ctx.h); else if (ctx.kind === 'fight') startBattle(ctx.mon, true); else if (ctx.kind === 'fish') startFishing(ctx.s); else if (ctx.kind === 'salvage') startSalvage(ctx.w); else if (ctx.kind === 'land') startDig(ctx.m); else if (ctx.kind === 'slow') say('Tap STOP or ROW to slow down first.'); }
+function doAction() { if (!ctx || state !== 'play') return; if (autoOn() && ctx.kind !== 'dock') autoDock(false); if (ctx.kind === 'dock') openHarbor(ctx.h); else if (ctx.kind === 'fight') startBattle(ctx.mon, true); else if (ctx.kind === 'fish') startFishing(ctx.s); else if (ctx.kind === 'salvage') startSalvage(ctx.w); else if (ctx.kind === 'land') startDig(ctx.m); else if (ctx.kind === 'gate') gateAsk(); else if (ctx.kind === 'slow') say('Tap STOP or ROW to slow down first.'); }
 const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(0, 0, 0), V(0, 0, 0)]), new THREE.LineBasicMaterial({ color: 0xf2e6c8 })); line.visible = false; scene.add(line);
 function startFishing(s) { fishing = { s }; boat.wp = null; $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy'); line.visible = true;
   minis.fish({ kind: s.kind, nets: P.up.nets, tier: P.tier, biteChance: 0.07 }, (res) => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); line.visible = false; fishing = null; boat.grace = 2.5;
     const k = 1 + P.tier * 0.6, q = res.q || 0.4;
     if (res.result === 'catch') { const r = s.kind === 'fish' ? { f: Math.round(2 + P.up.nets * 1.5 + q * 3 + P.tier) } : s.kind === 'flotsam' ? { w: Math.round((5 + q * 6) * k * (1 + P.up.nets * 0.2)), i: Math.round((1 + q * 3) * k) } : { g: Math.round((18 + q * 40) * k * (1 + P.up.nets * 0.15)) }; reward(r, s.x, 2.5, s.z); removeSpot(s); }
-    else if (res.result === 'bite') { removeSpot(s); const lv = Math.max(0, P.tier + rnd(-0.3, 0.6)), vi = MLV.shark.reduce((bi, l, i) => (Math.abs(l - lv) < Math.abs(MLV.shark[bi] - lv) ? i : bi), 0); const mon = spawnMon({ type: 'shark', v: vi, lv: MLV.shark[vi] }, s.x, s.z); mon.state = 'chase'; startBattle(mon, false); } }); }
+    else if (res.result === 'bite') { removeSpot(s); const lv = Math.max(0, P.tier + rnd(-0.3, 0.6)), vi = MLV.shark.reduce((bi, l, i) => (Math.abs(l - lv) < Math.abs(MLV.shark[bi] - lv) ? i : bi), 0); const mon = spawnMon({ type: 'shark', v: vi, lv: Math.max(MLV.shark[vi], lv + (P.realm === 'hel' ? 0.5 : 0)) }, s.x, s.z); mon.state = 'chase'; startBattle(mon, false); } }); }
 function removeSpot(s) { scene.remove(s.g); const i = spots.indexOf(s); if (i >= 0) spots.splice(i, 1); }
 function fishCast() { if (!fishing) return; foam.splash(fishing.s.x, fishing.s.z, 0.6); sfx.splash(0.5); }
 function startSalvage(w) { const mine = w === 'mine'; if (mine) w = P.wreck; if (!w) return; fishing = { s: w }; $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy');
@@ -636,6 +684,7 @@ function startSalvage(w) { const mine = w === 'mine'; if (mine) w = P.wreck; if 
 
 // ---------- weather: rain, storms with lightning to catch, fog, rogue waves, waterspouts, sea tornadoes ----------
 const WXNAME = { clear: '', calm: 'Calm', rain: '🌧 Rain', storm: '⛈ Storm', fog: '🌫 Fog', spout: '💧 Waterspouts', tornado: '🌪 Sea tornado', rogue: '🌊 Rogue waves' };
+const WXNAME_HEL = { rain: '🌧 Ash rain', storm: '⛈ Ember storm', fog: '🌫 Grave mist' };
 const LOOK = { clear: null, calm: 'calm', rain: 'rain', storm: 'storm', fog: 'fog', spout: 'rain', tornado: 'storm', rogue: 'storm' };
 function pickWeather() { const reg = world.regionAt(boat.x, boat.z), opts = { home: ['calm', 'rain', 'fog', 'storm', 'spout'], frost: ['fog', 'storm', 'rogue', 'calm', 'rain'], storm: ['storm', 'storm', 'tornado', 'rogue', 'spout', 'rain'], mist: ['fog', 'fog', 'rain', 'storm', 'spout'], warm: ['calm', 'spout', 'storm', 'rain', 'tornado'] }[reg]; return opts[(Math.random() * opts.length) | 0]; }
 function setWeather(type) { if (type === 'clear') { if (wx.type !== 'clear') wx.fading = true; return; } wx.type = type; wx.k = 0; wx.fading = false; wx.t = rnd(40, 70); boltT = 3;
@@ -668,7 +717,7 @@ function warnRing() { const ahead = Math.random() < 0.6, a = ahead ? boat.yaw + 
 function landBolt(x, z, R) { const pts = []; let px = x + rnd(-3, 3), pz = z + rnd(-3, 3); for (let y = 60; y > 0; y -= 4) { pts.push(V(px, y, pz)); px += (px < x ? 1 : -1) * Math.random() * 2 + rnd(-1, 1); pz += (pz < z ? 1 : -1) * Math.random() * 2 + rnd(-1, 1); } pts.push(V(x, ocean.heightAt(x, z), z));
   const g = new THREE.Group(); g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), boltMat)); for (const o of [[0.25, 0], [-0.25, 0], [0, 0.25]]) g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts.map((q) => V(q.x + o[0], q.y, q.z + o[1]))), boltGlow)); scene.add(g); bolts.push({ g, t: 0.22 });
   flash = 1; sfx.thunder(); foam.splash(x, z, 1.4);
-  if (Math.hypot(boat.x - x, boat.z - z) < R + T().B * 0.5 && state === 'play') { boat.thor = 22; say('<span style="color:#9fe0ff">⚡ THOR\'S FURY! ⚡</span> Double damage and a mighty shield for 22 s', 3.5); sfx.zap(); sfx.horn(); P.hp = Math.min(maxHp(), P.hp + maxHp() * 0.05); hud(); }
+  if (Math.hypot(boat.x - x, boat.z - z) < R + T().B * 0.5 && state === 'play') { boat.thor = 22 * (1 + perk('thor')); say('<span style="color:#9fe0ff">⚡ THOR\'S FURY! ⚡</span> Double damage and a mighty shield for 22 s', 3.5); sfx.zap(); sfx.horn(); P.hp = Math.min(maxHp(), P.hp + maxHp() * 0.05); hud(); }
   for (const mon of mons) if (!mon.dead && Math.hypot(mon.x - x, mon.z - z) < R + mon.size * 0.5) { const d = Math.round(mon.maxHp * 0.3); mon.hp -= d; pop(mon.x, mon.top, mon.z, '⚡−' + d, '#9fe0ff'); if (mon.hp <= 0) killMon(mon); } }
 function updateWeather(dt) {
   if (wx.type === 'clear') { wx.next -= dt; if (wx.next <= 0) setWeather(pickWeather()); }
@@ -700,7 +749,7 @@ function updateWeather(dt) {
     if (s.life <= 0) { twisters.remove(s.g); spouts.splice(i, 1); } }
   twisters.update(dt);
   // rain
-  const wet = (LOOK[wx.type] === 'rain' || LOOK[wx.type] === 'storm') ? wx.k : 0; rain.visible = wet > 0.05; rain.material.opacity = 0.35 * wet; if (rain.visible) { const p = rain.geometry.attributes.position; for (let i = 0; i < p.count; i += 2) { let y = p.getY(i) - dt * 40; let x = p.getX(i), z = p.getZ(i); if (y < -2 || Math.abs(x - camTgt.x) > 50 || Math.abs(z - camTgt.z) > 50) { x = camTgt.x + rnd(-50, 50); z = camTgt.z + rnd(-50, 50); y = rnd(20, 50); } p.setXYZ(i, x, y, z); p.setXYZ(i + 1, x + 0.3, y + 1.6, z + 0.2); } p.needsUpdate = true; }
+  const wet = (LOOK[wx.type] === 'rain' || LOOK[wx.type] === 'storm') ? wx.k : 0; rain.visible = wet > 0.05; rain.material.opacity = 0.35 * wet; rain.material.color.setHex(P.realm === 'hel' ? 0x9a8a86 : 0xcfe6f2); if (rain.visible) { const p = rain.geometry.attributes.position; for (let i = 0; i < p.count; i += 2) { let y = p.getY(i) - dt * 40; let x = p.getX(i), z = p.getZ(i); if (y < -2 || Math.abs(x - camTgt.x) > 50 || Math.abs(z - camTgt.z) > 50) { x = camTgt.x + rnd(-50, 50); z = camTgt.z + rnd(-50, 50); y = rnd(20, 50); } p.setXYZ(i, x, y, z); p.setXYZ(i + 1, x + 0.3, y + 1.6, z + 0.2); } p.needsUpdate = true; }
 }
 const rain = (() => { const n = 700, a = new Float32Array(n * 6); for (let i = 0; i < n * 6; i += 3) { a[i] = rnd(-50, 50); a[i + 1] = rnd(0, 50); a[i + 2] = rnd(-50, 50); } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(a, 3)); const l = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xcfe6f2, transparent: true, opacity: 0.3 })); l.frustumCulled = false; l.visible = false; scene.add(l); return l; })();
 
@@ -749,7 +798,7 @@ function serpentAmbush() { const reg = world.regionAt(boat.x, boat.z), lvs = MLV
   let v = -1; for (let i = 0; i < lvs.length; i++) if (vb['serpent:' + i]) v = i;
   if (v < 0) { const ok = lvs.map((lv, i) => i).filter((i) => lvs[i] <= P.tier + 1.6); v = ok.length ? ok[(Math.random() * ok.length) | 0] : 0; }
   const rel = (Math.random() < 0.5 ? 1 : -1) * (Math.PI / 2 + rnd(-0.5, 0.3)), gap = T().B * 0.5 + 5 + P.tier;
-  EV.ambush = { rel, gap, t: 1.6, e: { type: 'serpent', v, lv: clamp(P.tier + rnd(0.1, 0.7), 0.3, lvs[v] + 0.5) } };
+  EV.ambush = { rel, gap, t: 1.6, e: { type: 'serpent', v, lv: clamp(P.tier + rnd(0.1, 0.7) + (P.realm === 'hel' ? 0.5 : 0), 0.3, lvs[v] + 0.5 + lvShift()) } };
   warn('⚠ The water boils beside you…', 1.8); sfx.groan && sfx.groan(); return true; }
 function updateAmbush(dt) { const A = EV.ambush; if (!A) return; if (battle || fishing || state !== 'play') { EV.ambush = null; return; }
   const a = boat.yaw + A.rel, x = boat.x + Math.sin(a) * A.gap, z = boat.z + Math.cos(a) * A.gap; A.t -= dt;
@@ -764,39 +813,40 @@ function updateAmbush(dt) { const A = EV.ambush; if (!A) return; if (battle || f
 function raiderFleet() { const n = P.tier === 0 ? 2 : P.tier < 3 ? 3 : 4;
   for (let tries = 0; tries < 8; tries++) { const a = Math.random() * 6.28, cx = boat.x + Math.sin(a) * 150, cz = boat.z + Math.cos(a) * 150; if (!openAt(cx, cz, 22)) continue;
     const id = ++EV.fleetN, pal = RAIDER_PALS[(Math.random() * RAIDER_PALS.length) | 0], hd = Math.atan2(boat.x - cx, boat.z - cz); let got = 0;
-    for (let i = 0; i < n; i++) { const lead = i === 0, st = lead ? Math.min(4, P.tier) : Math.max(0, P.tier - 1), row = Math.ceil(i / 2), off = lead ? 0 : (i % 2 ? 1 : -1) * 16 * row, back = 12 * row;
+    for (let i = 0; i < n; i++) { const lead = i === 0, st = lead ? Math.min(7, P.tier) : Math.max(0, P.tier - 1), row = Math.ceil(i / 2), off = lead ? 0 : (i % 2 ? 1 : -1) * 16 * row, back = 12 * row;
       const x = cx + Math.cos(hd) * off - Math.sin(hd) * back, z = cz - Math.sin(hd) * off - Math.cos(hd) * back; if (world.blockAt(x, z, 6)) continue;
       const mon = spawnMon({ type: 'raider', v: st, lv: st + 0.4 + (lead ? 0.3 : 0) }, x, z, { pal }); Object.assign(mon, { yaw: hd, state: 'chase', hunt: 80, fleet: id, fleetOff: off }); if (lead) mon.name = 'Warlord of the ' + pal.name; got++; }
     if (!got) return false; EV.fleets[id] = { n: got, killed: 0, pal };
     warn('⚔ A RAIDER FLEET to the ' + compassName(cx - boat.x, cz - boat.z) + '! ' + got + ' ships of the ' + pal.name + '. Fight them or outrun them!', 5); sfx.horn(); setTimeout(() => sfx.horn(), 800); return true; }
   return false; }
 function fleetDown(id) { const f = EV.fleets[id]; if (!f) return; f.killed++; if (f.killed < f.n) { setTimeout(() => say('A raider ship goes down! ' + (f.n - f.killed) + ' left in the fleet.', 3), 600); return; }
-  delete EV.fleets[id]; const k = P.tier + 1; setTimeout(() => { reward({ w: 25 * k, i: 12 * k, g: 60 * k }, boat.x, 4, boat.z); say('<b>⚔ THE FLEET IS BROKEN! ⚔</b> Their war chest is yours.', 4.5); sfx.horn(); }, 1200); }
+  delete EV.fleets[id]; const k = P.tier + 1; setTimeout(() => { reward({ w: 25 * k, i: 12 * k, g: 60 * k, s: P.realm === 'hel' ? 4 * k : 0 }, boat.x, 4, boat.z); say('<b>⚔ THE FLEET IS BROKEN! ⚔</b> Their war chest is yours.', 4.5); sfx.horn(); }, 1200); }
 
 // treasure knarr: a fat merchant ship runs from you, dumping cargo as you close in. Catch it and board her.
 function treasureShip() { for (let tries = 0; tries < 10; tries++) { const a = boat.yaw + rnd(-1.2, 1.2), d = rnd(70, 95), x = boat.x + Math.sin(a) * d, z = boat.z + Math.cos(a) * d; if (!openAt(x, z, 10)) continue;
-    const v = clamp(P.tier, 1, 3), mon = spawnMon({ type: 'raider', v, lv: P.tier + 0.2 }, x, z, { pal: TREASURE_PAL, merchant: true });
-    Object.assign(mon, { treasure: true, flee: 75, dropT: 3, name: '💰 Treasure Knarr', yaw: Math.atan2(x - boat.x, z - boat.z) }); mon.dmg = Math.round(mon.dmg * 0.45);
-    warn('💰 A TREASURE KNARR to the ' + compassName(x - boat.x, z - boat.z) + '! Run it down before it gets away!', 5); sfx.horn(); return true; } return false; }
+    const v = clamp(P.tier, 1, 7), mon = spawnMon({ type: 'raider', v, lv: P.tier + 0.2 + (P.realm === 'hel' ? 0.5 : 0) }, x, z, { pal: TREASURE_PAL, merchant: true });
+    Object.assign(mon, { treasure: true, flee: 75, dropT: 3, name: P.realm === 'hel' ? "💰 Hel's Soul Barge" : '💰 Treasure Knarr', yaw: Math.atan2(x - boat.x, z - boat.z) }); mon.dmg = Math.round(mon.dmg * 0.45);
+    warn((P.realm === 'hel' ? "💰 HEL'S SOUL BARGE" : '💰 A TREASURE KNARR') + ' to the ' + compassName(x - boat.x, z - boat.z) + '! Run it down before it gets away!', 5); sfx.horn(); return true; } return false; }
 
 // northern lights: some nights in the Frost Sea the sky burns green, and the Bifröst touches the sea nearby. Sail into it:
 // your hull mends and your sails fill (+25% speed) for 30 s.
 const aur = createAurora(scene, ocean), AUR_HEMI = new THREE.Color(0x6affc0), AUR_FOG = new THREE.Color(0x1a5a4a);
 function placePillar() { for (let tries = 0; tries < 16; tries++) { const a = Math.random() * 6.28, d = rnd(55, 105), x = boat.x + Math.sin(a) * d, z = boat.z + Math.cos(a) * d; if (!openAt(x, z, 6)) continue; aur.showPillar(x, z); return true; } return false; }
-function updateAurora(dt) { const A = EV.aurora, night = isNight();
+function updateAurora(dt) { const A = EV.aurora, night = isNight() && P.realm !== 'hel';
   if (night && !A.wasNight) A.tonight = A.forced || Math.random() < 0.75; if (!night && A.wasNight) { A.forced = false; A.shown = false; A.tonight = false; aur.hidePillar(); } A.wasNight = night;
   if (A.k > 0.5 && !A.shown) { A.shown = true; say('🌌 The northern lights! Find where the Bifröst touches the sea.', 4.5); sfx.horn(); placePillar(); }
   const pa = aur.pillarAt; if (pa) { const d = Math.hypot(pa.x - boat.x, pa.z - boat.z);
     if (d > 260 || A.k < 0.05) aur.hidePillar();
     else if (d < 6 + T().B * 0.5 && !battle) { aur.hidePillar(); boat.bifrost = 30; A.nextPillar = 60; say('🌈 <span style="color:#9fffd0">BIFRÖST!</span> The gods\' light mends your hull and fills your sails for 30 s', 4); sfx.zap(); sfx.horn(); foam.splash(boat.x, boat.z, 1.5); } }
   else if (A.shown && A.k > 0.5) { A.nextPillar -= dt; if (A.nextPillar <= 0) { A.nextPillar = 20; placePillar(); } } }
-function updateAuroraFx(dt) { const A = EV.aurora, want = A.tonight && isNight() ? clamp(((rw.frost || 0) - 0.35) / 0.4, 0, 1) : 0; A.k += (want - A.k) * Math.min(1, dt * 0.4); const k = A.k * env.cur.moon;
+function updateAuroraFx(dt) { const A = EV.aurora, want = A.tonight && isNight() && P.realm !== 'hel' ? clamp(((rw.frost || 0) - 0.35) / 0.4, 0, 1) : 0; A.k += (want - A.k) * Math.min(1, dt * 0.4); const k = A.k * env.cur.moon;
   aur.update(dt, k, camera.position); ocean.uniforms.uAur.value = k * 0.9;
   if (k > 0.01) { hemi.color.lerp(AUR_HEMI, k * 0.3); scene.fog.color.lerp(AUR_FOG, k * 0.3); ocean.uniforms.uHorizon.value.lerp(AUR_FOG, k * 0.3); } }
 
 // ---------- your own wreck: half the cargo goes down with the ship. Sail back and salvage it, or hire a harbour crew ----------
 let wreckG = null;
-function placeWreck() { if (wreckG) { scene.remove(wreckG); wreckG = null; } if (!P.wreck) return; const g = new THREE.Group(), wood = M(0x5a3a22), dark = M(0x3a2414);
+const wreckHere = () => !!P.wreck && (P.wreck.realm || 'mid') === P.realm;
+function placeWreck() { if (wreckG) { scene.remove(wreckG); wreckG = null; } if (!wreckHere()) return; const g = new THREE.Group(), wood = M(0x5a3a22), dark = M(0x3a2414);
   const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 7, 7), wood); mast.position.set(0, 2.2, 0); mast.rotation.z = 0.55; g.add(mast);
   const yard = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 4, 6), wood); yard.rotation.z = Math.PI / 2 + 0.55; yard.position.set(-1.46, 4.6, 0); g.add(yard);
   const rag = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 2), new THREE.MeshLambertMaterial({ color: 0xb8322a, side: THREE.DoubleSide })); rag.position.set(-0.9, 3.7, 0.08); rag.rotation.z = 0.55; g.add(rag);
@@ -812,7 +862,7 @@ function takeWreck(frac, x, z) { const r = P.wreck.res, got = {}; for (const k o
 
 // ---------- porpoises: friendly pods that swim with your ship, leap, and ride its bow wave (+10% speed while 2+ are with you) ----------
 const pods = []; let podT = 30;
-function spawnPod() { if (world.regionAt(boat.x, boat.z) === 'storm') return; const a = Math.random() * 6.28, d = rnd(60, 110), cx = boat.x + Math.sin(a) * d, cz = boat.z + Math.cos(a) * d; if (world.blockAt(cx, cz, 10) || Math.abs(cx) > HALF - 20 || Math.abs(cz) > HALF - 20) return;
+function spawnPod() { if (world.regionAt(boat.x, boat.z) === 'storm' || P.realm === 'hel') return; const a = Math.random() * 6.28, d = rnd(60, 110), cx = boat.x + Math.sin(a) * d, cz = boat.z + Math.cos(a) * d; if (world.blockAt(cx, cz, 10) || Math.abs(cx) > HALF - 20 || Math.abs(cz) > HALF - 20) return;
   const v = (Math.random() * 3) | 0, n = 3 + ((Math.random() * 3) | 0), members = [];
   for (let i = 0; i < n; i++) { const m = makeMonster('porpoise', v, 1), x = cx + rnd(-6, 6), z = cz + rnd(-6, 6); m.g.position.set(x, 0, z); scene.add(m.g); members.push({ m, x, z, yaw: Math.random() * 6.28, leap: -1, st: { t: 0, speed: 0.6, attack: 0, dive: 0, hurt: 0, rise: 1 }, slot: (i / n) * 2 - 1, r: rnd(0, 1) }); }
   pods.push({ members, life: rnd(80, 120) }); }
@@ -832,12 +882,12 @@ function updatePods(dt) { podT -= dt; if (podT <= 0) { podT = rnd(40, 75); if (p
   const was = boat.pod; boat.pod = riders >= 2 && boat.v > 3 && state === 'play'; if (boat.pod && !was && !boat.podSaid) { boat.podSaid = true; say('🐬 Porpoises ride your bow wave! +10% speed while they swim with you.', 3.5); } }
 
 // ---------- boarding prizes: plunder her hold, or claim her (a prize crew sails her to your home harbour) ----------
-const HOOK_NEED = (v) => (v <= 1 ? 1 : v <= 3 ? 2 : 3); // grappling hook level needed to board a ship of size v
-const palOf = (skin) => (skin === 'ghost' ? GHOST_PAL : skin === 'treasure' ? TREASURE_PAL : RAIDER_PALS.find((p) => p.name === skin) || PLAYER_PAL);
+const HOOK_NEED = (v) => (v <= 1 ? 1 : v <= 3 ? 2 : v <= 4 ? 3 : 4); // grappling hook level needed to board a ship of size v
+const palOf = (skin) => (skin === 'ghost' ? GHOST_PAL : skin === 'treasure' ? TREASURE_PAL : RAIDER_PALS.find((p) => p.name === skin) || Object.values(HEL_PALS).find((p) => p.name === skin) || PLAYER_PAL);
 const skinLabel = (skin) => (!skin || skin === 'pats' ? "Pat's colours" : skin === 'ghost' ? 'the Draugr ghost hull' : skin === 'treasure' ? 'a treasure knarr' : 'the ' + skin + ' colours');
-const shipValue = (pz) => Math.round([70, 220, 480, 950, 1800][pz.tier] * (pz.skin === 'ghost' ? 3 : pz.skin === 'treasure' ? 2 : 1));
+const shipValue = (pz) => Math.round([70, 220, 480, 950, 1800, 3000, 5200, 9000][pz.tier] * (pz.skin === 'ghost' ? 3 : pz.skin === 'treasure' ? 2 : 1));
 function boardInfo(mon) { if (!mon.naval) return undefined; const need = mon.type === 'ghost' ? 3 : HOOK_NEED(mon.e.v);
-  if (!P.up.hooks) return 'NEEDS GRAPPLING HOOKS'; if (P.up.hooks < need) return 'NEEDS HOOKS ' + ['', 'I', 'II', 'III'][need];
+  if (!P.up.hooks) return 'NEEDS GRAPPLING HOOKS'; if (P.up.hooks < need) return 'NEEDS HOOKS ' + ['', 'I', 'II', 'III', 'IV'][need];
   if (mon.type === 'ghost' && !P.relics.bane) return "HOOKS PASS THROUGH HER: FIND DRAUGR'S BANE"; if (mon.type === 'ghost' && !isNight()) return 'ONLY AT NIGHT'; return null; }
 function prizeChoice(mon) { state = 'prize'; const full = P.prizes.length >= 3, tn = SHIP_TIERS[mon.e.v].name, ghost = mon.type === 'ghost';
   $('prizeText').innerHTML = (ghost ? 'The draugr fall back into the mist. The ghost ship is yours to take.' : 'The crew of the ' + mon.name + ' throw down their axes.') + '<br><br>Strip her hold and scuttle her, or put a prize crew aboard and send her to ' + homeHarbor().name + ' (sail her or sell her there).';
@@ -861,7 +911,7 @@ function giveMap(kind = null) { if (P.maps.length >= 3) { say('You find another 
       const [icon, name] = LANDMARK[isl.region] || LANDMARK.home, dx = cell[0] - mk[0], dy = cell[1] - mk[1], p = (n) => n + ' pace' + (n === 1 ? '' : 's'), parts = [];
       if (dx) parts.push(p(Math.abs(dx)) + (dx > 0 ? ' east' : ' west')); if (dy) parts.push(p(Math.abs(dy)) + (dy > 0 ? ' south' : ' north'));
       const clue = (relic ? 'Where the drowned king sleeps: from ' : 'From ') + name + ', walk ' + parts.join(' and ') + '.';
-      const m = { isl: i, lx, lz, kind: relic ? 'relic' : 'gold', region: isl.region, cell, clue, marks: [{ c: mk, icon }, { c: dec, icon: ['🦴', '⚓', '🐚'][ri(3)] }] };
+      const m = { isl: i, lx, lz, kind: relic ? 'relic' : 'gold', realm: P.realm, region: isl.region, cell, clue, marks: [{ c: mk, icon }, { c: dec, icon: ['🦴', '⚓', '🐚'][ri(3)] }] };
       P.maps.push(m); save(); sfx.coins();
       say((relic ? '📜 A map scratched on bone!' : '📜 A treasure map!') + ' An ✕ marks an island in the ' + rname(isl.region) + ', ' + compassName(lx - boat.x, lz - boat.z) + ' of here. Sail to it and LAND.', 5);
       return true; } }
@@ -872,7 +922,7 @@ function startDig(m) { fishing = { s: { x: m.lx, z: m.lz } }; boat.wp = null; $(
       if (m.kind === 'relic') { P.relics.bane = true; reward({ g: 80 * k }, m.lx, 3, m.lz); say("🗝 DRAUGR'S BANE! With this rune-carved relic your grappling hooks can bite into a ghost ship (Grappling Hooks III, at night).", 6); sfx.horn(); }
       else { reward({ w: Math.round(rnd(20, 40) * k), i: Math.round(rnd(8, 18) * k), g: Math.round(rnd(90, 180) * k) }, m.lx, 3, m.lz); say('💰 You dig up a chest of hacksilver and gold!', 4); }
       save(); }
-    else if (res.result === 'guardian') { const v = clamp(Math.round(P.tier - 1), 0, 2); let first = null; for (let n = 0; n < 2; n++) { const a = Math.random() * 6.28, mon = spawnMon({ type: 'crab', v, lv: MLV.crab[v] }, m.lx + Math.sin(a) * 9, m.lz + Math.cos(a) * 9); mon.state = 'chase'; if (!first) first = mon; }
+    else if (res.result === 'guardian') { const v = clamp(Math.round(P.tier - 1), 0, 2); let first = null; for (let n = 0; n < 2; n++) { const a = Math.random() * 6.28, mon = spawnMon({ type: 'crab', v, lv: Math.max(MLV.crab[v], P.tier - 0.4 + (P.realm === 'hel' ? 0.5 : 0)) }, m.lx + Math.sin(a) * 9, m.lz + Math.cos(a) * 9); mon.state = 'chase'; if (!first) first = mon; }
       warn('🦀 Giant crabs burst out of the sand!', 3); if (first) startBattle(first, false); }
     else say('The tide turns. The treasure stays buried, and your map still shows the way.', 3.5); }); }
 
@@ -880,36 +930,59 @@ function startDig(m) { fishing = { s: { x: m.lx, z: m.lz } }; boat.wp = null; $(
 let atHarbor = null;
 function openHarbor(h) { state = 'harbor'; atHarbor = h; P.home = h.idx; boat.v = 0; boat.wp = null; $('hud').classList.add('hidden'); $('harbor').classList.remove('hidden'); $('hbName').textContent = h.name.toUpperCase();
   let txt = 'Welcome to ' + h.name + '.'; if (P.res.f > 0) { const g = P.res.f * (3 + P.tier); txt += ' Your catch of ' + P.res.f + ' 🐟 sold for ' + g + ' 🪙.'; P.res.g += g; P.res.f = 0; sfx.coins(); } $('hbText').textContent = txt; const last = !!tut && tut.i === TUT.length - 1; $('hbTip').classList.toggle('hidden', !last); if (last) tutEnd(); save(); drawHarbor(); sfx.horn(); }
-const can = (c) => P.res.w >= c[0] && P.res.i >= c[1] && P.res.g >= c[2];
-const costHtml = (c) => [['🪵', c[0], P.res.w], ['⚙️', c[1], P.res.i], ['🪙', c[2], P.res.g]].filter(([, n]) => n > 0).map(([ic, n, have]) => '<span class="' + (have < n ? 'no' : '') + '">' + n + ic + '</span>').join(' ');
-function drawHarbor() { $('hbRes').innerHTML = `<span>🪵 ${P.res.w}</span><span>⚙️ ${P.res.i}</span><span>🪙 ${P.res.g}</span><span>❤️ ${Math.ceil(P.hp)}/${maxHp()}</span>`; const list = $('hbList'); list.innerHTML = '';
+const can = (c) => P.res.w >= c[0] && P.res.i >= c[1] && P.res.g >= c[2] && (P.res.s || 0) >= (c[3] || 0);
+const pay = (c) => { P.res.w -= c[0]; P.res.i -= c[1]; P.res.g -= c[2]; P.res.s = (P.res.s || 0) - (c[3] || 0); };
+const costHtml = (c) => [['🪵', c[0], P.res.w], ['⚙️', c[1], P.res.i], ['🪙', c[2], P.res.g], ['👻', c[3] || 0, P.res.s || 0]].filter(([, n]) => n > 0).map(([ic, n, have]) => '<span class="' + (have < n ? 'no' : '') + '">' + n + ic + '</span>').join(' ');
+function drawHarbor() { $('hbRes').innerHTML = `<span>🪵 ${P.res.w}</span><span>⚙️ ${P.res.i}</span><span>🪙 ${P.res.g}</span>${P.res.s > 0 || P.realm === 'hel' ? `<span>👻 ${P.res.s || 0}</span>` : ''}<span>❤️ ${Math.ceil(P.hp)}/${maxHp()}</span>`; const list = $('hbList'); list.innerHTML = '';
   const miss = maxHp() - P.hp; if (miss > 0.5) { const c = [Math.ceil(miss / 10), 0, Math.ceil(miss / 6)]; const d = document.createElement('div'); d.className = 'card'; d.innerHTML = `<div class="ic">🔨</div><div class="tx"><b>Repair the hull</b><div>${Math.ceil(miss)} damage to mend</div><div class="cost">${costHtml(c)}</div></div>`; const b = document.createElement('button'); b.textContent = 'REPAIR'; b.disabled = !can(c); b.onclick = () => { if (!can(c)) return; P.res.w -= c[0]; P.res.g -= c[2]; P.hp = maxHp(); sfx.pickup(); drawHarbor(); hud(); save(); }; d.appendChild(b); list.appendChild(d); }
   if (P.wreck) { const c = [0, 0, wreckCost()]; const d = document.createElement('div'); d.className = 'card'; d.innerHTML = `<div class="ic">☠</div><div class="tx"><b>Hire a salvage crew</b><div>They raise your wreck and bring back ${wreckSum(P.wreck.res)}</div><div class="cost">${costHtml(c)}</div></div>`; const b = document.createElement('button'); b.textContent = 'RAISE'; b.disabled = !can(c); b.onclick = () => { if (!can(c) || !P.wreck) return; P.res.g -= c[2]; const r = P.wreck.res; for (const k of ['w', 'i', 'g', 'f']) P.res[k] += r[k] || 0; P.wreck = null; placeWreck(); sfx.coins(); drawHarbor(); hud(); save(); }; d.appendChild(b); list.appendChild(d); }
+  { const d = document.createElement('div'); d.className = 'card'; d.innerHTML = `<div class="ic">🎨</div><div class="tx"><b>The shipwright</b><div>${(HULLS[P.hull] || HULLS.oak).name} hull, ${(SAILS[P.sailD] || SAILS.pats).name} sail. Fit new hulls and sails, each with a perk (${P.owned.h.length + P.owned.s.length} of ${Object.keys(HULLS).length + Object.keys(SAILS).length} designs).</div></div>`; const b = document.createElement('button'); b.textContent = 'DESIGN'; b.onclick = openWright; d.appendChild(b); list.appendChild(d); }
   P.prizes.forEach((pz, i) => { const t = SHIP_TIERS[pz.tier], val = shipValue(pz), d = document.createElement('div'); d.className = 'card';
     d.innerHTML = `<div class="ic">${pz.skin === 'ghost' ? '👻' : pz.skin === 'treasure' ? '💰' : '⚓'}</div><div class="tx"><b>Moored here: a ${t.name}</b><div>In ${skinLabel(pz.skin)}. Sail her (your ${T().name} waits here in her place) or sell her.${pz.skin === 'ghost' ? ' Night monsters hardly see a ghost hull.' : ''}</div><div class="cost"><span>Sells for ${val}🪙</span></div></div>`;
     const col = document.createElement('div'); col.className = 'btn2'; const b1 = document.createElement('button'); b1.textContent = 'SAIL HER'; b1.onclick = () => { const cur = { tier: P.tier, skin: P.skin }; P.prizes[i] = cur; P.tier = pz.tier; P.skin = pz.skin; P.hp = maxHp(); rebuildShip(); sfx.horn(); drawHarbor(); hud(); save(); };
     const b2 = document.createElement('button'); b2.className = 'ghost'; b2.textContent = 'SELL'; b2.onclick = () => { P.res.g += val; P.prizes.splice(i, 1); sfx.coins(); drawHarbor(); hud(); save(); };
     col.append(b1, b2); d.appendChild(col); list.appendChild(d); });
-  if (P.tier < 4) { const c = TIER_COST[P.tier + 1], nt = SHIP_TIERS[P.tier + 1]; const d = document.createElement('div'); d.className = 'card ship'; d.innerHTML = `<div class="ic">🐉</div><div class="tx"><b>Build a ${nt.name}</b><div>Ship size ${P.tier + 2} of 5 · ${nt.crew} crew · hull ${Math.round(100 * Math.pow(1.75, P.tier + 1))} · stronger seas</div><div class="cost">${costHtml(c)}</div></div>`; const b = document.createElement('button'); b.textContent = 'BUILD'; b.disabled = !can(c); b.onclick = () => { if (!can(c)) return; P.res.w -= c[0]; P.res.i -= c[1]; P.res.g -= c[2]; P.tier++; P.skin = 'pats'; P.hp = maxHp(); rebuildShip(); sfx.horn(); drawHarbor(); save(); }; d.appendChild(b); list.appendChild(d); }
+  if (P.tier < SHIP_TIERS.length - 1) { const c = TIER_COST[P.tier + 1], nt = SHIP_TIERS[P.tier + 1], lockT = P.tier + 1 === 7 && !P.helWon ? 'Slay Hafgufa, Surtr and Nidhögg in Helheim first' : null; const d = document.createElement('div'); d.className = 'card ship'; d.innerHTML = `<div class="ic">${P.tier + 1 >= 7 ? '☠' : '🐉'}</div><div class="tx"><b>Build ${P.tier + 1 >= 5 ? 'the ' : 'a '}${nt.name}</b><div>Ship size ${P.tier + 2} of ${SHIP_TIERS.length} · ${nt.crew} crew · hull ${Math.round(100 * Math.pow(1.75, P.tier + 1))} · stronger seas${P.tier + 1 === 7 ? ' · the ship of the dead, built from their nails' : ''}</div><div class="cost">${lockT ? '<span class="no">' + lockT + '</span>' : costHtml(c)}</div></div>`; const b = document.createElement('button'); b.textContent = 'BUILD'; b.disabled = !!lockT || !can(c); b.onclick = () => { if (lockT || !can(c)) return; pay(c); P.tier++; P.skin = 'pats'; P.hp = maxHp(); rebuildShip(); sfx.horn(); drawHarbor(); save(); }; d.appendChild(b); list.appendChild(d); }
   for (const [k, u] of Object.entries(UPG)) { const lv = P.up[k], d = document.createElement('div'); d.className = 'card'; const capped = lv >= u.max, locked = !capped && lv >= P.tier + 1, c = capped ? null : u.cost[lv];
     d.innerHTML = `<div class="ic">${u.icon}</div><div class="tx"><b>${u.name}</b><span class="pips">${'◆'.repeat(lv)}${'◇'.repeat(u.max - lv)}</span><div>${capped ? 'Fully upgraded' : u.desc[lv] + (u.eff ? ' · ' + u.eff : '')}</div><div class="cost">${capped ? '' : locked ? '<span class="no">Needs a bigger ship</span>' : costHtml(c)}</div></div>`;
-    if (!capped) { const b = document.createElement('button'); b.textContent = 'BUY'; b.disabled = locked || !can(c); b.onclick = () => { if (locked || !can(c)) return; P.res.w -= c[0]; P.res.i -= c[1]; P.res.g -= c[2]; P.up[k]++; if (k === 'armor') P.hp += maxHp() - Math.round(maxHp() / (1 + 0.25 * P.up.armor) * (1 + 0.25 * (P.up.armor - 1))); P.hp = Math.min(P.hp, maxHp()); rebuildShip(); sfx.pickup(); drawHarbor(); save(); }; d.appendChild(b); }
+    if (!capped) { const b = document.createElement('button'); b.textContent = 'BUY'; b.disabled = locked || !can(c); b.onclick = () => { if (locked || !can(c) || P.up[k] !== lv) return; pay(c); P.up[k]++; if (k === 'armor') P.hp += maxHp() - Math.round(maxHp() / (1 + 0.25 * P.up.armor) * (1 + 0.25 * (P.up.armor - 1))); P.hp = Math.min(P.hp, maxHp()); rebuildShip(); sfx.pickup(); drawHarbor(); save(); }; d.appendChild(b); }
     list.appendChild(d); } }
 $('hbSail').onclick = () => { $('harbor').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; const h = atHarbor; if (h) { boat.x = h.dock.x + Math.cos(h.dir) * 10; boat.z = h.dock.z + Math.sin(h.dir) * 10; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); } atHarbor = null; setThrottle(0, true); helm.angle = 0; hud(); say('Fair winds! Tap HALF or FULL to set sail.'); };
 
+// ---------- the shipwright (v0.8.0): fit a hull and a sail design to Pat's ships, each with its own small perk. Tap a design to
+// see it on your ship (the camera swings round her at the dock); FIT one you own, BUILD one you can afford; legends leave some ----------
+let wrightOn = false, wrTab = 'h';
+function openWright() { wrightOn = true; $('harbor').classList.add('hidden'); $('wright').classList.remove('hidden'); drawWright(); }
+function closeWright() { wrightOn = false; $('wright').classList.add('hidden'); $('harbor').classList.remove('hidden'); rebuildShip(); drawHarbor(); }
+function previewDesign(tab, key) { const was = [P.hull, P.sailD]; if (tab === 'h') P.hull = key; else P.sailD = key; rebuildShip(); P.hull = was[0]; P.sailD = was[1]; }
+function drawWright() { const list = $('wrList'); list.innerHTML = ''; $('wrHull').classList.toggle('on', wrTab === 'h'); $('wrSail').classList.toggle('on', wrTab === 's');
+  const T0 = wrTab === 'h' ? HULLS : SAILS, owned = wrTab === 'h' ? P.owned.h : P.owned.s, cur = wrTab === 'h' ? P.hull : P.sailD;
+  $('wrNote').textContent = P.skin !== 'pats' ? 'You sail a prize ship: she keeps her own colours and no design perks. Designs fit Pat\'s own ships.' : 'Tap a design to see it on your ship. Its perk works while it is fitted.';
+  $('wrRes').innerHTML = `🪵 ${P.res.w} · ⚙️ ${P.res.i} · 🪙 ${P.res.g}` + (P.res.s > 0 || P.realm === 'hel' ? ` · 👻 ${P.res.s || 0}` : '');
+  for (const [k, d] of Object.entries(T0)) { const have = owned.includes(k), on = cur === k, c = d.got.cost, leg = d.got.legend, el = document.createElement('div'); el.className = 'wcard' + (on ? ' on' : '');
+    el.innerHTML = `<div class="wic">${d.icon}</div><b>${d.name}</b><div class="wperk">${d.perk}</div><div class="cost">${have ? (on ? '✔ fitted' : '✔ owned') : leg ? '<span class="no">Slay ' + LAIR_NAMES[leg] + '</span>' : costHtml(c)}</div>`;
+    const b = document.createElement('button'); b.textContent = on ? 'FITTED' : have ? 'FIT' : leg ? 'LOCKED' : 'BUILD'; b.disabled = on || (!have && (!!leg || !can(c)));
+    b.onclick = (e) => { e.stopPropagation(); if (on || state !== 'harbor') return; if (!have) { if (leg || !can(c) || owned.includes(k)) return; pay(c); owned.push(k); sfx.coins(); } const ratio = P.hp / maxHp(); if (wrTab === 'h') P.hull = k; else P.sailD = k; P.hp = Math.max(1, Math.round(ratio * maxHp())); rebuildShip(); sfx.pickup(); hud(); save(); drawWright(); };
+    el.onclick = () => { previewDesign(wrTab, k); for (const c2 of list.children) c2.classList.toggle('pv', c2 === el); };
+    el.appendChild(b); list.appendChild(el); } }
+$('wrHull').onclick = () => { wrTab = 'h'; rebuildShip(); drawWright(); }; $('wrSail').onclick = () => { wrTab = 's'; rebuildShip(); drawWright(); }; $('wrDone').onclick = () => closeWright();
+
 // ---------- lairs (legend bosses) ----------
-const LAIR_NAMES = { kraken: 'The Kraken', jorm: 'Jormungandr', rlyeh: 'The Elder One' }, LAIR_NEED = { kraken: 2, jorm: 3, rlyeh: 4 };
+const LAIR_NAMES = { kraken: 'The Kraken', jorm: 'Jormungandr', rlyeh: 'The Elder One', hafgufa: 'Hafgufa', surtr: 'Surtr the Burning', nidhogg: 'Nidhögg' }, LAIR_NEED = { kraken: 2, jorm: 3, rlyeh: 4, hafgufa: 5, surtr: 6, nidhogg: 6 };
+// Helheim's three legends are the old fights grown dead and far stronger: Hafgufa, mother of every kraken, under the ice of
+// Niflhel; Surtr the fire giant warding his forge in Muspelheim; Nidhogg the corpse-dragon gnawing the World Tree's roots
+const legendLv = (L) => MLV[L.monster][0] + (LAIRS_HEL[L.key] ? 2.6 : 0);
 // the legends always rise. With a big enough ship it is the legend itself. In a smaller ship it is usually one of its
 // young (a hard but fair fight, half again the gold, not a legend slain), now and then the legend itself, who will wreck
 // you: flee, and it sinks back into the deep once you are away. Stay in a lair and another rises every minute or two,
 // each wave a little tougher (and richer), and the chance of the legend itself grows. Leaving the lair resets the waves.
 // Once a legend is slain its young still rise there for anyone who wants the gold.
-const YOUNG_NAMES = { kraken: 'Kraken Hatchling', jorm: "Jormungandr's Whelp", rlyeh: 'Spawn of the Elder One' }, YOUNG_SCALE = { kraken: 3.5, jormungandr: 0.7, elder: 1.1 }, PAPA_CHANCE = 0.2;
+const YOUNG_NAMES = { kraken: 'Kraken Hatchling', jorm: "Jormungandr's Whelp", rlyeh: 'Spawn of the Elder One', hafgufa: "Hafgufa's Brood", surtr: 'Ember-spawn of Surtr', nidhogg: 'Corpse-wyrm of Nidhögg' }, YOUNG_SCALE = { kraken: 3.5, jormungandr: 0.7, elder: 1.1 }, PAPA_CHANCE = 0.2;
 let lairWarned = {}; const lairCool = {}, lairWave = {};
 function lairSpawn(L, big) { const w = (lairWave[L.key] = (lairWave[L.key] || 0) + 1), slain = L.beaten || !!P.legends[L.key];
-  if (!slain && (big || Math.random() < Math.min(0.6, PAPA_CHANCE + 0.07 * (w - 1)))) { const lv = MLV[L.monster][0], mon = spawnMon({ type: L.monster, v: 0, lv }, L.x, L.z, { boss: true, lair: L.key, scale: L.monster === 'kraken' ? 17.5 : L.monster === 'elder' ? 1.5 : 1 }); mon.name = LAIR_NAMES[L.key]; mon.papa = !big;
+  if (!slain && (big || Math.random() < Math.min(0.6, PAPA_CHANCE + 0.07 * (w - 1)))) { const lv = legendLv(L), hl = !!LAIRS_HEL[L.key], mon = spawnMon({ type: L.monster, v: hl && L.monster === 'jormungandr' ? 1 : 0, lv }, L.x, L.z, { boss: true, lair: L.key, scale: (L.monster === 'kraken' ? 17.5 : L.monster === 'elder' ? 1.5 : 1) * (hl ? 1.15 : 1) }); mon.name = LAIR_NAMES[L.key]; mon.papa = !big;
     warn('⚠ ' + LAIR_NAMES[L.key].toUpperCase() + ' RISES! ⚠' + (big ? '' : '<br>Your ' + T().name + ' is far too small: FLEE!'), big ? 4 : 6); sfx.horn(); sfx.thunder(); flash = 1; return; }
-  const lv = clamp(P.tier + 1 + 0.4 * (w - 1), 1, MLV[L.monster][0] - 0.3), mon = spawnMon({ type: L.monster, v: 0, lv }, L.x, L.z, { lair: L.key, scale: YOUNG_SCALE[L.monster] || 0.6 });
+  const lv = clamp(P.tier + 1 + 0.4 * (w - 1) + (LAIRS_HEL[L.key] ? 0.5 : 0), 1, legendLv(L) - 0.3), mon = spawnMon({ type: L.monster, v: 0, lv }, L.x, L.z, { lair: L.key, scale: YOUNG_SCALE[L.monster] || 0.6 });
   Object.assign(mon, { name: YOUNG_NAMES[L.key], young: L.key, state: 'rise', rise: 0, dive: 1, riseK: 0.6, hunt: true });
   warn('⚠ ' + YOUNG_NAMES[L.key].toUpperCase() + ' RISES! ⚠<br>' + (w > 1 ? 'The deep stirs again: wave ' + w + ', stronger than the last.' : 'Only a young one…'), 4); sfx.horn(); }
 function updateLairs() { for (const L of world.lairs) { const d = Math.hypot(boat.x - L.x, boat.z - L.z), big = P.tier >= LAIR_NEED[L.key], slain = L.beaten || !!P.legends[L.key];
@@ -918,37 +991,63 @@ function updateLairs() { for (const L of world.lairs) { const d = Math.hypot(boa
     for (const m of mons) if (m.papa && m.lair === L.key && !m.dead && !inFight(m) && d > 120) { removeMon(m); lairCool[L.key] = time + 60; say(LAIR_NAMES[L.key] + ' sinks back into the deep.', 3); }
     if (!battle && !(lairCool[L.key] > time) && (d < 40 || (lairWave[L.key] > 0 && d < 95)) && !mons.some((m) => !m.dead && m.lair === L.key)) lairSpawn(L, big); } }
 
+// ---------- the realms (v0.8.0): Midgard and Helheim. Hel's Gate stands in Midgard's Mist Sea; once you sail a Drakkar
+// it opens and you can cross. The gate home stands beside Gjallarhofn. Each realm is its own world: its own islands,
+// harbours, legends, wreck and treasure maps; your ship, upgrades, cargo and souls cross with you. ----------
+const gates = { mid: makeGate('mid'), hel: makeGate('hel') }; for (const k in gates) { gates[k].g.position.set(GATES[k].x, 0, GATES[k].z); scene.add(gates[k].g); }
+const gateOpen = () => P.realm === 'hel' || P.tier >= 4;
+function setRealm(realm, quiet) { realm = realm === 'hel' ? 'hel' : 'mid'; P.realm = realm;
+  if (world.realm !== realm) { scene.remove(world.group); if (worlds[realm]) scene.add(worlds[realm].group); else worlds[realm] = buildWorld(scene, realm === 'hel' ? 6661013 : 20261019, realm); world = worlds[realm]; ocean.setShore(world.shore); }
+  env.setRealm(realm); gates.mid.g.visible = realm === 'mid'; gates.hel.g.visible = realm === 'hel'; for (const L of world.lairs) L.beaten = !!P.legends[L.key];
+  for (const m of [...mons]) removeMon(m); for (const sp of [...spots]) removeSpot(sp); for (const f of floats) scene.remove(f.g); floats.length = 0; for (const sp of spouts) twisters.remove(sp.g); spouts.length = 0;
+  for (const pod of pods) for (const Mb of pod.members) scene.remove(Mb.m.g); pods.length = 0; EV.whirl = null; ocean.whirl.k = 0; EV.ambush = null; for (const id in EV.fleets) delete EV.fleets[id]; EV.next = 60; aur.hidePillar();
+  lairWarned = {}; for (const k in lairWave) lairWave[k] = 0; curSea = ''; placeWreck(); if (!quiet) hud(); }
+function updateGates(dt) { const G = gates[P.realm], k = gateOpen() ? 1 : 0.25; G.update(dt, time, k); G.g.position.y = ocean.heightAt(GATES[P.realm].x, GATES[P.realm].z) * 0.3;
+  if (state === 'play' && Math.random() < dt * 8 * k && Math.hypot(GATES[P.realm].x - boat.x, GATES[P.realm].z - boat.z) < 220) { const a = Math.random() * 6.28, r = rnd(2, 17); soulFx.add(GATES[P.realm].x + Math.cos(a) * r, GATES[P.realm].z + Math.sin(a) * r, { spray: true, y: 0.5, vx: 0, vz: 0, vy: rnd(3, 7), g: -0.2, s: rnd(0.4, 0.9), grow: 0.3, life: 3, a: 0.9 }); } }
+function gateAsk() { if (state !== 'play') return; if (!gateOpen()) { say("🌀 Hel's Gate is sealed. Only a Drakkar (ship size 5) is great enough to pass through to Helheim.", 5); return; }
+  const hel = P.realm === 'hel'; state = 'gate'; boat.v = 0; setThrottle(0, true); $('gateTitle').textContent = hel ? 'THE GATE OF THE LIVING' : "HEL'S GATE";
+  $('gateText').innerHTML = hel ? 'Sail back up to Midgard? Your ship, cargo and souls come with you, and you can return here through Hel\'s Gate whenever you like.' : 'Below lies <b>Helheim</b>, the realm of the dead. Every ship there is a draugr ship and every monster is undead, and all of them are a little stronger than Midgard\'s.<br><br>Every kill in Helheim gives <b>souls 👻</b>: spend them on rune upgrades, new shipwright designs and the greatest ships of all. Hafgufa, Surtr and Nidhögg rule there.<br><br>The gate home stands beside Gjallarhöfn.';
+  $('gateGo').textContent = hel ? 'RETURN TO MIDGARD' : 'DESCEND INTO HELHEIM'; $('gateNo').textContent = hel ? 'STAY' : 'NOT YET'; $('hud').classList.add('hidden'); $('gate').classList.remove('hidden'); sfx.horn(); }
+$('gateNo').onclick = () => { $('gate').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; boat.grace = 2; };
+$('gateGo').onclick = () => { $('gate').classList.add('hidden'); crossRealm(); };
+function crossRealm() { const to = P.realm === 'hel' ? 'mid' : 'hel'; state = 'cross'; $('fade').classList.add('on'); sfx.whoosh(); sfx.thunder();
+  setTimeout(() => { setRealm(to); const G = GATES[to], dir = Math.atan2(-G.x, -G.z); boat.x = G.x + Math.sin(dir) * 32; boat.z = G.z + Math.cos(dir) * 32; boat.yaw = dir; boat.v = 0; boat.wp = null; courseMark.visible = false; boat.grace = 6; setThrottle(0, true); helm.angle = 0;
+    P.home = nearestHarbor().idx; env.snap(P.tod, null, world.regionWeights(boat.x, boat.z, {})); camTgt.set(boat.x, 0, boat.z); save(); $('hud').classList.remove('hidden'); state = 'play'; hud();
+    setTimeout(() => $('fade').classList.remove('on'), 250); const el = $('seaBanner'); el.innerHTML = to === 'hel' ? '<b>☠ HELHEIM ☠</b><small>The realm of the dead</small>' : '<b>⚓ MIDGARD ⚓</b><small>The world of the living</small>'; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); sfx.horn();
+    say(to === 'hel' ? 'You pass through Hel\'s Gate into the realm of the dead. Every kill here gives souls 👻. ' + (P.res.s ? '' : 'Spend them at Helheim\'s harbours, or back in Midgard.') : 'You rise through the gate into Midgard, the world of the living.', 6); }, 1100); }
+function helWin() { state = 'won'; $('hud').classList.add('hidden'); $('won').classList.remove('hidden'); $('wonTitle').innerHTML = "HEL'S<br>REIGN"; $('wonText').innerHTML = 'Hafgufa, Surtr and Nidhögg have fallen. Even the dead bow to Pat.<br><br>The shipwrights of Helheim will now build you <b>NAGLFAR</b>, the ship of nails.<br><br>' + P.kills + ' foes slain.'; sfx.horn(); save(); }
 // ---------- sinking, saving ----------
 function sink() { if (state !== 'play') return; state = 'sunk'; clearBroadside(); clearLegend(); if (boat.air) { boat.air = null; if (ship.mask) ship.mask.visible = true; } battle = null; fishing = null; minis.close(); const lost = {}; for (const k of ['w', 'i', 'g', 'f']) { lost[k] = Math.floor(P.res[k] / 2); P.res[k] -= lost[k]; }
-  const old = P.wreck, any = lost.w + lost.i + lost.g + lost.f > 0; EV.ambush = null; if (any) { P.wreck = { x: boat.x, z: boat.z, res: lost }; placeWreck(); }
+  const old = P.wreck, any = lost.w + lost.i + lost.g + lost.f > 0; EV.ambush = null; if (any) { P.wreck = { x: boat.x, z: boat.z, res: lost, realm: P.realm }; placeWreck(); }
   $('sunkText').innerHTML = 'Your ship goes down beneath the waves. The gods send you back to ' + homeHarbor().name + ' with a new hull. ' + (any ? 'Half your cargo went down with the wreck: ' + wreckSum(lost) + '.<br><br>Sail back to the ☠ on the map and SALVAGE it to get it all back, or hire a salvage crew at any harbour.' + (old ? ' Your older wreck is lost to the deep.' : '') : 'Your hold was empty, so nothing was lost.'); $('hud').classList.add('hidden'); $('sunk').classList.remove('hidden'); sfx.over(); setBattle(false); }
 $('sunkBtn').onclick = () => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); const h = homeHarbor(); P.hp = maxHp(); setThrottle(0, true); helm.angle = 0; boat.x = h.dock.x + Math.cos(h.dir) * 10; boat.z = h.dock.z + Math.sin(h.dir) * 10; boat.v = 0; boat.wp = null; for (const m of [...mons]) removeMon(m); $('sunk').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; hud(); save(); };
-function winGame() { P.won = true; state = 'won'; $('hud').classList.add('hidden'); $('won').classList.remove('hidden'); $('wonText').innerHTML = 'The Kraken, Jormungandr and the Elder One have fallen. Every fjord sings of Pat, ruler of the monster sea.<br><br>' + P.kills + ' foes slain.'; sfx.horn(); save(); }
+function winGame() { P.won = true; state = 'won'; $('hud').classList.add('hidden'); $('won').classList.remove('hidden'); $('wonTitle').innerHTML = "PAT'S<br>REIGN"; $('wonText').innerHTML = 'The Kraken, Jormungandr and the Elder One have fallen. Every fjord sings of Pat, ruler of the monster sea.<br><br>But the saga is not over: ' + (P.tier >= 4 ? 'Hel\'s Gate in the Mist Sea stands open for your ship. Helheim waits.' : 'Hel\'s Gate in the Mist Sea opens for a Drakkar. Helheim waits.') + '<br><br>' + P.kills + ' foes slain.'; sfx.horn(); save(); }
 $('wonBtn').onclick = () => { $('won').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; };
 const SAVE = 'pr_save';
 function homeHarbor() { return world.harbors.find((h) => h.idx === P.home) || world.harbors[0]; }
-function save() { try { localStorage.setItem(SAVE, JSON.stringify({ v: 1, tier: P.tier, up: P.up, res: P.res, hp: P.hp, legends: P.legends, kills: P.kills, home: P.home, won: P.won, tod: P.tod, x: boat.x, z: boat.z, yaw: boat.yaw, wreck: P.wreck, prizes: P.prizes, maps: P.maps, relics: P.relics, skin: P.skin })); } catch { /* ignore */ } }
+function save() { try { localStorage.setItem(SAVE, JSON.stringify({ v: 1, tier: P.tier, up: P.up, res: P.res, hp: P.hp, legends: P.legends, kills: P.kills, home: P.home, won: P.won, tod: P.tod, x: boat.x, z: boat.z, yaw: boat.yaw, wreck: P.wreck, prizes: P.prizes, maps: P.maps, relics: P.relics, skin: P.skin, realm: P.realm, hull: P.hull, sailD: P.sailD, owned: P.owned })); } catch { /* ignore */ } }
 // a save (from this browser, or from a save code someone pasted) is trusted only as numbers and names from the game's own
 // lists: anything else is clamped or dropped, so a doctored code cannot slip markup or script into the page
 function cleanSave(s) {
   const num = (v, lo, hi, d = lo) => (typeof v === 'number' && isFinite(v) ? clamp(v, lo, hi) : d), int = (v, lo, hi, d = lo) => Math.round(num(v, lo, hi, d));
   const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {}), arr = (v) => (Array.isArray(v) ? v : []);
-  const SKINS = ['pats', 'ghost', 'treasure', ...RAIDER_PALS.map((p) => p.name)], skin = (v) => (SKINS.includes(v) ? v : 'pats');
+  const SKINS = ['pats', 'ghost', 'treasure', ...RAIDER_PALS.map((p) => p.name), ...Object.values(HEL_PALS).map((p) => p.name)], skin = (v) => (SKINS.includes(v) ? v : 'pats');
   const ICONS = [...Object.values(LANDMARK).map((l) => l[0]), '🦴', '⚓', '🐚'], text = (v) => String(v ?? '').replace(/[<>&"'`]/g, '').slice(0, 200);
-  const res = (r) => { r = obj(r); return { w: int(r.w, 0, 1e7), i: int(r.i, 0, 1e7), g: int(r.g, 0, 1e7), f: int(r.f, 0, 1e7) }; };
+  const res = (r) => { r = obj(r); return { w: int(r.w, 0, 1e7), i: int(r.i, 0, 1e7), g: int(r.g, 0, 1e7), f: int(r.f, 0, 1e7), s: int(r.s, 0, 1e7) }; };
   const cell = (c) => [int(arr(c)[0], 0, 4), int(arr(c)[1], 0, 3)], E = HALF - 20, nIsl = world.islands.length;
-  const up = {}; for (const k in P.up) up[k] = int(obj(s.up)[k], 0, UPG[k] ? UPG[k].max : 3);
-  const legends = {}; for (const L of world.lairs) if (obj(s.legends)[L.key] === true) legends[L.key] = true;
+  const tier = int(s.tier, 0, SHIP_TIERS.length - 1), up = {}; for (const k in P.up) up[k] = int(obj(s.up)[k], 0, Math.min(UPG[k] ? UPG[k].max : 3, tier + 1));
+  const legends = {}; for (const key of [...Object.keys(LAIRS), ...Object.keys(LAIRS_HEL)]) if (obj(s.legends)[key] === true) legends[key] = true;
+  const own = obj(s.owned), hs = [...new Set(['oak', ...arr(own.h).filter((k) => typeof k === 'string' && HULLS[k])])], ss = [...new Set(['pats', ...arr(own.s).filter((k) => typeof k === 'string' && SAILS[k])])], realm = s.realm === 'hel' ? 'hel' : 'mid';
   const w = obj(s.wreck), h = world.harbors[int(s.home, 0, world.harbors.length - 1)];
-  const p = { tier: int(s.tier, 0, SHIP_TIERS.length - 1), up, res: res(s.res), hp: num(s.hp, 1, 1e6, 1e6), legends, kills: int(s.kills, 0, 1e7), home: h.idx, won: s.won === true, tod: num(s.tod, 0, 1, 0.2),
-    wreck: w.res ? { x: num(w.x, -E, E, 0), z: num(w.z, -E, E, 0), res: res(w.res) } : null,
+  const p = { tier, up, realm, owned: { h: hs, s: ss }, hull: hs.includes(s.hull) ? s.hull : 'oak', sailD: ss.includes(s.sailD) ? s.sailD : 'pats', helWon: Object.keys(LAIRS_HEL).every((k) => legends[k]), res: res(s.res), hp: num(s.hp, 1, 1e6, 1e6), legends, kills: int(s.kills, 0, 1e7), home: h.idx, won: s.won === true, tod: num(s.tod, 0, 1, 0.2),
+    wreck: w.res ? { x: num(w.x, -E, E, 0), z: num(w.z, -E, E, 0), res: res(w.res), realm: w.realm === 'hel' ? 'hel' : 'mid' } : null,
     prizes: arr(s.prizes).slice(0, 3).map((q) => ({ tier: int(obj(q).tier, 0, SHIP_TIERS.length - 1), skin: skin(obj(q).skin) })),
-    maps: arr(s.maps).slice(0, 3).filter((m) => obj(m).isl != null).map((m) => ({ isl: int(m.isl, 0, nIsl - 1), lx: num(m.lx, -E, E, 0), lz: num(m.lz, -E, E, 0), kind: m.kind === 'relic' ? 'relic' : 'gold', region: REGIONS[m.region] ? m.region : 'home',
+    maps: arr(s.maps).slice(0, 3).filter((m) => obj(m).isl != null).map((m) => ({ isl: int(m.isl, 0, nIsl - 1), lx: num(m.lx, -E, E, 0), lz: num(m.lz, -E, E, 0), kind: m.kind === 'relic' ? 'relic' : 'gold', realm: m.realm === 'hel' ? 'hel' : 'mid', region: REGIONS[m.region] ? m.region : 'home',
       cell: cell(m.cell), clue: text(m.clue), marks: arr(m.marks).slice(0, 2).map((k) => ({ c: cell(obj(k).c), icon: ICONS.includes(obj(k).icon) ? k.icon : '🪨' })) })),
     relics: obj(s.relics).bane === true ? { bane: true } : {}, skin: skin(s.skin) };
   const home = (a) => (a === 'x' ? h.dock.x + Math.cos(h.dir) * 12 : h.dock.z + Math.sin(h.dir) * 12);
   return { p, x: num(s.x, -E, E, home('x')), z: num(s.z, -E, E, home('z')), yaw: num(s.yaw, -1e3, 1e3, 0) }; }
-function load() { try { const raw = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (!raw || raw.v !== 1) return false; const s = cleanSave(raw); Object.assign(P, s.p); P.hp = Math.min(P.hp, maxHp()); boat.x = s.x; boat.z = s.z; boat.yaw = s.yaw; for (const L of world.lairs) if (P.legends[L.key]) L.beaten = true; return true; } catch { return false; } }
+function load() { try { const raw = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (!raw || raw.v !== 1) return false; const s = cleanSave(raw); Object.assign(P, s.p); setRealm(P.realm, true); P.hp = Math.min(P.hp, maxHp()); boat.x = s.x; boat.z = s.z; boat.yaw = s.yaw; for (const L of world.lairs) if (P.legends[L.key]) L.beaten = true; return true; } catch { return false; } }
 
 // ---------- minimap and chart ----------
 const mapEl = $('map'), mapCtx = mapEl.getContext('2d'), chartEl = $('chartCv'), chartCtx = chartEl.getContext('2d');
@@ -960,12 +1059,12 @@ function drawMap(cv, g, full) { const dpr = Math.min(2, devicePixelRatio || 1), 
   for (const h of world.harbors) { const [x, y] = P2(h.dock.x, h.dock.z); g.fillText('⚓', x, y); if (full) { g.font = 'bold ' + 11 * dpr + 'px Georgia'; g.fillStyle = '#f2e6c8'; g.fillText(h.name, x, y + 14 * dpr); g.font = fs + 'px serif'; } }
   for (const L of world.lairs) { const [x, y] = P2(L.x, L.z); g.globalAlpha = L.beaten ? 0.4 : 1; g.fillText(L.beaten ? '✔' : L.icon, x, y); g.globalAlpha = 1; }
   for (const w of world.wrecks) { if (w.looted) continue; const [x, y] = P2(w.x, w.z); g.fillStyle = '#c8a070'; g.fillRect(x - 1.5 * dpr, y - 1.5 * dpr, 3 * dpr, 3 * dpr); }
-  g.font = 'bold ' + (full ? 20 : 13) * dpr + 'px Georgia'; for (const mp of P.maps) { const [x, y] = P2(mp.lx, mp.lz); g.fillStyle = '#1a0e06'; g.fillText('✕', x + 1 * dpr, y + 1 * dpr); g.fillStyle = mp.kind === 'relic' ? '#d08aff' : '#ff4a3a'; g.fillText('✕', x, y); } g.font = fs + 'px serif';
+  g.font = 'bold ' + (full ? 20 : 13) * dpr + 'px Georgia'; for (const mp of P.maps) { if ((mp.realm || 'mid') !== P.realm) continue; const [x, y] = P2(mp.lx, mp.lz); g.fillStyle = '#1a0e06'; g.fillText('✕', x + 1 * dpr, y + 1 * dpr); g.fillStyle = mp.kind === 'relic' ? '#d08aff' : '#ff4a3a'; g.fillText('✕', x, y); } g.font = fs + 'px serif';
   const fog = wx.type === 'fog' && wx.k > 0.5; for (const s of spots) { const [x, y] = P2(s.x, s.z); g.fillStyle = s.kind === 'treasure' ? '#ffd24a' : s.kind === 'flotsam' ? '#c8a070' : '#bfe6ff'; g.beginPath(); g.arc(x, y, 1.8 * dpr, 0, 6.28); g.fill(); }
   for (const mon of mons) { if (mon.dead) continue; const d = Math.hypot(mon.x - boat.x, mon.z - boat.z); if (fog && d > 45 && !mon.boss) continue; const [x, y] = P2(mon.x, mon.z); g.fillStyle = mon.treasure ? '#ffd24a' : mon.fleet ? '#ff4a3a' : mon.naval ? '#ff9a3a' : danger(mon.lv); g.beginPath(); g.arc(x, y, (mon.boss ? 4 : mon.treasure ? 3.6 : 2.2) * dpr, 0, 6.28); g.fill(); }
   for (const s of spouts) { const [x, y] = P2(s.x, s.z); g.fillText('🌪', x, y); }
   g.fillStyle = '#e8f6ff'; for (const pod of pods) for (const Mb of pod.members) { const [x, y] = P2(Mb.x, Mb.z); g.fillRect(x - 1 * dpr, y - 1 * dpr, 2 * dpr, 2 * dpr); }
-  if (EV.whirl) { const [x, y] = P2(EV.whirl.x, EV.whirl.z); g.fillText('🌀', x, y); } { const pa = aur.pillarAt; if (pa) { const [x, y] = P2(pa.x, pa.z); g.fillText('🌈', x, y); } } if (P.wreck) { const [x, y] = P2(P.wreck.x, P.wreck.z); g.fillText('☠', x, y); }
+  if (EV.whirl) { const [x, y] = P2(EV.whirl.x, EV.whirl.z); g.fillText('🌀', x, y); } { const pa = aur.pillarAt; if (pa) { const [x, y] = P2(pa.x, pa.z); g.fillText('🌈', x, y); } } if (wreckHere()) { const [x, y] = P2(P.wreck.x, P.wreck.z); g.fillText('☠', x, y); } { const G = world.gate; if (G) { const [x, y] = P2(G.x, G.z); g.fillText(P.realm === 'hel' ? '🌅' : '🌀', x, y); } }
   if (boat.wp) { const [x, y] = P2(boat.wp.x, boat.wp.z); g.strokeStyle = '#ffd24a'; g.lineWidth = 2 * dpr; const q = 4 * dpr; g.beginPath(); g.moveTo(x - q, y - q); g.lineTo(x + q, y + q); g.moveTo(x + q, y - q); g.lineTo(x - q, y + q); g.stroke(); const [bx, by] = P2(boat.x, boat.z); g.setLineDash([3 * dpr, 4 * dpr]); g.lineWidth = 1 * dpr; g.beginPath(); g.moveTo(bx, by); g.lineTo(x, y); g.stroke(); g.setLineDash([]); }
   const [bx, by] = P2(boat.x, boat.z); g.save(); g.translate(bx, by); g.rotate(-boat.yaw + Math.PI); g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 1; const s2 = (full ? 7 : 5) * dpr; g.beginPath(); g.moveTo(0, -s2 * 1.4); g.lineTo(s2, s2); g.lineTo(-s2, s2); g.closePath(); g.fill(); g.stroke(); g.restore();
   g.restore(); }
@@ -1016,7 +1115,7 @@ function updateBoat(dt) {
   const top = topSpeed() * (1 - (LOOK[wx.type] === 'storm' ? 0.15 * wx.k : 0)); const acc = 3.2 * (1 + 0.15 * P.up.oars); boat.v += clamp(thr * top - boat.v, -acc * 1.2 * dt, acc * dt); boat.boost = Math.max(0, boat.boost - dt); boat.thor = Math.max(0, boat.thor - dt); boat.curse = Math.max(0, (boat.curse || 0) - dt);
   // the crew patch the hull at sea (Oars & Crew): out of battle, once nothing has hit you for 8 s
   boat.mending = state === 'play' && !!P.up.oars && !battle && !boat.bifrost && P.hp < maxHp() && time - (boat.lastHit ?? -99) > 8;
-  if (boat.mending) { P.hp = Math.min(maxHp(), P.hp + maxHp() * MEND[P.up.oars] * dt); boat.hudT = (boat.hudT || 0) - dt; if (boat.hudT <= 0) { boat.hudT = 0.25; hud(); } }
+  if (boat.mending) { P.hp = Math.min(maxHp(), P.hp + maxHp() * MEND[P.up.oars] * (1 + perk('mend')) * dt); boat.hudT = (boat.hudT || 0) - dt; if (boat.hudT <= 0) { boat.hudT = 0.25; hud(); } }
   if (boat.bifrost > 0) { boat.bifrost = Math.max(0, boat.bifrost - dt); if (!battle && P.hp < maxHp()) { P.hp = Math.min(maxHp(), P.hp + maxHp() * 0.02 * dt); boat.hudT = (boat.hudT || 0) - dt; if (boat.hudT <= 0) { boat.hudT = 0.25; hud(); } } } boat.grace = Math.max(0, boat.grace - dt);
   let nx = boat.x + Math.sin(boat.yaw) * boat.v * dt, nz = boat.z + Math.cos(boat.yaw) * boat.v * dt;
   const bl = world.blockAt(nx, nz, t.B * 0.5 + t.L * 0.18) || world.blockAt(nx + Math.sin(boat.yaw) * t.L * 0.4, nz + Math.cos(boat.yaw) * t.L * 0.4, t.B * 0.3);
@@ -1048,7 +1147,10 @@ $('viewBtn').onclick = () => { viewMode = viewMode === 'top' ? 'chase' : viewMod
 // battles get their own zoom: each starts framed (1), pinch or the wheel zooms it, and your sailing zoom comes back after
 let camBattle = false, zoomSail = 1;
 function updateCamera(dt) { const t = T(); let tgt, dist, pitch; if (!!battle !== camBattle) { camBattle = !!battle; if (camBattle) { zoomSail = zoom; zoom = 1; } else zoom = zoomSail; }
-  if (state === 'title') { const a = time * 0.06; tgt = V(boat.x, 2, boat.z); dist = t.L * 2.2 + 14; pitch = 0.28; camYaw = a; }
+  if (wrightOn) { // frame the whole ship in the space above the shipwright's sheet
+    const free = clamp(1 - ($('wright').offsetHeight || innerHeight * 0.4) / innerHeight, 0.3, 1), f = clamp(2 - free, 1, 1.75); if (Math.abs(f - wrF) > 0.01) { wrF = f; viewOff = null; }
+    const tv = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), hf = tv * camera.aspect; tgt = V(boat.x, (t.mast + 2) * 0.42, boat.z); dist = Math.max((t.L + 8) / (2 * hf), ((t.mast + 3) * f) / (2 * tv * free * 0.85)); pitch = 0.12; camYaw = boat.yaw + Math.PI * 0.5 + Math.sin(time * 0.15) * 0.9; }
+  else if (state === 'title') { const a = time * 0.06; tgt = V(boat.x, 2, boat.z); dist = t.L * 2.2 + 14; pitch = 0.28; camYaw = a; }
   else if (battle && battle.broad) { // the battle line side-on: the camera slides along the line and never turns
     const B = battle.broad, ni = nearFoe(B), f = B.foes[ni] || battle.mon, sep = clamp((B.foes.length ? foeAt(B, ni) : B.sp) - B.sp, -16, 16), [fx, fz] = lanePos(B, B.sp + sep / 2, (B.yC + B.eC) / 2), hfov = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect, W = Math.max(18, Math.abs(sep) + tierOf(f).L + 6, t.L * 2.2);
     tgt = V(fx, 1.2, fz); dist = Math.max(5, clamp(W / (2 * hfov), 16, 60) * zoom); pitch = 0.28; camYaw += angDiff(B.camYaw, camYaw) * Math.min(1, dt * 2.5); }
@@ -1060,7 +1162,7 @@ function updateCamera(dt) { const t = T(); let tgt, dist, pitch; if (!!battle !=
     tgt = V((boat.x + ex) / 2, Rk * 0.3, (boat.z + ez) / 2); dist = Math.max(8, (de * 0.5 + t.L * 1.8 + 12) * zoom); pitch = 0.16; const want = Math.atan2(ex - boat.x, ez - boat.z); camYaw += angDiff(want, camYaw) * Math.min(1, dt * 1.5); }
   else if (battle) { const mon = battle.mon; tgt = V((boat.x + mon.x) / 2, 1.5, (boat.z + mon.z) / 2); const hfov = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect, needW = Math.hypot(mon.x - boat.x, mon.z - boat.z) + t.L * 0.7 + mon.size + 6; dist = Math.max(6, Math.max(needW / (2 * hfov * 0.9), mon.top * 2.2 + 10) * zoom); pitch = 0.4; const want = Math.atan2(mon.x - boat.x, mon.z - boat.z) + Math.PI / 2; camYaw += angDiff(want - Math.PI, camYaw) * Math.min(1, dt * 1.5); }
   else { tgt = V(boat.x + Math.sin(boat.yaw) * boat.v * 0.6, boat.air ? boat.air.h * 0.85 : 0, boat.z + Math.cos(boat.yaw) * boat.v * 0.6); const W = (34 + t.L * 1.6) * (viewMode === 'top' ? 1 : 0.7); dist = (W / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * Math.min(camera.aspect, 1))) * 0.62 * zoom * (boat.air ? 1 + boat.air.h / 20 : 1); pitch = viewMode === 'top' ? 0.98 : 0.42; const wantYaw = viewMode === 'top' ? Math.PI : boat.yaw; camYaw += angDiff(wantYaw, camYaw) * Math.min(1, dt * (viewMode === 'top' ? 3 : 1.5)); }
-  const off = battle && (battle.broad || battle.legend) ? 'broad' : !!(battle || fishing); if (off !== viewOff) { viewOff = off; applyView(); }
+  const off = wrightOn ? 'wright' : battle && (battle.broad || battle.legend) ? 'broad' : !!(battle || fishing); if (off !== viewOff) { viewOff = off; applyView(); }
   if (fishing && !battle) { const s = fishing.s; tgt = V((boat.x + s.x) / 2, 0, (boat.z + s.z) / 2); dist = 26 + t.L * 1.4; pitch = 0.75; }
   camTgt.lerp(tgt, Math.min(1, dt * 4)); const lx = Math.sin(camYaw), lz = Math.cos(camYaw); const want = V(camTgt.x - lx * Math.cos(pitch) * dist, Math.sin(pitch) * dist + 2, camTgt.z - lz * Math.cos(pitch) * dist); camPos.lerp(want, Math.min(1, dt * 3)); camera.position.copy(camPos); camera.lookAt(camTgt);
   const helmCam = viewMode === 'helm' && !battle && !fishing && state !== 'title' && ship; if (helmCam) { ship.g.updateMatrixWorld(true); const eye = ship.body.localToWorld(V(t.B * 0.28, ship.deckY + 2.2 + t.L * 0.04, -t.L * 0.36)), look = ship.body.localToWorld(V(t.B * 0.1, ship.deckY + 0.6, t.L * 3)); camPos.copy(eye); camTgt.copy(look); camera.position.copy(eye); camera.lookAt(look); camera.rotateZ(-boat.roll * 0.5); }
@@ -1069,11 +1171,11 @@ function updateCamera(dt) { const t = T(); let tgt, dist, pitch; if (!!battle !=
 
 // ---------- HUD buttons ----------
 $('fireBtn').onclick = (e) => { e.stopPropagation(); unlockAudio(); fire(); }; $('actBtn').onclick = (e) => { e.stopPropagation(); doAction(); };
-$('pauseBtn').onclick = () => { if (state !== 'play') return; state = 'paused'; $('pauseText').textContent = T().name + ' · ' + P.kills + ' foes slain · legends ' + Object.keys(P.legends).length + ' / 3'; $('paused').classList.remove('hidden'); };
+$('pauseBtn').onclick = () => { if (state !== 'play') return; state = 'paused'; $('pauseText').textContent = T().name + ' · ' + P.kills + ' foes slain · legends of Midgard ' + legendCount(false) + ' / 3' + (P.realm === 'hel' || legendCount(true) ? ' · of Helheim ' + legendCount(true) + ' / 3' : ''); $('paused').classList.remove('hidden'); };
 $('resumeBtn').onclick = () => { $('paused').classList.add('hidden'); state = 'play'; };
 $('saveQuit').onclick = () => { save(); $('paused').classList.add('hidden'); toTitle(); };
 $('howBtn').onclick = () => { $('title').classList.add('hidden'); $('how').classList.remove('hidden'); }; $('howBack').onclick = () => { $('how').classList.add('hidden'); $('title').classList.remove('hidden'); };
-function begin(cont) { unlockAudio(); startSaga(); if (!cont) { localStorage.removeItem(SAVE); Object.assign(P, { tier: 0, up: { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 0, oars: 0, nets: 0, lights: 0, compass: 0, hooks: 0 }, res: { w: 20, i: 5, g: 40, f: 0 }, legends: {}, kills: 0, home: 0, won: false, tod: 0.16, wreck: null, prizes: [], maps: [], relics: {}, skin: 'pats' }); placeWreck(); P.hp = maxHp(); const h = world.harbors[0]; boat.x = h.dock.x + Math.cos(h.dir) * 12; boat.z = h.dock.z + Math.sin(h.dir) * 12; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); for (const L of world.lairs) L.beaten = false; }
+function begin(cont) { unlockAudio(); startSaga(); if (!cont) { localStorage.removeItem(SAVE); Object.assign(P, { tier: 0, up: { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 0, oars: 0, nets: 0, lights: 0, compass: 0, hooks: 0 }, res: { w: 20, i: 5, g: 40, f: 0, s: 0 }, legends: {}, kills: 0, home: 0, won: false, tod: 0.16, wreck: null, prizes: [], maps: [], relics: {}, skin: 'pats', hull: 'oak', sailD: 'pats', owned: { h: ['oak'], s: ['pats'] }, helWon: false }); setRealm('mid', true); placeWreck(); P.hp = maxHp(); const h = world.harbors[0]; boat.x = h.dock.x + Math.cos(h.dir) * 12; boat.z = h.dock.z + Math.sin(h.dir) * 12; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); for (const L of world.lairs) L.beaten = false; }
   boat.v = 0; boat.wp = null; for (const m of [...mons]) removeMon(m); rebuildShip(); $('title').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; fsCtl.play(); hud();
   boat.throttle = 0; helm.angle = 0; drawThrottle(); helmDrawn = null; if (tutForce || (!cont && !tutSeen())) { tutForce = false; tutStart(); } else if (!tut) say(cont ? 'Back at sea. Skål! Tap ROW, HALF or FULL to get under way.' : 'Tap ROW, HALF or FULL to get under way, and swipe along the wheel to steer. Tap the sea or the map to set a course.', 5.5); camYaw = Math.PI; }
 const codes = initSaveCodes(); $('codeBtn').onclick = () => codes.open(); $('pauseCode').onclick = () => { save(); codes.open(); };
@@ -1173,24 +1275,28 @@ $('howTut').onclick = () => { $('how').classList.add('hidden'); tutForce = true;
 
 // ---------- the four seas: a banner when you cross into one, falling snow or ash, volcano smoke and embers, storm flicker ----------
 const rw = {}; let curSea = 'home', stormT = 5;
+const SEA_INTRO_HEL = { home: ['☠ GJÖLL ☠', 'The black river of the dead'], frost: ['❄ NIFLHEL ❄', 'Frozen mist where the dead wander'], storm: ['🔥 MUSPELHEIM 🔥', 'Seas of fire and burning ships'], mist: ['🦴 NÁSTRÖND 🦴', 'The corpse shore, where Nidhögg feeds'], warm: ['💀 GINNUNGAGAP 💀', 'Shores of bare bone over the abyss'] };
 const SEA_INTRO = { home: ['⚓ HOME WATERS ⚓', 'Green isles around Patsholm'], frost: ['❄ THE FROST SEA ❄', 'Ice floes, snow peaks and frost wyrms'], storm: ['🌋 THE STORM SEA 🌋', 'Fire mountains, black rock and lightning'], mist: ['🌫 THE MIST SEA 🌫', 'Dead marshes, old stones and ghost lights'], warm: ['🌴 THE WARM SEA 🌴', 'White sands, palms and coral reefs'] };
-function seaBanner(k) { const el = $('seaBanner'); el.innerHTML = '<b>' + SEA_INTRO[k][0] + '</b><small>' + SEA_INTRO[k][1] + '</small>'; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); sfx.horn(); }
+function seaBanner(k) { const el = $('seaBanner'), I = (P.realm === 'hel' ? SEA_INTRO_HEL : SEA_INTRO)[k]; el.innerHTML = '<b>' + I[0] + '</b><small>' + I[1] + '</small>'; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); sfx.horn(); }
 const fall = (() => { const n = 700, pos = new Float32Array(n * 3), vel = new Float32Array(n); for (let i = 0; i < n; i++) { pos[i * 3] = rnd(-45, 45); pos[i * 3 + 1] = rnd(0, 40); pos[i * 3 + 2] = rnd(-45, 45); vel[i] = rnd(0.6, 1.4); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const m = new THREE.PointsMaterial({ color: 0xffffff, size: 0.55, transparent: true, opacity: 0, depthWrite: false }); const p = new THREE.Points(g, m); p.frustumCulled = false; p.visible = false; scene.add(p); return { p, m, g, pos, vel, n }; })();
 const smoke = createFoam(scene, ocean, 320, { color: 0x3c3836 }), embers = createFoam(scene, ocean, 160, { color: 0xff7a2a });
-const ashC = new THREE.Color(0x8a8480), snowC = new THREE.Color(0xffffff);
+const ashC = new THREE.Color(0x8a8480), snowC = new THREE.Color(0xffffff), helAsh = new THREE.Color(0x7a6a6e), emberC = new THREE.Color(0xff8a3a), rimeC = new THREE.Color(0xd8e4f4);
+const soulFx = createFoam(scene, ocean, 260, { color: 0xc8a0ff });
 function updateSeas(dt) {
   world.regionWeights(boat.x, boat.z, rw); let best = 'home', bw = rw.home; for (const k of ['frost', 'storm', 'mist', 'warm']) if (rw[k] > bw) { bw = rw[k]; best = k; }
   if (best !== curSea && bw > 0.62) { curSea = best; if (state === 'play') seaBanner(best); }
-  setMusicSea(curSea); // each sea has its own song (it changes on the next bar line)
+  setMusicSea(P.realm === 'hel' ? (curSea === 'storm' ? 'muspel' : 'hel') : curSea); // each sea has its own song (it changes on the next bar line); Helheim has its own two
+  updateGates(dt);
   // snow in the Frost Sea, ash in the Storm Sea
-  const sn = rw.frost || 0, as = rw.storm || 0, k = Math.max(sn, as); fall.p.visible = k > 0.04; if (fall.p.visible) { const ashy = as / (sn + as + 1e-6); fall.m.color.copy(snowC).lerp(ashC, ashy); fall.m.size = 0.55 - ashy * 0.25; fall.m.opacity = 0.6 * k;
-    const sp = 3.2 - ashy * 1.8; fall.p.position.set(camTgt.x, 0, camTgt.z); const P3 = fall.pos; for (let i = 0; i < fall.n; i++) { P3[i * 3 + 1] -= sp * fall.vel[i] * dt; P3[i * 3] += Math.sin(time * 0.8 + i) * dt * 0.6; if (P3[i * 3 + 1] < -1) { P3[i * 3 + 1] = 40; P3[i * 3] = rnd(-45, 45); P3[i * 3 + 2] = rnd(-45, 45); } } fall.g.attributes.position.needsUpdate = true; }
+  // in Helheim ash drifts down everywhere, embers glow in Muspelheim and rime in Niflhel
+  const hel = P.realm === 'hel', sn = rw.frost || 0, as = rw.storm || 0, k = hel ? Math.max(0.5, sn, as) : Math.max(sn, as); fall.p.visible = k > 0.04; if (fall.p.visible) { const ashy = as / (sn + as + 1e-6); if (hel) { fall.m.color.copy(helAsh).lerp(emberC, as).lerp(rimeC, sn * 0.8); fall.m.size = 0.4; } else { fall.m.color.copy(snowC).lerp(ashC, ashy); fall.m.size = 0.55 - ashy * 0.25; } fall.m.opacity = 0.6 * k;
+    const sp = hel ? 1.1 + sn * 1.4 : 3.2 - ashy * 1.8; fall.p.position.set(camTgt.x, 0, camTgt.z); const P3 = fall.pos; for (let i = 0; i < fall.n; i++) { P3[i * 3 + 1] -= sp * fall.vel[i] * dt; P3[i * 3] += Math.sin(time * 0.8 + i) * dt * 0.6; if (P3[i * 3 + 1] < -1) { P3[i * 3 + 1] = 40; P3[i * 3] = rnd(-45, 45); P3[i * 3 + 2] = rnd(-45, 45); } } fall.g.attributes.position.needsUpdate = true; }
   // volcanoes smoke and spit embers
   for (const v of world.volcanoes) { if (Math.abs(v.x - boat.x) > 230 || Math.abs(v.z - boat.z) > 230) continue;
     if (Math.random() < dt * 5) smoke.add(v.x + rnd(-v.r, v.r), v.z + rnd(-v.r, v.r), { spray: true, y: v.y, vx: rnd(-0.5, 0.5) + 1.2, vz: rnd(-0.5, 0.5), vy: rnd(2.5, 4), g: -0.15, s: rnd(2.5, 4), grow: 1.6, life: 7, a: 0.5 });
     if (Math.random() < dt * 7) embers.add(v.x + rnd(-v.r, v.r) * 0.6, v.z + rnd(-v.r, v.r) * 0.6, { spray: true, y: v.y, vx: rnd(-2, 2), vz: rnd(-2, 2), vy: rnd(5, 10), g: 4, s: 0.35, grow: 0, life: 2, a: 1 }); }
-  smoke.update(dt); embers.update(dt); smoke.mat.uniforms.uLight.value = 0.35 + env.cur.ambient * 0.8; embers.mat.uniforms.uLight.value = 1.6;
+  smoke.update(dt); embers.update(dt); soulFx.update(dt); soulFx.mat.uniforms.uLight.value = 1.8; smoke.mat.uniforms.uLight.value = 0.35 + env.cur.ambient * 0.8; embers.mat.uniforms.uLight.value = 1.6;
   // the Storm Sea never quite stops flickering
   if (as > 0.6 && state === 'play') { stormT -= dt; if (stormT <= 0) { stormT = rnd(4, 11); flash = Math.max(flash, rnd(0.12, 0.3)); setTimeout(() => sfx.thunder(), rnd(400, 1600)); } }
 }
@@ -1240,7 +1346,7 @@ function tick(dt) { time += dt;
   if (state === 'play') { updateTags(dt); if ((mapFlip ^= 1)) drawMap(mapEl, mapCtx, false);
     drawDockBtn(); ctx = actionContext(); const key = ctx ? ctx.kind + ctx.label : ''; if (key !== ctxKey) { ctxKey = key; const b = $('actBtn'); if (ctx) { b.classList.remove('hidden'); b.innerHTML = '<em>' + ctx.icon + '</em><small>' + ctx.label + '</small>'; b.style.borderColor = ctx.kind === 'fight' ? '#ff5a3a' : ctx.kind === 'slow' ? '#c8c8c8' : '#7dff3a'; } else b.classList.add('hidden'); }
     const wk = P.up.ballista ? 'b' : 's'; if (wk !== fireKey) { fireKey = wk; $('fireBtn').innerHTML = '<em>' + (P.up.ballista ? '🏹' : '🗡') + '</em><small>' + (P.up.ballista ? 'BALLISTA' : 'SPEARS') + '</small><i class="cd" id="fireCd"></i>'; } $('fireCd').style.height = (boat.fireCd > 0 ? clamp(boat.fireCd / (P.up.ballista ? 2 : 1.2), 0, 1) * 100 : 0) + '%';
-    $('region').textContent = rname(world.regionAt(boat.x, boat.z)) + (isNight() ? ' · 🌙' : ''); $('wxTxt').textContent = wx.k > 0.3 ? WXNAME[wx.type] : ''; $('buff').textContent = [boat.thor > 0 ? '⚡ Thor ' + Math.ceil(boat.thor) + 's' : '', boat.bifrost > 0 ? '🌈 Bifröst ' + Math.ceil(boat.bifrost) + 's' : '', boat.curse > 0 ? '☠ Cursed ' + Math.ceil(boat.curse) + 's' : '', boat.mending ? '🔨 Crew mending' : ''].filter(Boolean).join(' · '); $('hurt').classList.toggle('thor', boat.thor > 0); }
+    $('region').textContent = rname(world.regionAt(boat.x, boat.z)) + (isNight() ? ' · 🌙' : ''); $('wxTxt').textContent = wx.k > 0.3 ? (P.realm === 'hel' && WXNAME_HEL[wx.type]) || WXNAME[wx.type] : ''; $('buff').textContent = [boat.thor > 0 ? '⚡ Thor ' + Math.ceil(boat.thor) + 's' : '', boat.bifrost > 0 ? '🌈 Bifröst ' + Math.ceil(boat.bifrost) + 's' : '', boat.curse > 0 ? '☠ Cursed ' + Math.ceil(boat.curse) + 's' : '', boat.mending ? '🔨 Crew mending' : ''].filter(Boolean).join(' · '); $('hurt').classList.toggle('thor', boat.thor > 0); }
   else for (const mon of mons) mon.tag.style.display = 'none';
   msgT -= dt; if (msgT <= 0) $('msg').style.opacity = 0; warnT -= dt; if (warnT <= 0) $('warn').innerHTML = '';
   renderer.render(scene, camera); }
@@ -1248,4 +1354,4 @@ function tick(dt) { time += dt;
 { const h = world.harbors[0]; boat.x = h.dock.x + Math.cos(h.dir) * 12; boat.z = h.dock.z + Math.sin(h.dir) * 12; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); }
 const hadSave = load(); if (!hadSave) P.hp = maxHp(); rebuildShip(); placeWreck(); toTitle(); env.snap(P.tod, null, world.regionWeights(boat.x, boat.z, {})); camTgt.set(boat.x, 0, boat.z);
 requestAnimationFrame(frame);
-window.__pr = { broadSwap, startBroadside, broadFire, endBroadside, BROAD, planRoute, autoDock, cleanSave, giveMap, prizeChoice, startDig, boardInfo, spouts, startAir, liftK, pods, spawnPod, EV, startEvent, aur, get wreck() { return P.wreck; }, sink, get chartView() { return chartView; }, step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); }, helm, setThrottle, set timeScale(v) { timeScale = v; }, dmgLog, P, boat, mons, spots, floats, world, ocean, wx, setWeather, spawnMon, startBattle, startFishing, openHarbor, fire, get state() { return state; }, set state(v) { state = v; }, get battle() { return battle; }, minis, MLV, killMon, landBolt, warnRing, spawnSpout, rebuildShip, save, load, camera, renderer, scene, get ship() { return ship; }, setCourse };
+window.__pr = { broadSwap, startBroadside, broadFire, endBroadside, BROAD, planRoute, autoDock, cleanSave, giveMap, prizeChoice, startDig, boardInfo, spouts, startAir, liftK, pods, spawnPod, EV, startEvent, aur, get wreck() { return P.wreck; }, sink, get chartView() { return chartView; }, step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); }, helm, setThrottle, set timeScale(v) { timeScale = v; }, dmgLog, P, boat, mons, spots, floats, get world() { return world; }, worlds, setRealm, crossRealm, gateAsk, gates, GATES, HULLS, SAILS, perk, UPG, TIER_COST, legendCount, lvShift, spawnTable, ocean, wx, setWeather, spawnMon, startBattle, startFishing, openHarbor, fire, get state() { return state; }, set state(v) { state = v; }, get battle() { return battle; }, minis, MLV, killMon, landBolt, warnRing, spawnSpout, rebuildShip, save, load, camera, renderer, scene, get ship() { return ship; }, setCourse };

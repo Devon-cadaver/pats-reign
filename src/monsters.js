@@ -427,5 +427,16 @@ export const SPECIES = {
     { name: 'Jormungandr', top: 0x2a4a3a, belly: 0xc8b878, accent: 0x7affc8, fin: 0x1a2a20, eye: 0x7affc8, pattern: 'runes', glow: true, horn: 0xe8dcc0 },
     { name: 'Jormungandr the Ashen', top: 0x3a3a3a, belly: 0xa89880, accent: 0xff8a2a, fin: 0x1a1a1a, eye: 0xff8a2a, pattern: 'runes', glow: true, horn: 0x1a1a1a } ] },
 };
-export function makeMonster(type, vi = 0, scale = 1) { const sp = SPECIES[type], P = sp.variants[((vi % sp.variants.length) + sp.variants.length) % sp.variants.length]; const m = sp.build(P, scale * (P.scale || 1)); m.type = type; m.variant = P; m.name = P.name;
+// Helheim's undead: each of its seas raises its own dead from the same beasts. Their colours rot toward the sea's own
+// (drowned green, rime blue, burnt black, corpse purple, bare bone), their eyes burn, and glowing bands show like ribs
+export const UNDEAD = {
+  home: { pre: 'Drowned', top: 0x3a4a3e, belly: 0x8a9a84, accent: 0x6affb0, eye: 0x9affc8, fin: 0x2a3a30, k: 0.6 },
+  frost: { pre: 'Rime-dead', top: 0x8aa8bc, belly: 0xe8f4fa, accent: 0x9ae6ff, eye: 0xbff4ff, fin: 0x5a7a90, k: 0.62 },
+  storm: { pre: 'Burning', top: 0x1e1612, belly: 0x5a3a2a, accent: 0xff7a2a, eye: 0xffb03a, fin: 0x3a1a10, k: 0.68 },
+  mist: { pre: 'Corpse', top: 0x4a3a4c, belly: 0xb0a0b0, accent: 0xc46aff, eye: 0xd8a0ff, fin: 0x2a1e2c, k: 0.6 },
+  warm: { pre: 'Bone', top: 0xd8d0bc, belly: 0xf4efe4, accent: 0xb06aff, eye: 0xc88aff, fin: 0x9a9080, k: 0.72 },
+};
+export function undeadPal(P, sea) { const U = UNDEAD[sea] || UNDEAD.home, mix = (a, b) => (a == null ? a : lerpHex(a, b, U.k));
+  return { ...P, name: U.pre + ' ' + P.name, top: mix(P.top, U.top), belly: mix(P.belly ?? P.top, U.belly), accent: U.accent, fin: mix(P.fin, U.fin), wing: mix(P.wing, U.fin), dark: mix(P.dark, U.top), horn: mix(P.horn, U.belly), eye: U.eye, glow: true, pattern: 'rings', undead: sea }; }
+export function makeMonster(type, vi = 0, scale = 1, undead = null) { const sp = SPECIES[type], P0 = sp.variants[((vi % sp.variants.length) + sp.variants.length) % sp.variants.length], P = undead ? undeadPal(P0, undead) : P0; const m = sp.build(P, scale * (P.scale || 1)); m.type = type; m.variant = P; m.name = P.name;
   m.g.traverse((o) => { if (o.isMesh || o.isLine || o.isLineSegments) o.castShadow = false; }); return m; }

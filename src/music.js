@@ -9,6 +9,8 @@
 //   lyre and thunder rolling in.
 // MIST SEA: eerie, 56 bpm. A tritone drone, a slow heartbeat drum, ghostly whole-tone bells and a choir that never resolves.
 // WARM SEA: bright, G Mixolydian in a quick 6/8. Hand drums and a shaker, a marimba tune, a plucked bass walking G F C G.
+// HELHEIM (v0.8.0): a dirge for the dead, C Locrian at 46 bpm: a tritone drone, a funeral drum, a tolling bell, a low choir.
+// MUSPELHEIM (Helheim's fire sea): fire drums at 96 bpm in D Phrygian dominant, a snarling low ostinato and horns.
 // BATTLE (any sea): a war song at 138 bpm. Pounding war drums with fills, a driving low ostinato, horn calls, "HU!" war
 //   cries and the full choir. setBattle() switches at the next bar so the change lands on the beat.
 import { audioNodes, isMusicOff } from './audio.js';
@@ -86,7 +88,7 @@ function rumble(t, len = 3, vol = 0.18) { if (late) return; const { ctx, bus, no
 // ---------- the songs: per sea a drone (4 pitches), its filter, drone level and reverb, the beat, and a melody ----------
 // phrases are [scale degree, length in steps]; null = rest. note(d) turns a degree into a pitch, play() sounds it.
 const mode = (sc) => (d) => { const n = sc.length, o = Math.floor(d / n), i = ((d % n) + n) % n; return sc[i] + 12 * o; };
-const AEO = mode([0, 2, 3, 5, 7, 8, 10]), PHR = mode([0, 1, 3, 5, 7, 8, 10]), MIX = mode([0, 2, 4, 5, 7, 9, 10]), WT = mode([0, 2, 4, 6, 8, 10]);
+const AEO = mode([0, 2, 3, 5, 7, 8, 10]), PHR = mode([0, 1, 3, 5, 7, 8, 10]), MIX = mode([0, 2, 4, 5, 7, 9, 10]), WT = mode([0, 2, 4, 6, 8, 10]), LOC = mode([0, 1, 3, 5, 6, 8, 10]), HIJ = mode([0, 1, 4, 5, 7, 8, 10]);
 const THEMES = {
   home: { E: 60 / 66 / 3, bar: 6, drone: [st(-12), st(-12), st(-5), st(0)], cut: 520, dg: 0.035, wet: 0.32, phrases: PHRASES, note: (d) => st(deg(d)),
     play: (t, f, n, E) => { lyre(t, f, E * n * 0.95, 0.075); if (n >= 6 && Math.random() < 0.5) lyre(t + E * 0.02, f / 2, E * n, 0.035); },
@@ -118,6 +120,16 @@ const THEMES = {
     step: (t, s, E) => { const root = [st(-7), st(-9), st(-14), st(-7)][M.bar % 4]; // G, F, C, G
       if (s === 0) drum(t, 92, 0.18, 0.3, 1600); if (s === 3) drum(t, 110, 0.12, 0.25, 1900); if (s === 5) drum(t, 128, 0.07, 0.15, 2600);
       if (s % 3) shaker(t, s % 3 === 1 ? 0.035 : 0.022); if (s === 0 || s === 3) bass(t, root, E * 2.4, 0.06); if (s === 0 && M.bar % 4 === 0) choir(t, [st(5), st(9), st(12)], E * 22, 0.014); } },
+  hel: { E: 60 / 46 / 2, bar: 8, drone: [st(-14), st(-8), st(-2), st(4)], cut: 360, dg: 0.034, wet: 0.55, note: (d) => st(10 + LOC(d)), // bells from C4
+    phrases: [[[0, 6], [null, 2], [1, 4], [0, 4], [-2, 8], [null, 8]], [[4, 4], [3, 4], [1, 8], [null, 4], [0, 4], [1, 4], [-1, 12], [null, 8]], [[0, 3], [1, 3], [3, 2], [4, 8], [3, 4], [1, 4], [0, 8], [null, 16]]],
+    play: (t, f, n, E) => { bell(t, f, E * n + 2.5, 0.032); if (n >= 8) choir(t, [f / 4, f * 0.375], E * n, 0.012); },
+    step: (t, s, E) => { if (s === 0) { drum(t, 40, 0.24, 1.2, 220); bell(t, st(-14), 4, 0.03); if (M.bar % 2 === 1) choir(t, [st(-14), st(-8), st(-2)], E * 15, 0.02); }
+      if (s === 4) drum(t, 38, 0.12, 0.9, 200); if (s === 6 && M.bar % 4 === 3) horn(t, st(-14), E * 8, 0.03); } },
+  muspel: { E: 60 / 96 / 2, bar: 8, drone: [st(-12), st(-11), st(-5), st(0)], cut: 680, dg: 0.04, wet: 0.3, note: (d) => st(HIJ(d)),
+    phrases: [[[0, 2], [1, 2], [2, 4], [1, 2], [0, 6], [null, 16]], [[4, 2], [5, 2], [4, 2], [2, 2], [1, 4], [0, 4], [null, 16]], [[7, 4], [5, 2], [4, 2], [5, 2], [4, 2], [1, 4], [0, 8], [null, 8]]],
+    play: (t, f, n, E) => lyre(t, f, E * n * 0.9, 0.06),
+    step: (t, s, E) => { const b = M.bar; if (s === 0 || s === 3 || s === 6) drum(t, 48, 0.32, 0.6, 600); if (s === 2 || s === 5) drum(t, 66, 0.16, 0.3, 900); if (s === 7) drum(t, 84, 0.12, 0.2, 1400);
+      bass(t, st(-24 + [0, 0, 1, 0, 4, 0, 1, 0][s]), E * 0.85, 0.06); if (s === 0 && b % 2 === 0) horn(t, st(b % 4 === 0 ? 0 : 1), E * 6, 0.045); if (s === 0 && b % 8 === 4) rumble(t, 4, 0.2); if (s === 0 && b % 4 === 2) choir(t, [st(-12), st(-8), st(-5)], E * 14, 0.018); } },
 };
 let seaWant = 'home';
 export function setMusicSea(key) { if (THEMES[key]) seaWant = key; }

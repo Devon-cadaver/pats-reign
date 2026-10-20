@@ -22,7 +22,7 @@ export function regionWeights(x, z, out = {}) { const d = Math.hypot(x, z), home
   for (const k in CENTERS) { const c = CENTERS[k], da = Math.abs(Math.atan2(Math.sin(a - c), Math.cos(a - c))), w = smooth01(Math.PI / 4 + 0.09, Math.PI / 4 - 0.09, da); out[k] = w; sum += w; }
   for (const k in CENTERS) out[k] = (out[k] / (sum || 1)) * (1 - home); out.home = home; return out; }
 
-const BIOME = {
+const BIOME_MID = {
   home: { sand: 0xd8c890, grass: 0x4f8a3a, grass2: 0x3f7230, rock: 0x707068, beach: 1.2 },
   frost: { sand: 0xe4ecf0, grass: 0xf2f6fa, grass2: 0xdfe8ee, rock: 0x56606c, snow: 0xffffff, beach: 0.9 },
   storm: { sand: 0x2a2624, grass: 0x3a3626, grass2: 0x2e2a20, rock: 0x1c1c20, ash: 0x4a4644, lava: 0xff5a14, beach: 1.0 },
@@ -30,7 +30,7 @@ const BIOME = {
   warm: { sand: 0xf8e6b0, grass: 0x46b838, grass2: 0x36a02a, rock: 0xc49a66, beach: 2.4 },
 };
 // sea stack stone per sea
-const STACK_PAL = {
+const STACK_PAL_MID = {
   home: { stone: [0x6e6a62, 0x625e57, 0x77726a, 0x5a5751], top: 0x56763a, wet: 0x2e3430, algae: 0x3a4a34 },
   frost: { stone: [0x5a6470, 0x4e5864, 0x66707c, 0x48525e], top: 0xffffff, wet: 0x26303a, algae: 0x3a4a58 },
   storm: { stone: [0x1e1e22, 0x26262a, 0x18181c, 0x2c2a2a], top: 0x4a4644, wet: 0x101012, algae: 0x2a1a14 },
@@ -39,19 +39,44 @@ const STACK_PAL = {
 };
 
 export const HARBOR_NAMES = ['Patsholm', 'Ravenfjord', 'Frostvik', 'Thunderhaven', 'Mistmere', 'Sunstrand'];
-export const LAIRS = { kraken: { name: "Kraken's Maw", x: 420, z: -400, monster: 'kraken', need: 3, icon: '🦑' }, jorm: { name: "Serpent's Coil", x: -60, z: -520, monster: 'jormungandr', need: 4, icon: '🐍' }, rlyeh: { name: "R'lyeh", x: -440, z: 380, monster: 'elder', need: 4, icon: '👁' } };
+// ---------- Helheim (v0.8.0): the realm of the dead, the end-game map. The same five seas, the dead's own version of each:
+//   Gjoll (centre): the river of the dead, black stone isles and dead trees round Gjallarhofn.
+//   Niflhel (north): frozen mist, pale frost and dead white trees.  Muspelheim (east): fire, lava and burnt black rock.
+//   Nastrond (west): the corpse shore, bruise-purple marsh and soul lights.  Ginnungagap (south): shores of bare bone. ----------
+export const REGIONS_HEL = { home: { name: 'Gjöll', danger: 1 }, frost: { name: 'Niflhel', danger: 1 }, storm: { name: 'Muspelheim', danger: 1 }, mist: { name: 'Nástrond', danger: 1 }, warm: { name: 'Ginnungagap', danger: 1 } };
+export const HARBOR_NAMES_HEL = ['Gjallarhöfn', 'Niflvik', 'Hrimgard', 'Surtsholm', 'Nástrond', 'Bonestrand'];
+export const LAIRS_HEL = { hafgufa: { name: "Hafgufa's Deep", x: -60, z: -520, monster: 'kraken', need: 5, icon: '🦑' }, surtr: { name: "Surtr's Forge", x: 520, z: 250, monster: 'elder', need: 6, icon: '🔥' }, nidhogg: { name: "Nidhögg's Roots", x: -440, z: 380, monster: 'jormungandr', need: 6, icon: '🐉' } };
+// the gates between the realms: Hel's Gate in Midgard's Mist Sea, and the gate home in Helheim beside Gjallarhofn
+export const GATES = { mid: { x: -548, z: 190 }, hel: { x: 62, z: 36 } };
+const BIOME_HEL = {
+  home: { sand: 0x3a3632, grass: 0x2a2a2e, grass2: 0x34303a, rock: 0x24222a, beach: 1.0 },
+  frost: { sand: 0xa8b8c8, grass: 0xd8e4ee, grass2: 0xb8c8d8, rock: 0x3a4250, snow: 0xe8f0f8, beach: 0.9 },
+  storm: { sand: 0x1a1412, grass: 0x2a1a14, grass2: 0x3a1c10, rock: 0x140e0c, ash: 0x3a2a24, lava: 0xff4a0a, beach: 1.0 },
+  mist: { sand: 0x3a3038, grass: 0x3e2e40, grass2: 0x2c2030, rock: 0x40343e, beach: 0.7 },
+  warm: { sand: 0xe0d8c4, grass: 0xc8c0aa, grass2: 0xb8b098, rock: 0x8a8070, beach: 2.4 },
+};
+const STACK_PAL_HEL = {
+  home: { stone: [0x2a282e, 0x24222a, 0x302e34, 0x1e1c22], top: 0x3a3440, wet: 0x141218, algae: 0x2a2430 },
+  frost: { stone: [0x4a5260, 0x404858, 0x56606c, 0x3a4250], top: 0xe8f0f8, wet: 0x1a2028, algae: 0x2a3448 },
+  storm: { stone: [0x1a1210, 0x221614, 0x140e0c, 0x2a1a14], top: 0x5a1a08, wet: 0x0a0606, algae: 0x3a1008 },
+  mist: { stone: [0x3e3440, 0x342a36, 0x4a3e4c, 0x2e2430], top: 0x5a3a6a, wet: 0x1a121c, algae: 0x3a2a44 },
+  warm: { stone: [0xd8d0bc, 0xc8c0aa, 0xe4dcc8, 0xbab098], top: 0x8a6aa8, wet: 0x6a6050, algae: 0x8a7a9a },
+};
+const LAIRS_MID = { kraken: { name: "Kraken's Maw", x: 420, z: -400, monster: 'kraken', need: 3, icon: '🦑' }, jorm: { name: "Serpent's Coil", x: -60, z: -520, monster: 'jormungandr', need: 4, icon: '🐍' }, rlyeh: { name: "R'lyeh", x: -440, z: 380, monster: 'elder', need: 4, icon: '👁' } };
 
+export const LAIRS = LAIRS_MID;
 // island shape: radius at angle a (with lobes)
 function islandShape(r) { const lobes = [1 + ((r() * 3) | 0), 2 + ((r() * 3) | 0), 5 + ((r() * 4) | 0)].map((f) => [f, r() * 6.28, 0.06 + r() * 0.14]); return (a) => 1 + lobes.reduce((s, [f, p, k]) => s + Math.sin(a * f + p) * k, 0) * 0.9; }
 
-export function buildWorld(scene, seed = 20261019) {
+export function buildWorld(scene, seed = 20261019, realm = 'mid') {
+  const hel = realm === 'hel', BIOME = hel ? BIOME_HEL : BIOME_MID, STACK_PAL = hel ? STACK_PAL_HEL : STACK_PAL_MID, LAIRS = hel ? LAIRS_HEL : LAIRS_MID, NAMES = hel ? HARBOR_NAMES_HEL : HARBOR_NAMES, REG = hel ? REGIONS_HEL : REGIONS;
   const r = rand(seed), group = new THREE.Group(); scene.add(group);
   const islands = [], harbors = [], wrecks = [], rocks = [], bergs = [], lairs = [], basalt = [], corals = [], stones = [], floes = [], wisps = [], volcanoes = [];
-  const clear = (x, z, rad) => { if (Math.hypot(x, z) < 40 + rad) return false; for (const l of Object.values(LAIRS)) if (Math.hypot(x - l.x, z - l.z) < 70 + rad) return false; for (const i of islands) if (Math.hypot(x - i.x, z - i.z) < i.R * 1.25 + rad + 26) return false; return true; };
+  const clear = (x, z, rad) => { if (Math.hypot(x, z) < 40 + rad) return false; if (hel && Math.hypot(x - GATES.hel.x, z - GATES.hel.z) < 46 + rad) return false; for (const l of Object.values(LAIRS)) if (Math.hypot(x - l.x, z - l.z) < 70 + rad) return false; for (const i of islands) if (Math.hypot(x - i.x, z - i.z) < i.R * 1.25 + rad + 26) return false; return true; };
   // home island just north of the start, then harbour islands in each sea, then the rest
   const place = (x, z, R, H, region, harbor = null) => { const shape = islandShape(r); const isl = { x, z, R, H, region, shape, harbor, rot: r() * 6.28 }; islands.push(isl); return isl; };
   place(0, -70, 34, 13, 'home', 0);
-  const hpos = [[300, -360, 'frost', 2], [-30, -300, 'frost', 1], [420, 40, 'storm', 3], [-420, -60, 'mist', 4], [120, 420, 'warm', 5]];
+  const hpos = hel ? [[-280, -380, 'frost', 2], [60, -310, 'frost', 1], [430, -60, 'storm', 3], [-410, 60, 'mist', 4], [-120, 420, 'warm', 5]] : [[300, -360, 'frost', 2], [-30, -300, 'frost', 1], [420, 40, 'storm', 3], [-420, -60, 'mist', 4], [120, 420, 'warm', 5]];
   for (const [x, z, reg, hi] of hpos) place(x, z, 26 + r() * 10, 10 + r() * 6, reg, hi);
   for (let tries = 0; islands.length < 46 && tries < 4000; tries++) { const x = (r() - 0.5) * (WORLD - 90), z = (r() - 0.5) * (WORLD - 90), R = 8 + Math.pow(r(), 2) * 40; if (!clear(x, z, R)) continue; const reg = regionAt(x, z); place(x, z, R, 4 + R * (0.25 + r() * 0.3) + (reg === 'frost' ? 6 : 0), reg); }
   // shore map (0 sea .. 1 land) for the water shader: distance to each coast, soft falloff
@@ -112,9 +137,9 @@ export function buildWorld(scene, seed = 20261019) {
     if (isl.R > 18 && reg !== 'storm') for (let k = 0; k < 3; k++) { const a = r() * 6.28, d = isl.R * isl.shape(a - isl.rot) * (1.08 + r() * 0.25); rocks.push({ x: isl.x + Math.cos(a) * d, z: isl.z + Math.sin(a) * d, s: 1.2 + r() * 2.5, h: 3 + r() * 7 }); }
     // per-sea scenery around the island
     if (reg === 'storm') for (let c = 0; c < 2 + ((isl.R / 12) | 0); c++) { const a = r() * 6.28, d = isl.R * isl.shape(a - isl.rot) * (1.04 + r() * 0.14), cx = isl.x + Math.cos(a) * d, cz = isl.z + Math.sin(a) * d; for (let q = 0; q < 5 + ((r() * 5) | 0); q++) { const ca = r() * 6.28, cd = r() * 3; basalt.push({ x: cx + Math.cos(ca) * cd, z: cz + Math.sin(ca) * cd, r: 0.6 + r() * 0.6, h: 1 + r() * 4.5 }); } }
-    if (reg === 'warm') for (let c = 0; c < 10 + isl.R * 0.5; c++) { const a = r() * 6.28, d = isl.R * isl.shape(a - isl.rot) * (1.02 + r() * 0.2); corals.push({ x: isl.x + Math.cos(a) * d, z: isl.z + Math.sin(a) * d, s: 0.5 + r() * 1.3, c: [0xff6a8a, 0xff9a3a, 0xb06aff, 0xffd84a, 0x4ae0c8, 0xff4a5a][(r() * 6) | 0], rot: r() * 6.28 }); }
+    if (reg === 'warm') for (let c = 0; c < 10 + isl.R * 0.5; c++) { const a = r() * 6.28, d = isl.R * isl.shape(a - isl.rot) * (1.02 + r() * 0.2); corals.push({ x: isl.x + Math.cos(a) * d, z: isl.z + Math.sin(a) * d, s: 0.5 + r() * 1.3, c: (hel ? [0xe8e0cc, 0xd8d0bc, 0xb06aff, 0xc8c0aa, 0xf4efe4, 0x8a6aa8] : [0xff6a8a, 0xff9a3a, 0xb06aff, 0xffd84a, 0x4ae0c8, 0xff4a5a])[(r() * 6) | 0], rot: r() * 6.28 }); }
     if (reg === 'mist' && isl.harbor == null) for (let c = 0; c < 2 + ((isl.R / 14) | 0); c++) { const a = r() * 6.28, u = 0.35 + r() * 0.4, rr = isl.shape(a) * isl.R * u; stones.push({ x: isl.x + Math.cos(a + isl.rot) * rr, y: height(a, u) - 0.3, z: isl.z + Math.sin(a + isl.rot) * rr, rot: r() * 6.28, arch: r() < 0.4, s: 0.8 + r() * 0.6 }); }
-    if (reg === 'mist') for (let c = 0; c < 4; c++) { const a = r() * 6.28, d = isl.R * (1.2 + r() * 0.8); wisps.push({ x: isl.x + Math.cos(a) * d, z: isl.z + Math.sin(a) * d, y: 1.5 + r() * 3, ph: r() * 6.28 }); }
+    if (reg === 'mist' || hel) for (let c = 0; c < 4; c++) { const a = r() * 6.28, d = isl.R * (1.2 + r() * 0.8); wisps.push({ x: isl.x + Math.cos(a) * d, z: isl.z + Math.sin(a) * d, y: 1.5 + r() * 3, ph: r() * 6.28 }); }
   }
   // lone sea stacks and icebergs out in open water
   for (let k = 0; k < 70; k++) { const x = (r() - 0.5) * (WORLD - 40), z = (r() - 0.5) * (WORLD - 40); if (!clear(x, z, 4)) continue; const reg = regionAt(x, z); if (reg === 'frost' && r() < 0.7) bergs.push({ x, z, s: 3 + r() * 6, rot: r() * 6.28 }); else rocks.push({ x, z, s: 1 + r() * 2.2, h: 2 + r() * 6 }); }
@@ -146,7 +171,7 @@ export function buildWorld(scene, seed = 20261019) {
   const floeMesh = (() => { const g = new THREE.CylinderGeometry(1, 1, 0.35, 7); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const a = Math.atan2(p.getZ(i), p.getX(i)), k = 1 + Math.sin(a * 3 + 1) * 0.18 + Math.sin(a * 5) * 0.1; p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * k); } g.computeVertexNormals();
     const im = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ color: 0xeef8ff, emissive: 0x16303c, flatShading: true }), floes.length); floes.forEach((f, i) => { q.setFromAxisAngle(V(0, 1, 0), f.rot); mt.compose(V(f.x, 0.05, f.z), q, V(f.s, 1, f.s * 0.8)); im.setMatrixAt(i, mt); }); im.frustumCulled = false; group.add(im); return im; })();
   // ghost lights (Mist Sea): small green wisps hovering over the marsh water
-  const wispMesh = (() => { const im = new THREE.InstancedMesh(new THREE.SphereGeometry(0.35, 8, 6), new THREE.MeshBasicMaterial({ color: 0x9affc0 }), Math.max(1, wisps.length)); im.count = wisps.length; im.frustumCulled = false; group.add(im); return im; })();
+  const wispMesh = (() => { const im = new THREE.InstancedMesh(new THREE.SphereGeometry(0.35, 8, 6), new THREE.MeshBasicMaterial({ color: hel ? 0xc88aff : 0x9affc0 }), Math.max(1, wisps.length)); im.count = wisps.length; im.frustumCulled = false; group.add(im); return im; })();
   // trees: one instanced mesh per kind
   function paint(g, hex) { const n = g.attributes.position.count, c = new THREE.Color(hex), a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); if (g.index) { const ng = g.toNonIndexed(); g.copy(ng); } for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'color') g.deleteAttribute(k); return g; }
   const treeGeo = {
@@ -159,17 +184,19 @@ export function buildWorld(scene, seed = 20261019) {
       for (let i = 0; i < 7; i++) { const leaf = new THREE.ConeGeometry(0.3, 2.4, 4); leaf.scale(1, 1, 0.25); leaf.translate(0, 1.2, 0); leaf.rotateZ(-1.75 - (i % 2) * 0.25); leaf.rotateY((i / 7) * Math.PI * 2); leaf.translate(x, y, 0); parts.push(paint(leaf, i % 2 ? 0x2e9a2a : 0x3ab032)); }
       for (let i = 0; i < 3; i++) parts.push(paint(new THREE.SphereGeometry(0.12, 6, 5).translate(x + Math.cos(i * 2.1) * 0.15, y - 0.15, Math.sin(i * 2.1) * 0.15), 0x5a3a1a)); return mergeGeometries(parts); },
   };
+  if (hel) { treeSpots.bone = [...treeSpots.palm, ...treeSpots.birch.filter((t) => t[4] === 'warm')]; treeSpots.dead.push(...treeSpots.snowpine, ...treeSpots.birch.filter((t) => t[4] !== 'warm')); treeSpots.charred.push(...treeSpots.pine); treeSpots.palm = []; treeSpots.birch = []; treeSpots.snowpine = []; treeSpots.pine = []; }
+  treeGeo.bone = () => { const g = treeGeo.dead(), c = g.attributes.color; for (let i = 0; i < c.count; i++) c.setXYZ(i, 0.88, 0.85, 0.78); return g; };
   for (const kind of Object.keys(treeSpots)) { const list = treeSpots[kind]; if (!list.length) continue; const im = new THREE.InstancedMesh(treeGeo[kind](), new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), list.length);
     list.forEach(([x, y, z, s, reg], i) => { q.setFromAxisAngle(V(0, 1, 0), i * 2.4); const sc = s * (kind === 'palm' ? 1.9 : reg === 'frost' ? 1.4 : 1.6); mt.compose(V(x, y - 0.1, z), q, V(sc, sc * (0.9 + (i % 5) * 0.08), sc)); im.setMatrixAt(i, mt); }); group.add(im); }
 
   // ---------- harbours ----------
   for (const isl of islands) { if (isl.harbor == null) continue; const a = isl.rot + Math.PI / 2, coast = isl.R * isl.shape(Math.PI / 2) * 0.96, dx = Math.cos(a), dz = Math.sin(a);
-    const h = { name: HARBOR_NAMES[isl.harbor], idx: isl.harbor, isl, x: isl.x + dx * coast, z: isl.z + dz * coast, dir: a }; const dockLen = 14;
-    h.dock = { x: h.x + dx * (dockLen + 4), z: h.z + dz * (dockLen + 4) }; h.g = village(h, isl, dockLen, r); group.add(h.g); harbors.push(h); }
+    const h = { name: NAMES[isl.harbor], idx: isl.harbor, isl, x: isl.x + dx * coast, z: isl.z + dz * coast, dir: a }; const dockLen = 14;
+    h.dock = { x: h.x + dx * (dockLen + 4), z: h.z + dz * (dockLen + 4) }; h.g = village(h, isl, dockLen, r, hel); group.add(h.g); harbors.push(h); }
   // ---------- shipwrecks ----------
   for (let k = 0, tries = 0; k < 16 && tries < 500; tries++) { const x = (r() - 0.5) * (WORLD - 100), z = (r() - 0.5) * (WORLD - 100); if (!clear(x, z, 10) || Math.hypot(x, z) < 120) continue; const w = { x, z, rot: r() * 6.28, looted: false, g: wreck(r) }; w.g.position.set(x, 0, z); w.g.rotation.y = w.rot; group.add(w.g); wrecks.push(w); k++; }
   // ---------- legend lairs ----------
-  for (const [key, L] of Object.entries(LAIRS)) { const g = lair(key, r); g.position.set(L.x, 0, L.z); group.add(g); lairs.push({ key, ...L, g, beaten: false }); for (let k = 0; k < 10; k++) { const a = (k / 10) * 6.28; stamp(L.x + Math.cos(a) * 46, L.z + Math.sin(a) * 46, () => 3, 3, 4); } }
+  for (const [key, L] of Object.entries(LAIRS)) { const g = lair(key, r, hel); g.position.set(L.x, 0, L.z); group.add(g); lairs.push({ key, ...L, g, beaten: false }); for (let k = 0; k < 10; k++) { const a = (k / 10) * 6.28; stamp(L.x + Math.cos(a) * 46, L.z + Math.sin(a) * 46, () => 3, 3, 4); } }
 
   // collision: islands, stacks, bergs, basalt as circles (islands use their wobbly coast)
   function blockAt(x, z, pad = 0) { for (const isl of islands) { const dx = x - isl.x, dz = z - isl.z, d = Math.hypot(dx, dz); if (d > isl.R * 1.6 + pad) continue; const cr = coastR(isl, x, z) * 0.97 + pad; if (d < cr) return { x: isl.x, z: isl.z, r: cr, d, nx: dx / (d || 1), nz: dz / (d || 1), kind: 'island', isl }; }
@@ -179,7 +206,7 @@ export function buildWorld(scene, seed = 20261019) {
     for (const L of lairs) { for (let k = 0; k < 10; k++) { const a = (k / 10) * 6.28, px = L.x + Math.cos(a) * 46, pz = L.z + Math.sin(a) * 46, dx = x - px, dz = z - pz, d = Math.hypot(dx, dz), cr = 3 + pad; if (d < cr) return { x: px, z: pz, r: cr, d, nx: dx / (d || 1), nz: dz / (d || 1), kind: 'rock' }; } }
     return null; }
   // minimap: each sea in its own colour, land in its own colour
-  const SEA_RGB = { home: [29, 84, 112], frost: [86, 132, 160], storm: [34, 40, 50], mist: [44, 74, 62], warm: [18, 140, 170] }, LAND_RGB = { home: [196, 178, 120], frost: [236, 242, 246], storm: [70, 58, 52], mist: [92, 108, 82], warm: [240, 220, 150] };
+  const SEA_RGB = hel ? { home: [34, 20, 40], frost: [52, 62, 88], storm: [70, 18, 10], mist: [52, 26, 60], warm: [44, 30, 70] } : { home: [29, 84, 112], frost: [86, 132, 160], storm: [34, 40, 50], mist: [44, 74, 62], warm: [18, 140, 170] }, LAND_RGB = hel ? { home: [88, 82, 90], frost: [200, 214, 228], storm: [120, 40, 16], mist: [110, 80, 116], warm: [226, 218, 196] } : { home: [196, 178, 120], frost: [236, 242, 246], storm: [70, 58, 52], mist: [92, 108, 82], warm: [240, 220, 150] };
   const MR = SHORE_RES, mapCanvas = document.createElement('canvas'); mapCanvas.width = mapCanvas.height = MR; { const g = mapCanvas.getContext('2d'), w = {};
     const sh = g.createImageData(MR, MR); for (let y = 0; y < MR; y++) for (let x = 0; x < MR; x++) { const v = shore[y * SHORE_RES + x], i = (y * MR + x) * 4, wx = (x + 0.5) * (WORLD / MR) - HALF, wz = (y + 0.5) * (WORLD / MR) - HALF; regionWeights(wx, wz, w);
       let sr = 0, sg = 0, sb = 0, lr = 0, lg = 0, lb = 0; for (const k in SEA_RGB) { sr += SEA_RGB[k][0] * w[k]; sg += SEA_RGB[k][1] * w[k]; sb += SEA_RGB[k][2] * w[k]; lr += LAND_RGB[k][0] * w[k]; lg += LAND_RGB[k][1] * w[k]; lb += LAND_RGB[k][2] * w[k]; }
@@ -189,13 +216,13 @@ export function buildWorld(scene, seed = 20261019) {
   function update(dt, time, px, pz, heightAt) {
     let any = false; floes.forEach((f, i) => { if (Math.abs(f.x - px) > 170 || Math.abs(f.z - pz) > 170) return; any = true; f.t += dt; const y = heightAt(f.x, f.z); q.setFromEuler(e2.set(Math.sin(f.t * 0.9) * 0.06, f.rot + f.t * 0.02, Math.cos(f.t * 0.7) * 0.06)); mt.compose(V(f.x, y + 0.06, f.z), q, V(f.s, 1, f.s * 0.8)); floeMesh.setMatrixAt(i, mt); }); if (any) floeMesh.instanceMatrix.needsUpdate = true;
     let anyW = false; wisps.forEach((w, i) => { if (Math.abs(w.x - px) > 160 || Math.abs(w.z - pz) > 160) return; anyW = true; const s = 0.7 + Math.sin(time * 3 + w.ph) * 0.3; mt.compose(V(w.x + Math.sin(time * 0.4 + w.ph) * 2, w.y + Math.sin(time * 1.3 + w.ph) * 0.6, w.z + Math.cos(time * 0.35 + w.ph) * 2), q.identity(), V(s, s, s)); wispMesh.setMatrixAt(i, mt); }); if (anyW) wispMesh.instanceMatrix.needsUpdate = true; }
-  return { group, islands, harbors, wrecks, rocks, bergs, lairs, shore, blockAt, mapCanvas, regionAt, regionWeights, volcanoes, update, floes, basalt, corals, stones, wisps };
+  return { realm, group, islands, harbors, wrecks, rocks, bergs, lairs, shore, blockAt, mapCanvas, regionAt, regionWeights, volcanoes, update, floes, basalt, corals, stones, wisps, regions: REG, gate: GATES[realm] };
 }
 
 // ---------- a harbour village: dock on posts, longhouse with dragon gables, huts, runestone, fire, moored boat, banners ----------
-function village(h, isl, dockLen, r) {
+function village(h, isl, dockLen, r, hel) {
   const g = new THREE.Group(), st = grp(g); g.position.set(h.x, 0, h.z); g.rotation.y = -h.dir + Math.PI / 2; // local +z points out to sea
-  const wood = M(0x7a5232), dwood = M(0x4a2e18), roof = M(0x6a4a2a), thatch = M(0x9a7a3a), stone = M(0x8a8a86), red = M(0xb8322a);
+  const wood = M(hel ? 0x3a3036 : 0x7a5232), dwood = M(hel ? 0x1e181c : 0x4a2e18), roof = M(hel ? 0x2a2028 : 0x6a4a2a), thatch = M(hel ? 0x4a3a4a : 0x9a7a3a), stone = M(hel ? 0x5a5458 : 0x8a8a86), red = M(hel ? 0x5a2a7a : 0xb8322a);
   // dock: planks on posts heading out to sea
   part(st, BOX(), wood, 3, 0.3, dockLen + 4, 0, 0.9, dockLen / 2 + 1); for (let i = 0; i <= dockLen / 2; i++) for (const s of [-1, 1]) part(st, CYL6(), dwood, 0.35, 3, 0.35, s * 1.4, -0.4, i * 2 + 0.5);
   for (let i = 0; i < dockLen + 4; i += 1.1) part(st, BOX(), dwood, 3.05, 0.05, 0.08, 0, 1.06, i - 1);
@@ -210,14 +237,16 @@ function village(h, isl, dockLen, r) {
   // huts with thatch
   for (let i = 0; i < 4; i++) { const hx = (i % 2 ? 1 : -1) * (7 + r() * 4), hz = back - 2 - i * 4.5 + r() * 2; const hu = grp(st, hx, 1.2, hz); hu.rotation.y = r() * 6.28; part(hu, CYL(), wood, 3.2, 1.8, 3.2, 0, 0.9, 0); part(hu, CON(), thatch, 4.2, 2.4, 4.2, 0, 3, 0); part(hu, BOX(), dwood, 0.8, 1.3, 0.2, 0, 0.65, 1.6); }
   // runestone, fire pit, banner, barrels
-  part(st, RBX(), stone, 1.2, 3, 0.5, -4, 2.6, back + 3); part(st, BOX(), M(0xb8322a), 0.9, 0.1, 0.52, -4, 3.2, back + 3); part(st, BOX(), M(0xb8322a), 0.1, 1.6, 0.52, -4, 2.6, back + 3);
-  part(st, CYL(), stone, 1.6, 0.4, 1.6, 4, 1.4, back + 4); const fire = part(g, CON(), M(0xff8a2a, 'glow'), 0.9, 1.4, 0.9, 4, 2.2, back + 4); g.userData.fire = fire;
+  part(st, RBX(), stone, 1.2, 3, 0.5, -4, 2.6, back + 3); part(st, BOX(), red, 0.9, 0.1, 0.52, -4, 3.2, back + 3); part(st, BOX(), red, 0.1, 1.6, 0.52, -4, 2.6, back + 3);
+  // Helheim's harbours are fenced with whale ribs and skulls on stakes
+  if (hel) { const bone = M(0xe0d8c4); for (let i = 0; i < 6; i++) { const z = back - 4 + i * 1.6; for (const sd of [-1, 1]) { const rb = rod(st, bone, V(sd * 12, 0.8, z), V(sd * 9, 7.5, z + 0.6), 0.28); void rb; } } for (const sd of [-1, 1]) { rod(st, dwood, V(sd * 4.5, 1, dockLen * 0.2), V(sd * 4.5, 4.5, dockLen * 0.2), 0.1); part(st, SPH(), bone, 0.9, 0.8, 0.9, sd * 4.5, 4.9, dockLen * 0.2); } }
+  part(st, CYL(), stone, 1.6, 0.4, 1.6, 4, 1.4, back + 4); const fire = part(g, CON(), M(hel ? 0xc46aff : 0xff8a2a, 'glow'), 0.9, 1.4, 0.9, 4, 2.2, back + 4); g.userData.fire = fire;
   rod(st, dwood, V(1.6, 1, dockLen + 2), V(1.6, 8, dockLen + 2), 0.1); const ban = part(g, BOX(), red, 0.05, 1.6, 1.2, 1.6, 7, dockLen + 1.3); g.userData.banner = ban;
   for (let i = 0; i < 4; i++) { part(st, CYL(), M(0x7a5232), 0.7, 0.9, 0.7, -1 + (i % 2) * 0.8, 1.5, dockLen * 0.3 + i * 0.6); }
   // a small moored boat
   const bt = grp(st, -3.4, 0.1, dockLen * 0.6); part(bt, SPH(), M(0x6a4426), 1.6, 0.9, 5.5, 0, 0, 0); part(bt, SPH(), M(0x3a2414), 1.4, 0.7, 5.2, 0, 0.12, 0); part(bt, CYL(), dwood, 0.12, 3, 0.12, 0, 1.5, 0.4);
   // lantern posts along the dock
-  for (let i = 0; i < 3; i++) { rod(st, dwood, V(-1.5, 1, i * 6 + 2), V(-1.5, 3.2, i * 6 + 2), 0.08); part(g, SPH_LO(), M(0xffc86a, 'glow'), 0.3, 0.35, 0.3, -1.5, 3.4, i * 6 + 2); }
+  for (let i = 0; i < 3; i++) { rod(st, dwood, V(-1.5, 1, i * 6 + 2), V(-1.5, 3.2, i * 6 + 2), 0.08); part(g, SPH_LO(), M(hel ? 0xb48aff : 0xffc86a, 'glow'), 0.3, 0.35, 0.3, -1.5, 3.4, i * 6 + 2); }
   flattenInto(st); mergeParts(st); return g;
 }
 function flattenInto(st) { st.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(st.matrixWorld).invert(), list = []; st.traverse((o) => { if (o.isMesh && o.parent !== st) list.push(o); }); for (const m of list) { const mw = new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld); m.parent.remove(m); mw.decompose(m.position, m.quaternion, m.scale); st.add(m); } for (const c of [...st.children]) if (!c.isMesh && !c.children.length) st.remove(c); }
@@ -232,7 +261,14 @@ function wreck(r) { const g = new THREE.Group(), st = grp(g), wood = M(0x5a3a22)
   flattenInto(st); mergeParts(st); return g; }
 
 // ---------- lairs ----------
-function lair(key, r) { const g = new THREE.Group(), st = grp(g);
+function lair(key, r, hel) { const g = new THREE.Group(), st = grp(g);
+  // Hafgufa's Deep: a ring of ice-bone spires; Surtr's Forge: obsidian pillars with molten crowns; Nidhogg's Roots: great dead roots of the World Tree
+  if (key === 'hafgufa') { const ice = M(0xc8dcec, 'flat'), glow = M(0x9ae6ff, 'glow'); for (let k = 0; k < 10; k++) { const a = (k / 10) * 6.28; const p = grp(st, Math.cos(a) * 46, -1, Math.sin(a) * 46); p.rotation.set(0, -a, 0.3 + r() * 0.2); part(p, CON(), ice, 3.4, 24 + r() * 10, 3.4, 0, 11, 0, 0, 0, 0.2); part(p, SPH_LO(), glow, 1.1, 1.1, 1.1, 0, 3, 0); }
+    for (let k = 0; k < 5; k++) { const p = grp(st, (r() - 0.5) * 40, -1, (r() - 0.5) * 40); p.rotation.set(0.9, r() * 6, 0.5); part(p, CON(), M(0xe0d8c4), 1.4, 16, 1.4, 0, 4, 0); } flattenInto(st); mergeParts(st); return g; }
+  if (key === 'surtr') { const ob = M(0x141012, 'flat'), lava = M(0xff5a14, 'glow'); for (let k = 0; k < 10; k++) { const a = (k / 10) * 6.28, x = Math.cos(a) * 46, z = Math.sin(a) * 46; const p = grp(st, x, -2, z); p.rotation.set((r() - 0.5) * 0.3, a, (r() - 0.5) * 0.3); const hh = 16 + r() * 12; part(p, BOX(), ob, 4.2, hh, 4.2, 0, hh / 2, 0); part(p, BOX(), lava, 4.4, 1.2, 4.4, 0, hh - 0.4, 0); part(p, BOX(), lava, 0.3, hh * 0.6, 4.3, 2.12, hh * 0.45, 0); }
+    flattenInto(st); mergeParts(st); return g; }
+  if (key === 'nidhogg') { const root = M(0x2a2220, 'flat'), venom = M(0x7dff3a, 'glow'); for (let k = 0; k < 10; k++) { const a = (k / 10) * 6.28; const p = grp(st, Math.cos(a) * 46, -2, Math.sin(a) * 46); p.rotation.set(0, -a + 0.4, 0.5 + r() * 0.3); part(p, CYL(), root, 2.6, 30 + r() * 8, 2.6, 0, 12, 0, 0, 0, 0.15); part(p, SPH_LO(), venom, 0.9, 0.9, 0.9, 0, 2, 0); }
+    for (let k = 0; k < 6; k++) { const p = grp(st, (r() - 0.5) * 50, -2, (r() - 0.5) * 50); p.rotation.set(1.1, r() * 6, 0.4); part(p, CYL(), root, 1.6, 20, 1.6, 0, 5, 0); } flattenInto(st); mergeParts(st); return g; }
   if (key === 'rlyeh') { const st1 = M(0x24302a, 'flat'), glow = M(0x6aff9a, 'glow');
     for (let k = 0; k < 10; k++) { const a = (k / 10) * 6.28, x = Math.cos(a) * 46, z = Math.sin(a) * 46; const p = grp(st, x, -2, z); p.rotation.set((r() - 0.5) * 0.5, a, (r() - 0.5) * 0.6); part(p, BOX(), st1, 4, 18 + r() * 12, 4, 0, 8, 0); part(p, BOX(), glow, 0.3, 6, 4.1, 2.05, 9, 0); part(p, BOX(), glow, 4.1, 0.3, 0.3, 0, 13, 2.05); }
     for (let k = 0; k < 4; k++) { const a = r() * 6.28; const p = grp(st, Math.cos(a) * 22, -3, Math.sin(a) * 22); p.rotation.set(0.6, a, 0.3); part(p, BOX(), st1, 9, 14, 3, 0, 5, 0); } }
