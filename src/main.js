@@ -90,8 +90,8 @@ const pUp = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pinch0 =
 const HMAX = 2.4; // the wheel turns about 140 degrees each way
 const helm = { angle: 0, held: false, id: null, last: 0, tapT: 0 }; const helmEl = $('helm'), helmCtx = helmEl.getContext('2d'); let helmDrawn = null;
 function helmAngleAt(e) { const r = helmEl.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)); }
-helmEl.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); if (state !== 'play') return; unlockAudio(); helm.held = true; helm.id = e.pointerId; helm.last = helmAngleAt(e); try { helmEl.setPointerCapture(e.pointerId); } catch { /* ignore */ } const now = performance.now(); if (now - helm.tapT < 300) helm.angle = 0; helm.tapT = now; });
-helmEl.addEventListener('pointermove', (e) => { if (!helm.held || e.pointerId !== helm.id) return; const a = helmAngleAt(e); helm.angle = clamp(helm.angle + angDiff(a, helm.last), -HMAX, HMAX); helm.last = a; });
+helmEl.addEventListener('pointerdown', (e) => { const hr = helmEl.getBoundingClientRect(); if (Math.hypot(e.clientX - (hr.left + hr.width / 2), e.clientY - (hr.top + hr.height / 2)) > hr.width / 2) return; e.preventDefault(); e.stopPropagation(); if (state !== 'play') return; unlockAudio(); helm.held = true; helm.id = e.pointerId; helm.last = helmAngleAt(e); try { helmEl.setPointerCapture(e.pointerId); } catch { /* ignore */ } const now = performance.now(); if (now - helm.tapT < 300) helm.angle = 0; helm.tapT = now; });
+helmEl.addEventListener('pointermove', (e) => { if (!helm.held || e.pointerId !== helm.id) return; const a = helmAngleAt(e); helm.angle = clamp(helm.angle + angDiff(a, helm.last) * 0.5, -HMAX, HMAX); helm.last = a; });
 for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) helmEl.addEventListener(ev, (e) => { if (e.pointerId === helm.id) { helm.held = false; helm.id = null; } });
 function drawHelm() { if (!helmEl.clientWidth) return; const dpr = Math.min(2, devicePixelRatio || 1), S = Math.round(helmEl.clientWidth * dpr) || 1; if (helmEl.width !== S) { helmEl.width = helmEl.height = S; helmDrawn = null; } if (helmDrawn !== null && Math.abs(helmDrawn - helm.angle) < 0.002) return; helmDrawn = helm.angle;
   const g = helmCtx, c = S / 2, R = S / 2 - 2 * dpr, rim = R * 0.7; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, S, S);
@@ -371,7 +371,8 @@ function chartClamp() { chartView.zoom = clamp(chartView.zoom, 1, 8); const lim 
 function chartWorld(x, y) { const r = chartEl.getBoundingClientRect(), k = (r.width / WORLD) * chartView.zoom; return [chartView.cx + (x - r.left - r.width / 2) / k, chartView.cz + (y - r.top - r.height / 2) / k]; }
 function closeChart() { $('chart').classList.add('hidden'); state = 'play'; cptr.clear(); }
 function mapTap(cv, e) { const r = cv.getBoundingClientRect(); const x = ((e.clientX - r.left) / r.width) * WORLD - HALF, z = ((e.clientY - r.top) / r.height) * WORLD - HALF; setCourse(x, z); say('Course set. Turn the wheel any time; let go and the helmsman steers back to the mark.'); }
-mapEl.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); if (state === 'play' && !battle && !fishing) mapTap(mapEl, e); });
+let mapTapT = 0; mapEl.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); if (state === 'play' && !battle && !fishing) { mapTapT = performance.now(); mapTap(mapEl, e); } });
+mapEl.addEventListener('touchend', (e) => { if (performance.now() - mapTapT < 600 || state !== 'play' || battle || fishing) return; const t = e.changedTouches[0]; if (t) { e.preventDefault(); mapTap(mapEl, { clientX: t.clientX, clientY: t.clientY }); } }, { passive: false });
 $('chartBtn').onclick = () => { if (state !== 'play' || battle || fishing) return; state = 'chart'; chartView.zoom = 1; chartView.cx = 0; chartView.cz = 0; cptr.clear(); $('chart').classList.remove('hidden'); drawMap(chartEl, chartCtx, true); };
 chartEl.addEventListener('pointerdown', (e) => { e.preventDefault(); try { chartEl.setPointerCapture(e.pointerId); } catch { /* ignore */ } cptr.set(e.pointerId, [e.clientX, e.clientY]); if (cptr.size === 1) { cDown = { x: e.clientX, y: e.clientY, t: performance.now() }; cDrag = false; } else { cDrag = true; const [a, b] = [...cptr.values()]; cPinch = Math.hypot(a[0] - b[0], a[1] - b[1]); } });
 chartEl.addEventListener('pointermove', (e) => { if (!cptr.has(e.pointerId)) return; const prev = cptr.get(e.pointerId); cptr.set(e.pointerId, [e.clientX, e.clientY]); const r = chartEl.getBoundingClientRect();
@@ -399,7 +400,7 @@ function updateBoat(dt) {
         // hands off the wheel: the helmsman turns it back toward the mark (and around land)
         if (!helm.held && !kTurn) { want = steerAround(Math.atan2(dx, dz), Math.min(d, 26 + t.L)); const target = -clamp(angDiff(want, boat.yaw) * 1.8, -1, 1) * HMAX; helm.angle += clamp(target - helm.angle, -dt * 3.5, dt * 3.5); } } } }
   else thr = 0;
-  const rudder = helm.angle / HMAX, tr = turnRate() * (0.35 + 0.65 * Math.min(1, boat.v / (t.speed * 0.6))); boat.yaw += -rudder * tr * dt + boat.spin * dt; boat.spin *= 1 - dt * 1.2;
+  const r0 = helm.angle / HMAX, rudder = Math.sign(r0) * Math.pow(Math.abs(r0), 1.4), tr = turnRate() * (0.35 + 0.65 * Math.min(1, boat.v / (t.speed * 0.6))); boat.yaw += -rudder * tr * dt + boat.spin * dt; boat.spin *= 1 - dt * 1.2;
   boat.sailK = (boat.sailK ?? 0) + (clamp((thr - 0.3) / 0.45, 0, 1) - (boat.sailK ?? 0)) * Math.min(1, dt * 1.5);
   const top = topSpeed() * (1 - (LOOK[wx.type] === 'storm' ? 0.15 * wx.k : 0)); const acc = 3.2 * (1 + 0.15 * P.up.oars); boat.v += clamp(thr * top - boat.v, -acc * 1.2 * dt, acc * dt); boat.boost = Math.max(0, boat.boost - dt); boat.thor = Math.max(0, boat.thor - dt); boat.grace = Math.max(0, boat.grace - dt);
   let nx = boat.x + Math.sin(boat.yaw) * boat.v * dt, nz = boat.z + Math.cos(boat.yaw) * boat.v * dt;

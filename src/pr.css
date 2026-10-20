@@ -133,7 +133,7 @@ button:disabled { opacity: .45; filter: grayscale(.6); }
 @keyframes seaIn { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
 
 #helmWrap { position: absolute; left: 118px; bottom: calc(6px + env(safe-area-inset-bottom, 0)); width: 178px; height: 140px; pointer-events: none; transform-origin: left bottom; }
-#helm { position: absolute; left: 0; bottom: 0; width: 136px; height: 136px; pointer-events: auto; touch-action: none; filter: drop-shadow(0 3px 6px #000a); }
+#helm { position: absolute; left: 0; bottom: 0; width: 136px; height: 136px; clip-path: circle(50%); border-radius: 50%; pointer-events: auto; touch-action: none; filter: drop-shadow(0 3px 6px #000a); }
 #throttle { position: absolute; left: 140px; bottom: 4px; width: 38px; height: 134px; pointer-events: auto; touch-action: none; }
 #throttle .tTrack { position: absolute; left: 7px; right: 7px; top: 8px; bottom: 20px; border: 2px solid var(--gold); border-radius: 12px; background: #1a100ad8; }
 #tFill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; border-radius: 10px; background: linear-gradient(#f2d27a, #b8822a); }
@@ -144,3 +144,6 @@ button:disabled { opacity: .45; filter: grayscale(.6); }
 @media (max-width: 370px) { #helmWrap { transform: scale(0.88); left: 112px; } #map { width: 98px; height: 98px; } }
 
 #chart { background: #050b10f2; }
+
+#map { touch-action: none; z-index: 2; }
+.fsBtn { left: auto; right: 10px; }
