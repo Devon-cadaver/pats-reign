@@ -47,13 +47,16 @@ export function createMinis({ sfx, hooks }) {
     function firePot() { if (S.phase !== 'aim' || S.fire <= 0 || S.potVolley) return; S.potVolley = true; S.fire--; you.fireUsed = (you.fireUsed || 0) + 1; const k = you.potK || 2.6, dmg = dmgRoll(k); foe.hp -= dmg; hooks.shoot(k, dmg, 'FIRE', true); banner('🔥 BURN −' + dmg, '#ff8a2a'); sfx.boom(); hpDraw(); S.shots++; S.phase = 'shotFx'; S.t = 0; }
     const DIRS = { L: '⬅', R: '➡', U: '⬆' };
     // special moves: an octopus may wrap its arms round your hull, a serpent coil round your ship; hack at it fast to break
-    // free (tap, Space or any dodge key), or it drags you under / crushes you for 1.4 x a hit
-    function specialUI() { stage.innerHTML = ''; btns.innerHTML = ''; const grab = foe.special === 'grab', need = 5 + Math.min(5, Math.round(foe.lv * 0.7));
+    // free (tap, Space or any dodge key), or it drags you under / crushes you for 1.4 x a hit. Helheim's undead have their
+    // own: a burning crab or eel sets the deck ablaze (douse it), an undead shark feeds on you and heals by what it takes
+    const SPECIAL = { grab: ['wraps its arms round your hull!', '🐙 BREAK FREE!', '🪓 HACK AT IT', 'DRAGGED UNDER −', 'BROKE FREE!'], coil: ['coils round your ship!', '🐍 BREAK ITS COILS!', '🪓 HACK AT IT', 'CRUSHED −', 'BROKE FREE!'],
+      burn: ['sets your deck ablaze!', '🔥 DOUSE THE FLAMES!', '🪣 THROW WATER', 'BURNED −', 'DOUSED!'], drain: ["feeds on your crew's souls!", '👻 DRIVE IT OFF!', 'ᛉ RAISE THE WARD', 'IT FEEDS −', 'DRIVEN OFF!'] };
+    function specialUI() { stage.innerHTML = ''; btns.innerHTML = ''; const sp = SPECIAL[foe.special] || SPECIAL.grab, need = 5 + Math.min(5, Math.round(foe.lv * 0.7));
       S.prompt = { d: 'G', t: 0, win: 2.8 * (you.thor ? 1.25 : 1), done: false, need, hits: 0 }; hooks.foeAct('U');
-      cue.innerHTML = `<div class="mgWarn">${foe.name} ${grab ? 'wraps its arms round your hull!' : 'coils round your ship!'}</div><div class="mgPrompt">${grab ? '🐙 BREAK FREE!' : '🐍 BREAK ITS COILS!'} <span id="mgHits">0 / ${need}</span></div><div class="timer"><i id="mgTimer"></i></div>`;
-      const b = el('button', 'mgDir lit mgBreak', '🪓 HACK AT IT'); b.onpointerdown = (e) => { e.preventDefault(); breakTap(); }; btns.appendChild(b); sfx.hurt(); }
+      cue.innerHTML = `<div class="mgWarn">${foe.name} ${sp[0]}</div><div class="mgPrompt">${sp[1]} <span id="mgHits">0 / ${need}</span></div><div class="timer"><i id="mgTimer"></i></div>`;
+      const b = el('button', 'mgDir lit mgBreak', sp[2]); b.onpointerdown = (e) => { e.preventDefault(); breakTap(); }; btns.appendChild(b); sfx.hurt(); }
     function breakTap() { const P = S.prompt; if (S.phase !== 'defend' || !P || P.done || P.d !== 'G') return; P.hits++; const h = $('mgHits'); if (h) h.textContent = P.hits + ' / ' + P.need; sfx.hit(); if (P.hits >= P.need) answer('G'); }
-    function defendUI() { if (foe.special && S.attacks === 0 && Math.random() < 0.22) { specialUI(); return; } stage.innerHTML = ''; btns.innerHTML = ''; const naval = foe.naval; const opts = naval ? ['L', 'R', 'U'] : foe.moves || ['L', 'R', 'U']; const d = opts[(Math.random() * opts.length) | 0];
+    function defendUI() { if (foe.special && S.attacks === 0 && Math.random() < (foe.specialK || 0.22)) { specialUI(); return; } stage.innerHTML = ''; btns.innerHTML = ''; const naval = foe.naval; const opts = naval ? ['L', 'R', 'U'] : foe.moves || ['L', 'R', 'U']; const d = opts[(Math.random() * opts.length) | 0];
       const what = naval ? { L: 'Ram from port!', R: 'Ram from starboard!', U: 'Arrow volley!' }[d] : (foe.attackNames || { L: 'swings from the right', R: 'swings from the left', U: 'rears up to slam' })[d];
       const win = Math.max(0.55, (foe.boss ? 1.05 : 1.35) - foe.lv * 0.08) * (you.thor ? 1.25 : 1);
       S.prompt = { d, t: 0, win, done: false }; hooks.foeAct(d);
@@ -62,7 +65,7 @@ export function createMinis({ sfx, hooks }) {
       for (const k of ['L', 'U', 'R']) { const b = el('button', 'mgDir' + (k === d ? ' lit' : ''), k === 'U' ? '🛡' : DIRS[k]); b.onpointerdown = (e) => { e.preventDefault(); answer(k); }; btns.appendChild(b); } }
     function answer(k) { const P = S.prompt; if (S.phase !== 'defend' || !P || P.done) return; if (P.d === 'G' && k !== 'G' && k !== '-') { breakTap(); return; } P.done = true; side.className = 'mgSide';
       let dmg = foe.dmg * (1 - you.def) * (0.85 + Math.random() * 0.3);
-      if (P.d === 'G') { if (k === 'G') { dmg = 0; banner('BROKE FREE!', '#7dff3a'); sfx.pickup(); } else { dmg *= 1.4; banner((foe.special === 'grab' ? 'DRAGGED UNDER −' : 'CRUSHED −') + Math.round(dmg), '#ff5a3a'); sfx.hurt(); } }
+      if (P.d === 'G') { if (k === 'G') { dmg = 0; banner((SPECIAL[foe.special] || SPECIAL.grab)[4], '#7dff3a'); sfx.pickup(); } else { dmg *= 1.4; banner((SPECIAL[foe.special] || SPECIAL.grab)[3] + Math.round(dmg) + (foe.special === 'drain' ? ' · IT HEALS' : ''), '#ff5a3a'); sfx.hurt(); if (foe.special === 'drain') foe.hp = Math.min(foe.maxHp, foe.hp + Math.round(dmg)); } }
       else if (k === P.d) { dmg = P.d === 'U' ? dmg * 0.25 : 0; banner(P.d === 'U' ? 'BRACED!' : 'DODGED!', '#7dff3a'); sfx.pickup(); }
       else if (k === 'U') { dmg *= 0.5; banner('BLOCKED −' + Math.round(dmg), '#9fd6ff'); sfx.hit(); }
       else { banner('HIT −' + Math.round(dmg), '#ff5a3a'); sfx.hurt(); }
