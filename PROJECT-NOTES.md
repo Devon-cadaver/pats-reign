@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.0.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.1.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -587,6 +587,21 @@ disagree with this file, this file wins.
   made with C:/Windows/System32/tar.exe -a -c -f (PowerShell Compress-Archive writes backslash paths that itch cannot read;
   git-bash tar makes a tarball). Tested unzipped under /html/12345/ inside a 1280x720 iframe (how itch serves it): loads and plays.
   The repo and the Pages URL keep the pats-reign name. The Bestiary is release/valhallas-tide-bestiary.html (same artifact URL).
+- v1.0.1: a gentler start: the tutorial says mouse wheel on PC; the little map opens the chart instead of setting a course
+  (a tap sent the ship somewhere unseen); during the tutorial the chart shows a glowing TAP HERE mark (tutTarget) and the
+  first shark rises there; calm(): during the tutorial no events, one beast, no chases but the tutorial shark; until the
+  second kill on a Faering no events and three beasts at most.
+- v1.1.0: action monster fights (Sean: "action battles on should also affect the monster battles... more animated action").
+  startLegend gives any non-naval, non-boss beast kind 'beast' when BROAD.on (BEAST_KIND: bite shark/megalodon/angler,
+  slam serpent/eel/leviathan, grab octopus, claw crab). beastStart / updateBeast / beastFire in main.js: modes circle,
+  lock (the red ring tracks the ship, then freezes for the last 0.6 s), strike, exposed (head mark, shots land, PERFECT in
+  the first 0.6 s), approach, hold (grab: boat held, −1 CREW a second, hack free with FIRE taps: need 5 + 0.8 x level),
+  tear (crab: three ticks). Action beasts have 1.7x hull; strike damage 1.3x (slam 1.5x); a dodged strike brings the next
+  one in half the time; 70 away for 4 s ends the fight (endLegend('escape')). Camera: a beast branch in the camera code.
+  Classic fights: the beast lunges at the hull on its attacks (animMon offset), battleHurt shakes harder. Measured with
+  bots (Skeid, upgrades 2, level 3.4 beasts): a dodging, shooting bot wins in 8-22 s losing 10-18% hull; a passive ship
+  loses 11-16% in 25 s. The tutorial asks ACTION or CLASSIC (step 6 of 8, tut.choice); HOW TO PLAY is paged (howPager,
+  two topics a page) and sits below the sound buttons on the title.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
