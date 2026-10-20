@@ -341,3 +341,6 @@ html.tabletHud body.legendOn #msg, html.tabletHud body.broadOn #msg { top: calc(
 #wright .wrHead { flex-wrap: wrap; }
 #wrName { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 560px) { #wright .wrTabs { order: 3; flex-basis: 100%; } }
+/* landscape phones: messages stay clear of the right-hand buttons; the harbour's SET SAIL stays in reach while you scroll */
+@media (orientation: landscape) and (max-height: 500px) { #msg, #warn { width: calc(100vw - 240px); } }
+#hbSail { position: sticky; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); z-index: 3; flex: none; }
