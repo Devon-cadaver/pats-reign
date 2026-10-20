@@ -183,3 +183,16 @@ html.tabletHud .screen { padding-top: calc(20px + var(--padTop)); }
 html.tabletHud #title { padding-top: calc(10vh + var(--padTop)); }
 html.tabletHud #harbor { padding-top: calc(16px + var(--padTop)); }
 html.tabletHud #saveBox { padding-top: calc(18px + var(--padTop)); }
+/* boarding and the treasure dig */
+.mgBoard { font-size: 17px; padding: 14px 18px; border-radius: 14px; background: linear-gradient(#9fd46e, #4a8a2a); color: #0e1a08; border-color: #2a4a14; }
+.mgBoard.off { background: #2a1c12; color: #b9a88a; border-color: #6a4a1a; font-size: 13px; max-width: 220px; }
+#mini.dig { min-height: 0; top: 0; justify-content: center; background: #050b10e8; }
+.mgClue { font-style: italic; color: #f2e6c8; max-width: 340px; font-size: 16px; }
+.digGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; width: min(92vw, 380px); padding: 10px; border-radius: 14px; background: linear-gradient(#d8c08a, #b89a5e); box-shadow: inset 0 0 18px #7a5a2a; }
+.digCell { aspect-ratio: 1; padding: 0; border-radius: 9px; font-size: 24px; background: #e6d29e; border: 2px solid #c8ad72; box-shadow: none; color: #3a2614; }
+.digCell.mark { background: transparent; border-color: transparent; font-size: 30px; }
+.digCell.dug { background: #8a6a3a; border-color: #6a4a22; } .digCell.hot { background: #a8562a; } .digCell.warm { background: #9a7a3a; } .digCell.cold { background: #5a6a7a; }
+.digCell.gold { background: radial-gradient(#ffe27a, #c8962a); }
+.card .btn2 { display: flex; flex-direction: column; gap: 6px; flex: none; } .card .btn2 button { padding: 7px 10px; font-size: 13px; }
+#prize p { max-width: 360px; }
+#mini.dig .mgFlee { position: static; margin-top: 6px; }

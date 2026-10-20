@@ -5,6 +5,9 @@
 //  FISHING: cast (stop the power meter in the gold band), then reel (hold REEL to lift the net box and keep the fish in it
 //    until the catch bar fills). Sometimes something big takes the line.
 //  SALVAGE: haul the wreck's rope with alternating left / right pulls; pull too fast and it snaps.
+//  BOARDING (inside a ship battle, with grappling hooks, once her hull is below 40%): throw the hooks onto her rail (two
+//    must hold), then the crew clash: strike where their guard opens; lose too many and you are repelled.
+//  DIG: the landing party digs on a treasure island's beach using the map's clue; each hole says hot, warm or cold.
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -31,7 +34,9 @@ export function createMinis({ sfx, hooks }) {
       cue.innerHTML = `<div class="mgHint">${foe.naval ? 'Aim at their hull' : 'Aim for the weak spot'} · shot ${S.shots + 1} of ${S.maxShots}</div><div class="track" id="mgTrack"><div class="zone" id="mgZone"></div><div class="zone crit" id="mgCrit"></div><div class="needle" id="mgNeedle"></div></div>`;
       const z = $('mgZone'), c = $('mgCrit'); z.style.left = (S.zone - zw / 2) * 100 + '%'; z.style.width = zw * 100 + '%'; c.style.left = (S.zone - zw * 0.17) * 100 + '%'; c.style.width = zw * 34 + '%'; S.zw = zw;
       const fb = el('button', 'mgBig', you.weapon || 'FIRE'); fb.onclick = shoot; btns.appendChild(fb); $('mgTrack').onpointerdown = (e) => { e.preventDefault(); shoot(); };
-      if (S.fire > 0) { const fp = el('button', 'mgFire', '🔥 FIRE POT ×' + S.fire); fp.onclick = firePot; btns.appendChild(fp); } }
+      if (S.fire > 0) { const fp = el('button', 'mgFire', '🔥 FIRE POT ×' + S.fire); fp.onclick = firePot; btns.appendChild(fp); }
+      if (foe.naval && foe.boardBlock !== undefined && !S.repelled) { if (foe.hp / foe.maxHp <= 0.4) { const b = el('button', 'mgBoard' + (foe.boardBlock ? ' off' : ''), foe.boardBlock ? '🪝 ' + foe.boardBlock : '🪝 BOARD HER'); b.onclick = () => { if (S.phase !== 'aim') return; if (foe.boardBlock) { banner(foe.boardBlock, '#c8c8c8'); return; } boardStart(); }; btns.appendChild(b); }
+        else if ((you.hooks || 0) > 0) cue.insertAdjacentHTML('beforeend', '<div class="mgHint">🪝 Bring her hull below 40% to board</div>'); } }
     function dmgRoll(mult) { return Math.max(1, Math.round(you.atk * mult * (you.thor ? 2 : 1) * (0.85 + Math.random() * 0.3))); }
     function shoot() { if (S.phase !== 'aim') return; const d = Math.abs(S.mark - S.zone) / (S.zw / 2); let mult, txt, col;
       if (d < 0.34) { mult = 2; txt = 'CRITICAL!'; col = '#ffd24a'; } else if (d < 1) { mult = 1; txt = 'HIT'; col = '#ffffff'; } else if (d < 2) { mult = 0.4; txt = 'GRAZE'; col = '#c8c8c8'; } else { mult = 0; txt = 'MISS'; col = '#8a9aa8'; }
@@ -51,17 +56,41 @@ export function createMinis({ sfx, hooks }) {
       else if (k === 'U') { dmg *= 0.5; banner('BLOCKED −' + Math.round(dmg), '#9fd6ff'); sfx.hit(); }
       else { banner('HIT −' + Math.round(dmg), '#ff5a3a'); sfx.hurt(); }
       dmg = Math.round(dmg); if (dmg > 0) { you.hp -= dmg; S.taken += dmg; hooks.hurt(dmg); } hpDraw(); S.attacks++; S.phase = 'defFx'; S.t = 0; }
+    // ---------- boarding ----------
+    function boardStart() { S.phase = 'grapple'; S.throws = 2 + (you.hooks || 1); S.bit = 0; S.crewYou = S.crew0 = you.crew || 6; S.crewFoe = foe.crew || 6; S.mark = Math.random(); S.dir = 1; banner('GRAPPLES!', '#ffd24a'); sfx.throw(); grappleUI(); }
+    function grappleUI() { btns.innerHTML = ''; side.className = 'mgSide'; const zw = 0.1 + (you.hooks || 1) * 0.03; S.gzw = zw; S.gz = zw / 2 + Math.random() * (1 - zw);
+      cue.innerHTML = `<div class="mgHint">Throw the hooks onto her rail · ${S.bit} of 2 holding · ${S.throws} throws left</div><div class="track" id="mgTrack"><div class="zone" id="mgZone"></div><div class="needle" id="mgNeedle"></div></div>`;
+      const z = $('mgZone'); z.style.left = (S.gz - zw / 2) * 100 + '%'; z.style.width = zw * 100 + '%';
+      const b = el('button', 'mgBig', '🪝 THROW'); b.onclick = throwHook; btns.appendChild(b); $('mgTrack').onpointerdown = (e) => { e.preventDefault(); throwHook(); }; }
+    function throwHook() { if (S.phase !== 'grapple') return; S.throws--; if (Math.abs(S.mark - S.gz) <= S.gzw / 2) { S.bit++; banner('HOOKED!', '#7dff3a'); sfx.hit(); }
+      else { const dmg = Math.max(1, Math.round(foe.dmg * 0.25 * (1 - you.def))); you.hp -= dmg; S.taken += dmg; hooks.hurt(dmg); banner('MISSED · ARROWS −' + dmg, '#ff8a3a'); sfx.throw(); hpDraw(); }
+      S.phase = 'grappleFx'; S.t = 0; }
+    function clashUI() { btns.innerHTML = ''; const d = ['L', 'R', 'U'][(Math.random() * 3) | 0], what = { L: 'Their guard opens on the left!', R: 'Their guard opens on the right!', U: 'Leap the rail and strike high!' }[d];
+      const win = Math.max(0.6, (foe.ghost ? 0.95 : 1.3) - foe.lv * 0.04 + (you.hooks || 1) * 0.04); S.prompt = { d, t: 0, win, done: false };
+      cue.innerHTML = `<div class="mgHint">⚔ Your crew ${Math.max(0, S.crewYou)} · their ${foe.ghost ? 'draugr' : 'crew'} ${Math.max(0, S.crewFoe)}</div><div class="mgWarn">${what}</div><div class="mgPrompt">STRIKE ${DIRS[d]}</div><div class="timer"><i id="mgTimer"></i></div>`;
+      if (d !== 'U') { side.className = 'mgSide on ' + d; side.textContent = DIRS[d]; } else side.className = 'mgSide';
+      for (const k of ['L', 'U', 'R']) { const b = el('button', 'mgDir' + (k === d ? ' lit' : ''), DIRS[k]); b.onpointerdown = (e) => { e.preventDefault(); clash(k); }; btns.appendChild(b); } }
+    function clash(k) { const P = S.prompt; if (S.phase !== 'clash' || !P || P.done) return; P.done = true; side.className = 'mgSide';
+      if (k === P.d) { const n = Math.ceil(S.crewYou * 0.3 + 1); S.crewFoe -= n; banner('CUT DOWN ' + n + '!', '#7dff3a'); sfx.hit(); }
+      else { const n = Math.ceil(S.crewFoe * 0.22 + 1), dmg = Math.round(you.maxHp * (foe.ghost ? 0.08 : 0.05)); S.crewYou -= n; you.hp -= dmg; S.taken += dmg; hooks.hurt(dmg); banner('−' + n + ' CREW · HULL −' + dmg, '#ff5a3a'); sfx.hurt(); hpDraw(); }
+      S.phase = 'clashFx'; S.t = 0; }
+    function repel(why) { S.repelled = true; const dmg = Math.round(you.maxHp * 0.12); you.hp -= dmg; S.taken += dmg; hooks.hurt(dmg); hpDraw(); if (foe.ghost) S.cursed = true;
+      banner(why || (foe.ghost ? 'REPELLED · CURSED!' : 'REPELLED!'), '#ff5a3a'); sfx.boom(); btns.innerHTML = ''; cue.innerHTML = ''; S.phase = 'defFx'; S.t = 0; S.attacks = 0; S.maxAtk = 1; }
     function end(result) { if (S.ended) return; S.ended = true; if (result === 'flee') { const dmg = Math.round(foe.dmg * (1 - you.def) * 0.5); you.hp -= dmg; S.taken += dmg; hooks.hurt(dmg); }
-      cue.innerHTML = ''; side.className = 'mgSide'; banner(result === 'win' ? (foe.naval ? 'SHIP TAKEN!' : 'SLAIN!') : result === 'flee' ? 'ESCAPED' : 'SINKING!', result === 'win' ? '#7dff3a' : '#ff5a3a'); S.phase = 'over'; S.t = 0; S.result = result; }
+      cue.innerHTML = ''; side.className = 'mgSide'; banner(result === 'boarded' ? 'SHE IS YOURS!' : result === 'win' ? (foe.naval ? 'SHIP TAKEN!' : 'SLAIN!') : result === 'flee' ? 'ESCAPED' : 'SINKING!', result === 'win' || result === 'boarded' ? '#7dff3a' : '#ff5a3a'); S.phase = 'over'; S.t = 0; S.result = result; }
     // swipes anywhere on the overlay answer a dodge
-    let sw = null; root.onpointerdown = (e) => { sw = [e.clientX, e.clientY]; }; root.onpointerup = (e) => { if (!sw || S.phase !== 'defend') return; const dx = e.clientX - sw[0], dy = e.clientY - sw[1]; sw = null; if (Math.hypot(dx, dy) < 40) return; answer(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'L' : 'R') : (dy < 0 ? 'U' : 'U')); };
+    let sw = null; root.onpointerdown = (e) => { sw = [e.clientX, e.clientY]; }; root.onpointerup = (e) => { if (!sw || (S.phase !== 'defend' && S.phase !== 'clash')) return; const dx = e.clientX - sw[0], dy = e.clientY - sw[1]; sw = null; if (Math.hypot(dx, dy) < 40) return; (S.phase === 'clash' ? clash : answer)(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'L' : 'R') : 'U'); };
     cur = { update(dt) { S.t += dt;
       if (S.phase === 'intro' && S.t > (o.firstStrike === false ? 0.2 : 1.0)) { if (o.firstStrike === false) { S.phase = 'defend'; S.maxAtk = foe.attacks || 1; S.attacks = 0; defendUI(); } else { S.phase = 'aim'; aimUI(); } }
       else if (S.phase === 'aim') { const sp = (0.75 + foe.lv * 0.1) * (foe.boss ? 1.25 : 1); S.mark += S.dir * sp * dt; if (S.mark > 1) { S.mark = 2 - S.mark; S.dir = -1; } if (S.mark < 0) { S.mark = -S.mark; S.dir = 1; } const n = $('mgNeedle'); if (n) n.style.left = S.mark * 100 + '%'; }
       else if (S.phase === 'shotFx' && S.t > 0.55) { if (foe.hp <= 0) end('win'); else if (S.shots >= S.maxShots) { S.shots = 0; S.phase = 'defend'; S.maxAtk = foe.attacks || 1; S.attacks = 0; defendUI(); } else { S.phase = 'aim'; aimUI(); } }
       else if (S.phase === 'defend' && S.prompt) { S.prompt.t += dt; const k = 1 - S.prompt.t / S.prompt.win, tm = $('mgTimer'); if (tm) tm.style.width = clamp(k, 0, 1) * 100 + '%'; if (k <= 0 && !S.prompt.done) answer('-'); }
       else if (S.phase === 'defFx' && S.t > 0.6) { if (you.hp <= 0) end('sunk'); else if (S.attacks >= S.maxAtk) { S.phase = 'aim'; aimUI(); } else { S.phase = 'defend'; defendUI(); } }
-      else if (S.phase === 'over' && S.t > 1.2) { close(); done({ result: S.result, taken: S.taken, foeHp: foe.hp, fireUsed: you.fireUsed || 0 }); } } };
+      else if (S.phase === 'grapple') { const sp = 0.85 + foe.lv * 0.08; S.mark += S.dir * sp * dt; if (S.mark > 1) { S.mark = 2 - S.mark; S.dir = -1; } if (S.mark < 0) { S.mark = -S.mark; S.dir = 1; } const n = $('mgNeedle'); if (n) n.style.left = S.mark * 100 + '%'; }
+      else if (S.phase === 'grappleFx' && S.t > 0.5) { if (you.hp <= 0) end('sunk'); else if (S.bit >= 2) { S.phase = 'clash'; banner('BOARD!', '#ffd24a'); sfx.horn && sfx.horn(); clashUI(); } else if (S.throws <= 0) repel("THE HOOKS WON'T HOLD"); else { S.phase = 'grapple'; grappleUI(); } }
+      else if (S.phase === 'clash' && S.prompt) { S.prompt.t += dt; const k = 1 - S.prompt.t / S.prompt.win, tm = $('mgTimer'); if (tm) tm.style.width = clamp(k, 0, 1) * 100 + '%'; if (k <= 0 && !S.prompt.done) clash('-'); }
+      else if (S.phase === 'clashFx' && S.t > 0.6) { if (you.hp <= 0) end('sunk'); else if (S.crewFoe <= 0) end('boarded'); else if (S.crewYou <= Math.ceil(S.crew0 * 0.3)) repel(); else { S.phase = 'clash'; clashUI(); } }
+      else if (S.phase === 'over' && S.t > 1.2) { close(); done({ result: S.result, taken: S.taken, foeHp: foe.hp, fireUsed: you.fireUsed || 0, cursed: !!S.cursed }); } } };
   }
 
   // ---------- fishing ----------
@@ -105,5 +134,20 @@ export function createMinis({ sfx, hooks }) {
     cur = { update(dt) { S.t += dt; if (S.phase === 'haul') { S.tension = Math.max(0, S.tension - dt * 0.55); const tt = $('svT'), tm = $('svTime'); if (tt) { tt.style.width = clamp(S.tension, 0, 1) * 100 + '%'; tt.style.background = S.tension > 0.8 ? '#ff5a3a' : '#7dff3a'; } if (tm) tm.style.width = clamp(1 - S.t / 11, 0, 1) * 100 + '%'; if (S.t > 11) end(S.pulls >= S.need * 0.5 ? 'done' : 'stop'); }
       else if (S.phase === 'over' && S.t > 1.0) { close(); done({ result: S.result, frac: S.pulls / S.need }); } } };
   }
-  return { battle, fish, salvage, update(dt) { if (cur) cur.update(dt); }, get active() { return !!cur; }, close };
+  // ---------- treasure dig ----------
+  function dig(o, done) {
+    open('dig'); const W = 5, H = 4, m = o.map, S = { t: 0, phase: 'dig', shovels: 6, wrong: 0, ended: false };
+    root.innerHTML = `<div class="mgTitle">⛏ ${m.kind === 'relic' ? "The Drowned King's bone map" : 'Treasure map'}</div><div class="mgHint mgClue">“${m.clue}”</div><div class="digGrid" id="dgGrid"></div><div class="mgHint" id="dgInfo">Tap the sand to dig · ${S.shovels} digs before the tide turns</div>`;
+    const quit = el('button', 'ghost mgFlee', 'BACK TO SHIP'); quit.onclick = () => end('gaveup'); root.appendChild(quit);
+    const grid = $('dgGrid'); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const mk = m.marks.find((q) => q.c[0] === x && q.c[1] === y); const c = el('button', 'digCell' + (mk ? ' mark' : ''), mk ? mk.icon : ''); if (!mk) c.onclick = () => dig1(x, y, c); grid.appendChild(c); }
+    function dig1(x, y, c) { if (S.phase !== 'dig' || c.classList.contains('dug')) return; c.classList.add('dug'); S.shovels--; sfx.step && sfx.step(); const d = Math.abs(m.cell[0] - x) + Math.abs(m.cell[1] - y);
+      if (d === 0) { c.textContent = m.kind === 'relic' ? '🗝' : '💰'; c.classList.add('gold'); end('found'); return; }
+      c.textContent = d === 1 ? '🔥' : d === 2 ? '♨' : '❄'; c.classList.add(d === 1 ? 'hot' : d === 2 ? 'warm' : 'cold'); banner(d === 1 ? 'HOT!' : d === 2 ? 'WARM' : 'COLD', d === 1 ? '#ff8a3a' : d === 2 ? '#ffd24a' : '#9fd6ff');
+      S.wrong++; if (S.wrong >= 3 && Math.random() < (o.risk ?? 0.15)) { end('guardian'); return; }
+      if (S.shovels <= 0) { end('gaveup'); return; } $('dgInfo').textContent = S.shovels + ' digs before the tide turns'; }
+    function end(result) { if (S.ended) return; S.ended = true; S.phase = 'over'; S.t = 0; S.result = result;
+      banner(result === 'found' ? (m.kind === 'relic' ? "DRAUGR'S BANE!" : 'TREASURE!') : result === 'guardian' ? 'SOMETHING STIRS…' : 'THE TIDE TURNS', result === 'found' ? '#7dff3a' : result === 'guardian' ? '#ff5a3a' : '#c8c8c8'); (result === 'found' ? sfx.pickup : sfx.hurt)(); }
+    cur = { update(dt) { S.t += dt; if (S.phase === 'over' && S.t > 1.3) { close(); done({ result: S.result }); } } };
+  }
+  return { battle, fish, salvage, dig, update(dt) { if (cur) cur.update(dt); }, get active() { return !!cur; }, close };
 }

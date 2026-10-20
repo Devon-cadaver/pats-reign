@@ -62,6 +62,8 @@
       <p><b>⚓ Upgrade.</b> Dock at a harbour to sell fish, repair, and buy shields, iron plates, ballistas, fire pots, sails and a bigger ship.</p>
       <p><b>⚡ Weather.</b> In storms, sail into a blue lightning ring to catch the bolt: Thor's Fury doubles your damage for a while. Turn your bow into rogue waves. Keep clear of waterspouts and tornadoes.</p>
       <p><b>🌀 Sea events.</b> Out at sea anything can happen: a maelstrom that drags you round and in (full sail to break free, or dive in for the gold it swallowed), a serpent bursting up beside the ship, a raider fleet hunting you (sink them all for their war chest), a treasure knarr to run down and board, and on some Frost Sea nights the northern lights: sail into the Bifröst to mend your hull and fill your sails.</p>
+      <p><b>🪝 Boarding.</b> Buy Grappling Hooks at a harbour. In a ship battle, once her hull is below 40%, tap BOARD HER: throw the hooks onto her rail (two must hold), then strike where their guard opens. Win and choose: plunder her hold, or claim her and sail or sell her at your harbour. Lose too many crew and you are thrown back. The ghost ship can only be boarded at night, with Grappling Hooks III and Draugr's Bane.</p>
+      <p><b>📜 Treasure.</b> Wrecks, raiders and treasure knarrs sometimes give a map with an ✕ on an island. Sail there, tap LAND and dig where the clue says; each hole tells you hot, warm or cold. Dig too wildly and something may wake. A ghost ship carries a map scratched on bone.</p>
       <p><b>☠ Sinking.</b> Half your cargo goes down with your wreck. Sail back to the ☠ on the map and SALVAGE it to get it all back, or pay a harbour salvage crew to raise it. Your upgrades are never lost.</p>
       <p><b>💾 Save codes.</b> Your voyage saves in this browser. Tap SAVE CODE (title screen or pause menu) for a code you can keep, email to yourself, or load on another device.</p>
       <p><b>👑 Reign.</b> Slay the three legends, the Kraken, Jormungandr and the Elder One, to rule the sea.</p>
@@ -75,6 +77,7 @@
     <div id="hbList"></div>
     <button id="hbSail">SET SAIL</button>
   </div>
+  <div id="prize" class="screen hidden"><h2>⚔ PRIZE! ⚔</h2><p id="prizeText"></p><button id="prizePlunder">PLUNDER HER HOLD</button><button id="prizeClaim" class="ghost">CLAIM HER</button></div>
   <div id="chart" class="screen hidden"><h2>SEA CHART</h2><p class="small">Pinch to zoom, drag to look around, tap to set your course.</p><canvas id="chartCv"></canvas><button id="chartClose" class="ghost">CLOSE</button></div>
   <div id="paused" class="screen hidden"><h2>PAUSED</h2><p id="pauseText" class="small"></p><button id="resumeBtn">RESUME</button><button id="pauseCode" class="ghost">💾 SAVE CODE</button><button id="saveQuit" class="ghost">SAVE &amp; QUIT TO TITLE</button></div>
   <div id="sunk" class="screen hidden"><h1>VALHALLA<br>CALLS</h1><p id="sunkText"></p><button id="sunkBtn">RISE AGAIN</button></div>

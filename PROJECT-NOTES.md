@@ -1,6 +1,6 @@
 # Pats Reign: project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.4.5. Where older notes or memory
+READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.5.0. Where older notes or memory
 disagree with this file, this file wins.
 
 ## Where things are
@@ -36,7 +36,45 @@ disagree with this file, this file wins.
   only touchable on the wheel itself; corner minimap still sets a course on tap (the big chart is the same map,
   bigger and zoomable); v0.3.0: more random sea events (maelstrom, serpent ambush, raider fleet, treasure ship,
   Frost Sea aurora buff), Dead City-style save codes, and sinking leaves a wreck you can salvage (Sean chose "cargo
-  only": upgrades are never lost); v0.4.0: monster redesigns from Sean's roster notes (see Monsters below).
+  only": upgrades are never lost); v0.4.0: monster redesigns from Sean's roster notes (see Monsters below); v0.4.1-0.4.4:
+  half-wheel helm + sail telegraph, phone and tablet layouts, home-screen app, battle cues by the action, iPad top inset;
+  v0.4.5: tornadoes lift and fling, vortex sizes, STOP after a win; v0.5.0: boarding, prize ships, treasure maps and
+  digs, the ghost ship and Draugr's Bane, the HELM camera.
+
+## v0.5.0: boarding, prize ships, treasure maps, the ghost ship, the HELM view (Sean: "go in the order you feel is best")
+- Grappling Hooks: UPG.hooks (3 levels, capped at ship tier + 1 like every upgrade). HOOK_NEED(v): ship size 0-1 needs I,
+  2-3 needs II, 4 (Drakkar) needs III; the ghost ship needs III + Draugr's Bane + night. boardInfo(mon) returns null (can
+  board) or the reason shown on a disabled button ('NEEDS GRAPPLING HOOKS', 'ONLY AT NIGHT', ...); undefined = not a ship.
+- Boarding (src/minigames.js battle): when foe.naval and her hull <= 40%, a BOARD HER button sits beside FIRE. Phases:
+  grapple (needle over the rail zone; zone 0.1 + 0.03 x hooks wide; 2 + hooks throws; 2 must hold; misses = arrow damage),
+  clash (prompts L/R/U like dodging; hit kills ceil(0.3 x your crew + 1), miss loses ceil(0.22 x theirs + 1) crew and
+  5% hull, ghost 8%; win when their crew is 0), repel (your crew <= 30%: 12% hull, back to their attack, no second try;
+  repelled by draugr = cursed). Crews: yours = SHIP_TIERS crew + 2 x oars; theirs = SHIP_TIERS[v].crew, ghost 25.
+  Result 'boarded' -> main prizeChoice(mon) (state 'prize', screen #prize, world paused).
+- Prize choice: PLUNDER (killMon rewards + a big extra haul, 45% map) or CLAIM (P.prizes.push({ tier, skin }), max 3,
+  the ship is removed, counts as a kill / fleet loss). Skins: 'pats', a raider palette name, 'ghost', 'treasure'
+  (mon.skinKey from spawnMon; palOf(skin) -> palette; rebuildShip uses palOf(P.skin)). Harbour shipyard cards
+  ("Moored here: a <ship>"): SAIL HER swaps your ship and the moored one (P.tier, P.skin; upgrades kept), SELL gives
+  shipValue = [70, 220, 480, 950, 1800][tier] x3 ghost / x2 treasure. Building a new ship resets the skin to Pat's.
+  Ghost hull perk: at night monsters see you at half range (sightRange).
+- Treasure maps (P.maps, max 3): giveMap(kind) picks a non-harbour island (R >= 7, not a volcano) about 320 away, a landing
+  spot 9 off its coast in open water, a 5x4 beach grid with a landmark (LANDMARK per sea: lone pine / ice rock / black
+  rock / standing stone / leaning palm), a decoy (bone / anchor / shell) and the chest cell; the clue is exact ("From the
+  leaning palm, walk 3 paces west and 1 pace north"). ✕ drawn on the minimap and chart (purple for the relic map). Drops:
+  wreck salvage 30%, raider kill 12%, treasure knarr kill 60%, plunder +45%; sinking a ghost ship always gives the bone
+  map (kind 'relic', Mist Sea) until you hold Draugr's Bane.
+- LAND (context button within 14 + L x 0.3 of the landing spot, slow) -> startDig -> minis.dig: 6 digs, each hole says
+  hot (1 away) / warm (2) / cold; after 3 wrong holes each further one risks a guardian (13%, Mist 20%): two crabs at
+  your ship's level and a battle. Found: gold/iron/timber x (tier + 1), or P.relics.bane for the relic map. Gave up:
+  the map stays.
+- Curse: boat.curse 60 s, -0.2 defence, shown in the HUD buff line.
+- HELM view: the view button cycles TOP -> CHASE -> HELM. HELM puts the camera at the steering place (body-local
+  (0.28 B, deckY + 2.2 + 0.04 L, -0.36 L)) looking down the deck to the bow, rocking with the ship; fov 66; the sail
+  goes 35% opaque so it does not block the way ahead.
+- Save adds prizes, maps, relics, skin (and up.hooks). Test hooks: __pr.giveMap, prizeChoice, startDig, boardInfo,
+  startAir, liftK, spouts, pods.
+- Not done yet / ideas: roster page does not show the new ships' skins or the dig; on-foot island exploration (kept as
+  the landing-party dig on purpose); more relics; ship names.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
@@ -112,7 +150,7 @@ disagree with this file, this file wins.
   zoom to 8x, drag to pan, tap to set). Setting a course raises the sail if it was down. Hands off the wheel = the
   helmsman turns it toward the mark and around land (`steerAround`). Arriving furls the sails.
 - FIRE (spears, or ballista once bought) auto-aims; context button: DOCK / FIGHT / SALVAGE / FISH / SLOW.
-- Pinch or mouse wheel zooms the sea view; TOP / CHASE camera button. Keyboard: A/D wheel, W/S sails, space fire.
+- Pinch or mouse wheel zooms the sea view; view button cycles TOP / CHASE / HELM (captain's eye, v0.5.0). Keyboard: A/D wheel, W/S sails, space fire.
 - HUD: hull bar, timber/iron/gold/fish, ship name, sea, weather, Thor timer; compass top-right once bought.
 
 ## Rules as built

@@ -49,6 +49,7 @@ const UPG = {
   oars: { name: 'Oars & Crew', icon: '🚣', max: 3, desc: ['More rowers', 'Strong rowers', 'Berserker rowers'], eff: 'Faster turns and acceleration', cost: [[25, 5, 40], [50, 20, 120], [80, 50, 280]] },
   lights: { name: 'Lanterns', icon: '🏮', max: 3, desc: ['A stern lantern', 'Bow and mast lanterns', 'Great iron fire braziers'], eff: 'Light the sea around you at night and see further', cost: [[10, 10, 40], [20, 25, 110], [40, 60, 260]] },
   compass: { name: 'Compass', icon: '🧭', max: 2, desc: ['A lodestone compass shows which way you face', 'A Viking sunstone also points to the nearest harbour, even in fog'], eff: '', cost: [[5, 10, 35], [10, 25, 120]] },
+  hooks: { name: 'Grappling Hooks', icon: '🪝', max: 3, desc: ['Iron grappling hooks: board a Faering or a Karvi', 'Barbed hooks and boarding planks: board a Snekkja or a Skeid', 'Rune-carved hooks: board anything, even a Drakkar'], eff: 'Board a ship in battle once her hull is below 40%', cost: [[20, 25, 70], [40, 70, 200], [80, 150, 450]] },
   nets: { name: 'Nets', icon: '🕸', max: 3, desc: ['Rope nets', 'Wide nets', 'Iron-weighted nets'], eff: 'Bigger catch box, bigger catches', cost: [[20, 5, 30], [40, 15, 90], [60, 40, 200]] },
 };
 const TIER_COST = [null, [60, 20, 90], [150, 70, 250], [320, 160, 560], [650, 330, 1300]];
@@ -63,17 +64,17 @@ const VBIAS = { frost: { 'serpent:5': 5, 'leviathan:1': 3, 'megalodon:0': 2, 'oc
 const REGION_BIAS = { frost: { serpent: 2, leviathan: 2, crab: 0.5 }, storm: { eel: 3, jelly: 2, octopus: 1.5 }, mist: { angler: 3, octopus: 1.5, ghost: 3, raider: 1.5 }, warm: { shark: 2, crab: 3, jelly: 1.5 }, home: { shark: 1.5, jelly: 1.5 } };
 
 // ---------- player ----------
-const P = { tier: 0, up: { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 0, oars: 0, nets: 0, lights: 0, compass: 0 }, res: { w: 20, i: 5, g: 40, f: 0 }, hp: 100, legends: {}, kills: 0, home: 0, won: false, tod: 0.16, wreck: null };
+const P = { tier: 0, up: { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 0, oars: 0, nets: 0, lights: 0, compass: 0, hooks: 0 }, res: { w: 20, i: 5, g: 40, f: 0 }, hp: 100, legends: {}, kills: 0, home: 0, won: false, tod: 0.16, wreck: null, prizes: [], maps: [], relics: {}, skin: 'pats' };
 const boat = { grace: 0, x: 0, z: -20, yaw: Math.PI, v: 0, want: Math.PI, thr: 0, wp: null, fireCd: 0, thor: 0, boost: 0, spin: 0, shake: 0, hitCd: 0, y: 0, pitch: 0, roll: 0 };
 const T = () => SHIP_TIERS[P.tier];
 const maxHp = () => Math.round(100 * Math.pow(1.75, P.tier) * (1 + 0.25 * P.up.armor));
 const topSpeed = () => T().speed * (1 + 0.1 * P.up.sail) * (boat.boost > 0 ? 1.35 : 1) * (boat.bifrost > 0 ? 1.25 : 1) * (boat.pod ? 1.1 : 1);
 const turnRate = () => T().turn * (1 + 0.14 * P.up.oars);
-const defense = () => Math.min(0.85, 0.12 * P.up.shields + 0.08 * P.up.armor + (boat.thor > 0 ? 0.3 : 0));
+const defense = () => clamp(0.12 * P.up.shields + 0.08 * P.up.armor + (boat.thor > 0 ? 0.3 : 0) - (boat.curse > 0 ? 0.2 : 0), 0, 0.85);
 const attack = () => 12 * Math.pow(1.65, P.tier) * (1 + 0.3 * P.up.ballista);
 const fireRange = () => (P.up.ballista ? 24 + 6 * P.up.ballista : 16) + P.tier * 2;
 let ship = null;
-function rebuildShip() { if (ship) scene.remove(ship.g); ship = buildShip(P.tier, P.up, PLAYER_PAL, 7); scene.add(ship.g); ship.g.position.set(boat.x, 0, boat.z); hud(); }
+function rebuildShip() { if (ship) scene.remove(ship.g); ship = buildShip(P.tier, P.up, palOf(P.skin), 7); scene.add(ship.g); ship.g.position.set(boat.x, 0, boat.z); hud(); }
 
 // ---------- state ----------
 let state = 'title', time = 0, zoom = 1, viewMode = 'top', camYaw = Math.PI, camPos = new THREE.Vector3(0, 40, 40), camTgt = new THREE.Vector3();
@@ -159,13 +160,13 @@ function spawnTable(region, night) { const out = [], tier = P.tier, bias = REGIO
 function spawnMon(e, x, z, o = {}) {
   let m, size, top, naval = false;
   if (e.type === 'raider' || e.type === 'ghost') { const pal = e.type === 'ghost' ? GHOST_PAL : o.pal || RAIDER_PALS[(Math.random() * RAIDER_PALS.length) | 0], arm = !o.merchant; const lvl = arm ? Math.min(3, e.v) : 0; const s = buildShip(e.v, { shields: lvl, armor: arm && e.v > 2 ? 1 : 0, ballista: arm && e.v > 1 ? 1 : 0, fire: 0, ram: 0, sail: e.v }, pal, (Math.random() * 999) | 0); if (o.merchant) addCargo(s);
-    m = { g: s.g, anim: (dt, st) => s.anim(dt, { speed: st.speed * s.t.speed, time, night: isNight() }), name: pal.name, ship: s }; size = s.len * 0.5; top = s.mastTop + 1; naval = true; }
+    m = { g: s.g, anim: (dt, st) => s.anim(dt, { speed: st.speed * s.t.speed, time, night: isNight() }), name: pal.name, ship: s, skinKey: e.type === 'ghost' ? 'ghost' : pal === TREASURE_PAL ? 'treasure' : pal.name }; size = s.len * 0.5; top = s.mastTop + 1; naval = true; }
   else { m = makeMonster(e.type, e.v, o.scale || 1); size = m.size; top = m.top; }
   m.g.position.set(x, 0, z); scene.add(m.g);
   const lv = e.lv, hpMax = Math.round(45 * Math.pow(1.65, lv) * (o.boss ? 0.8 : 1));
   const tag = document.createElement('div'); tag.className = 'tag'; $('tags').appendChild(tag);
   const mon = { e, m, g: m.g, type: e.type, lv, hp: hpMax, maxHp: hpMax, dmg: Math.round(9 * Math.pow(1.5, lv)), speed: (MSPEED[e.type] || (naval ? SHIP_TIERS[e.v].speed * 0.85 : 8)), size, top, naval, boss: !!o.boss, lair: o.lair || null,
-    giant: !!m.giant, x, z, yaw: Math.random() * 6.28, state: o.boss ? 'rise' : 'wander', t: 0, wanderT: 0, att: 0, attT: -1, dive: o.boss ? 1 : 0, rise: o.boss ? 0 : 1, stun: 0, tag, name: m.name || SPECIES[e.type]?.variants[e.v]?.name || 'Monster', shotT: rnd(2, 4), dead: 0 };
+    giant: !!m.giant, skinKey: m.skinKey, x, z, yaw: Math.random() * 6.28, state: o.boss ? 'rise' : 'wander', t: 0, wanderT: 0, att: 0, attT: -1, dive: o.boss ? 1 : 0, rise: o.boss ? 0 : 1, stun: 0, tag, name: m.name || SPECIES[e.type]?.variants[e.v]?.name || 'Monster', shotT: rnd(2, 4), dead: 0 };
   mon.passive = e.type === 'jelly';
   mons.push(mon); return mon; }
 function removeMon(mon) { scene.remove(mon.g); mon.tag.remove(); const i = mons.indexOf(mon); if (i >= 0) mons.splice(i, 1); }
@@ -176,7 +177,7 @@ function updateSpawns(dt) { spawnT -= dt; if (spawnT > 0) return; spawnT = 1.5;
   const table = spawnTable(world.regionAt(x, z), isNight()); if (!table.length) return; let sum = table.reduce((s, e) => s + e.w, 0), pick = Math.random() * sum; let e = table[0]; for (const t of table) { pick -= t.w; if (pick <= 0) { e = t; break; } }
   if (e.type === 'jelly') { for (let k = 0; k < 3; k++) spawnMon(e, x + rnd(-8, 8), z + rnd(-8, 8)); } else spawnMon(e, x, z); }
 function isNight() { return P.tod > 0.68 && P.tod < 0.97; }
-function sightRange(mon) { let r = 34 + mon.lv * 6; if (wx.type === 'fog') r *= 0.45; if (isNight()) r *= 0.8; return r; }
+function sightRange(mon) { let r = 34 + mon.lv * 6; if (wx.type === 'fog') r *= 0.45; if (isNight()) r *= P.skin === 'ghost' ? 0.5 : 0.8; return r; }
 function updateMons(dt) {
   for (const mon of [...mons]) {
     const st = mon.stState || (mon.stState = { t: 0, speed: 0, attack: 0, dive: 0, hurt: 0, rise: 1 }); st.t += dt;
@@ -219,6 +220,7 @@ function enemyArrows(mon) { for (let k = 0; k < 4; k++) setTimeout(() => { if (s
 function killMon(mon) { mon.dead = 0.01; mon.tag.remove(); P.kills++; const lv = mon.lv, r = mon.naval ? { w: Math.round(12 * Math.pow(1.6, lv)), i: Math.round(3 + lv * 3), g: Math.round(16 * Math.pow(1.6, lv)) } : { i: Math.round(1 + lv * 2.5), g: Math.round(12 * Math.pow(1.6, lv)) };
   if (mon.type === 'jelly') { r.i = 0; r.g = Math.round(r.g * 0.4); } if (mon.treasure) { r.g *= 3; r.i = Math.round(r.i * 1.5); say('<b>💰 The treasure is yours!</b>', 3.5); } if (mon.ambush) r.g = Math.round(r.g * 1.5);
   reward(r, mon.x, mon.top + 1, mon.z); foam.splash(mon.x, mon.z, 2); if (mon.fleet) fleetDown(mon.fleet);
+  if (mon.type === 'ghost' && !P.relics.bane && !P.maps.some((m) => m.kind === 'relic')) setTimeout(() => giveMap('relic'), 1500); else if (mon.naval && Math.random() < (mon.treasure ? 0.6 : 0.12)) setTimeout(() => giveMap(), 1600);
   if (mon.boss) { P.legends[mon.lair] = true; world.lairs.find((l) => l.key === mon.lair).beaten = true; say('<b>' + mon.name.toUpperCase() + ' IS SLAIN!</b> Legends beaten: ' + Object.keys(P.legends).length + ' / 3', 5); sfx.horn(); if (Object.keys(P.legends).length >= 3 && !P.won) setTimeout(winGame, 2500); save(); } }
 
 // ---------- projectiles (spears, bolts, enemy arrows) ----------
@@ -244,10 +246,13 @@ function startBattle(mon, firstStrike) {
   $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy');
   const foe = { name: mon.name, lvShow: Math.round(mon.lv) + 1, lv: Math.round(mon.lv * 10) / 10, hp: mon.hp, maxHp: mon.maxHp, dmg: mon.dmg, naval: mon.naval, boss: mon.boss, attacks: mon.boss ? 3 : mon.lv >= 3 ? 2 : 1, attackNames: ATK[mon.type] };
   const you = { hp: P.hp, maxHp: maxHp(), def: defense(), atk: attack(), zone: 0.15 + P.up.ballista * 0.04, fire: P.up.fire ? P.up.fire + 1 : 0, thor: boat.thor > 0, shots: 3, weapon: P.up.ballista ? 'BALLISTA' : 'SPEARS' };
+  Object.assign(foe, { crew: mon.naval ? (mon.type === 'ghost' ? 25 : SHIP_TIERS[mon.e.v].crew) : 0, ghost: mon.type === 'ghost', boardBlock: boardInfo(mon) }); Object.assign(you, { hooks: P.up.hooks, crew: T().crew + 2 * P.up.oars });
   battle.foe = foe; battle.you = you;
   minis.battle({ foe, you, youName: T().name, firstStrike, intro: mon.boss ? mon.name.toUpperCase() + '!' : mon.treasure ? 'BOARD HER!' : mon.ambush ? 'AMBUSH!' : mon.fleet ? 'FLEET BATTLE!' : undefined }, (res) => {
     P.hp = Math.max(0, you.hp); mon.hp = foe.hp; setBattle(false); boat.grace = 3.5; $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); const b = battle; battle = null; hud();
     if (res.result === 'win') { killMon(mon); setThrottle(0, true); } // stop after a win so the kill is right beside you
+    else if (res.result === 'boarded') { setThrottle(0, true); prizeChoice(mon); }
+    if (res.cursed) { boat.curse = 60; setTimeout(() => say('☠ The draugr curse you: your defence is weakened for 60 s.', 4), 400); }
     else if (res.result === 'flee') { mon.stun = 7; boat.boost = 3.5; boat.v = topSpeed(); setThrottle(1, true); say('You row hard and break away!'); }
     if (res.result === 'sunk' || P.hp <= 0) { sink(); return; } void b; });
 }
@@ -282,10 +287,11 @@ function actionContext() { if (battle || fishing) return null; const v = boat.v;
   let nearM = null, nd = 1e9; for (const mon of mons) { if (mon.dead || mon.rise < 1 || mon.type === 'jelly') continue; const d = Math.hypot(mon.x - boat.x, mon.z - boat.z); if (d < 22 + mon.size && d < nd) { nd = d; nearM = mon; } } if (nearM) return { kind: 'fight', mon: nearM, icon: '⚔', label: 'FIGHT' };
   if (P.wreck && Math.hypot(P.wreck.x - boat.x, P.wreck.z - boat.z) < 14 + T().L * 0.3) return v < 3.5 ? { kind: 'salvage', w: 'mine', icon: '☠', label: 'SALVAGE' } : { kind: 'slow', icon: '☠', label: 'SLOW' };
   for (const w of world.wrecks) if (!w.looted && Math.hypot(w.x - boat.x, w.z - boat.z) < 14 + T().L * 0.3) return v < 3.5 ? { kind: 'salvage', w, icon: '🪝', label: 'SALVAGE' } : { kind: 'slow', icon: '🪝', label: 'SLOW' };
+  for (const m of P.maps) if (Math.hypot(m.lx - boat.x, m.lz - boat.z) < 14 + T().L * 0.3) return v < 3.5 ? { kind: 'land', m, icon: '⛏', label: 'LAND' } : { kind: 'slow', icon: '⛏', label: 'SLOW' };
   for (const s of spots) if (Math.hypot(s.x - boat.x, s.z - boat.z) < 9 + T().L * 0.35) return v < 3.5 ? { kind: 'fish', s, icon: s.kind === 'treasure' ? '💰' : s.kind === 'flotsam' ? '📦' : '🎣', label: 'FISH' } : { kind: 'slow', icon: '🎣', label: 'SLOW' };
   return null; }
 let ctx = null;
-function doAction() { if (!ctx || state !== 'play') return; if (ctx.kind === 'dock') openHarbor(ctx.h); else if (ctx.kind === 'fight') startBattle(ctx.mon, true); else if (ctx.kind === 'fish') startFishing(ctx.s); else if (ctx.kind === 'salvage') startSalvage(ctx.w); else if (ctx.kind === 'slow') say('Tap STOP or ROW to slow down first.'); }
+function doAction() { if (!ctx || state !== 'play') return; if (ctx.kind === 'dock') openHarbor(ctx.h); else if (ctx.kind === 'fight') startBattle(ctx.mon, true); else if (ctx.kind === 'fish') startFishing(ctx.s); else if (ctx.kind === 'salvage') startSalvage(ctx.w); else if (ctx.kind === 'land') startDig(ctx.m); else if (ctx.kind === 'slow') say('Tap STOP or ROW to slow down first.'); }
 const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(0, 0, 0), V(0, 0, 0)]), new THREE.LineBasicMaterial({ color: 0xf2e6c8 })); line.visible = false; scene.add(line);
 function startFishing(s) { fishing = { s }; boat.wp = null; $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy'); line.visible = true;
   minis.fish({ kind: s.kind, nets: P.up.nets, tier: P.tier, biteChance: 0.07 }, (res) => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); line.visible = false; fishing = null; boat.grace = 2.5;
@@ -297,7 +303,7 @@ function fishCast() { if (!fishing) return; foam.splash(fishing.s.x, fishing.s.z
 function startSalvage(w) { const mine = w === 'mine'; if (mine) w = P.wreck; if (!w) return; fishing = { s: w }; $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy');
   minis.salvage({ tier: P.tier }, (res) => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); fishing = null;
     if (mine) { const frac = res.result === 'done' ? 1 : clamp(res.frac || 0, 0, 1) * 0.8; if (P.wreck && frac > 0.05) { takeWreck(frac, w.x, w.z); say(P.wreck ? 'You raise part of your cargo. The rest still lies below.' : 'You raise all the cargo from your wreck! ☠', 3.5); } return; }
-    const k = (1 + P.tier * 0.6) * (res.frac || 0); if (res.result !== 'stop' || res.frac > 0.3) { reward({ w: Math.round(rnd(10, 20) * k), i: Math.round(rnd(4, 10) * k), g: Math.round(rnd(20, 45) * k) }, w.x, 3, w.z); w.looted = time + 480; } }); }
+    const k = (1 + P.tier * 0.6) * (res.frac || 0); if (res.result !== 'stop' || res.frac > 0.3) { reward({ w: Math.round(rnd(10, 20) * k), i: Math.round(rnd(4, 10) * k), g: Math.round(rnd(20, 45) * k) }, w.x, 3, w.z); w.looted = time + 480; if (Math.random() < 0.3) setTimeout(() => giveMap(), 1200); } }); }
 
 // ---------- weather: rain, storms with lightning to catch, fog, rogue waves, waterspouts, sea tornadoes ----------
 const WXNAME = { clear: '', calm: 'Calm', rain: '🌧 Rain', storm: '⛈ Storm', fog: '🌫 Fog', spout: '💧 Waterspouts', tornado: '🌪 Sea tornado', rogue: '🌊 Rogue waves' };
@@ -496,6 +502,51 @@ function updatePods(dt) { podT -= dt; if (podT <= 0) { podT = rnd(40, 75); if (p
     if (far === pod.members.length) { for (const Mb of pod.members) scene.remove(Mb.m.g); pods.splice(p, 1); } }
   const was = boat.pod; boat.pod = riders >= 2 && boat.v > 3 && state === 'play'; if (boat.pod && !was && !boat.podSaid) { boat.podSaid = true; say('🐬 Porpoises ride your bow wave! +10% speed while they swim with you.', 3.5); } }
 
+// ---------- boarding prizes: plunder her hold, or claim her (a prize crew sails her to your home harbour) ----------
+const HOOK_NEED = (v) => (v <= 1 ? 1 : v <= 3 ? 2 : 3); // grappling hook level needed to board a ship of size v
+const palOf = (skin) => (skin === 'ghost' ? GHOST_PAL : skin === 'treasure' ? TREASURE_PAL : RAIDER_PALS.find((p) => p.name === skin) || PLAYER_PAL);
+const skinLabel = (skin) => (!skin || skin === 'pats' ? "Pat's colours" : skin === 'ghost' ? 'the Draugr ghost hull' : skin === 'treasure' ? 'a treasure knarr' : 'the ' + skin + ' colours');
+const shipValue = (pz) => Math.round([70, 220, 480, 950, 1800][pz.tier] * (pz.skin === 'ghost' ? 3 : pz.skin === 'treasure' ? 2 : 1));
+function boardInfo(mon) { if (!mon.naval) return undefined; const need = mon.type === 'ghost' ? 3 : HOOK_NEED(mon.e.v);
+  if (!P.up.hooks) return 'NEEDS GRAPPLING HOOKS'; if (P.up.hooks < need) return 'NEEDS HOOKS ' + ['', 'I', 'II', 'III'][need];
+  if (mon.type === 'ghost' && !P.relics.bane) return "HOOKS PASS THROUGH HER: FIND DRAUGR'S BANE"; if (mon.type === 'ghost' && !isNight()) return 'ONLY AT NIGHT'; return null; }
+function prizeChoice(mon) { state = 'prize'; const full = P.prizes.length >= 3, tn = SHIP_TIERS[mon.e.v].name, ghost = mon.type === 'ghost';
+  $('prizeText').innerHTML = (ghost ? 'The draugr fall back into the mist. The ghost ship is yours to take.' : 'The crew of the ' + mon.name + ' throw down their axes.') + '<br><br>Strip her hold and scuttle her, or put a prize crew aboard and send her to ' + homeHarbor().name + ' (sail her or sell her there).';
+  $('prizeClaim').disabled = full; $('prizeClaim').textContent = full ? 'CLAIM (your 3 moorings are full)' : 'CLAIM THE ' + (ghost ? 'GHOST SHIP' : tn.toUpperCase());
+  $('hud').classList.add('hidden'); $('prize').classList.remove('hidden'); sfx.horn();
+  const finish = () => { $('prize').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; hud(); save(); };
+  $('prizePlunder').onclick = () => { finish(); const lv = mon.lv; killMon(mon); reward({ w: Math.round(10 * Math.pow(1.6, lv)), i: Math.round(4 + lv * 4), g: Math.round(30 * Math.pow(1.6, lv) * (ghost ? 3 : 1)) }, mon.x, mon.top + 2, mon.z); say('You strip her hold to the keel and scuttle her!', 3.5); if (!ghost && Math.random() < 0.45) setTimeout(() => giveMap(), 1500); };
+  $('prizeClaim').onclick = () => { if (P.prizes.length >= 3) return; finish(); P.prizes.push({ tier: mon.e.v, skin: mon.skinKey || 'pats' }); P.kills++; if (mon.fleet) fleetDown(mon.fleet); removeMon(mon);
+    reward({ g: Math.round(10 * Math.pow(1.6, mon.lv)) }, boat.x, 4, boat.z); say((ghost ? 'A prize crew takes the ghost ship' : 'A prize crew takes the ' + tn) + ' to ' + homeHarbor().name + '. Sail her or sell her at the harbour.', 4.5); sfx.horn(); };
+}
+
+// ---------- treasure maps: an ✕ on a real island; land there and dig ----------
+const LANDMARK = { home: ['🌲', 'the lone pine'], frost: ['🧊', 'the ice rock'], storm: ['🪨', 'the black rock'], mist: ['🗿', 'the standing stone'], warm: ['🌴', 'the leaning palm'] };
+function giveMap(kind = null) { if (P.maps.length >= 3) { say('You find another treasure map, but your sea chest already holds three.', 3); return false; }
+  const relic = kind === 'relic', taken = new Set(P.maps.map((m) => m.isl)), isl0 = world.islands;
+  const cands = isl0.map((isl, i) => ({ isl, i, d: Math.hypot(isl.x - boat.x, isl.z - boat.z) })).filter(({ isl, i }) => isl.harbor == null && isl.R >= 7 && !isl.volcano && !taken.has(i) && (relic ? isl.region === 'mist' : true)).sort((a, b) => Math.abs(a.d - 320) - Math.abs(b.d - 320)).slice(0, 8);
+  for (let tries = 0; tries < 12 && cands.length; tries++) { const { isl, i } = cands[(Math.random() * cands.length) | 0];
+    for (let k = 0; k < 16; k++) { const a = Math.random() * 6.28, cr = isl.R * isl.shape(a), wa = a + isl.rot, lx = isl.x + Math.cos(wa) * (cr + 9), lz = isl.z + Math.sin(wa) * (cr + 9);
+      if (world.blockAt(lx, lz, 3) || Math.abs(lx) > HALF - 25 || Math.abs(lz) > HALF - 25) continue;
+      const ri = (n) => (Math.random() * n) | 0; let mk, cell, dec; do { mk = [ri(5), ri(4)]; cell = [ri(5), ri(4)]; dec = [ri(5), ri(4)]; } while (Math.abs(mk[0] - cell[0]) + Math.abs(mk[1] - cell[1]) < 2 || (dec[0] === mk[0] && dec[1] === mk[1]) || (dec[0] === cell[0] && dec[1] === cell[1]));
+      const [icon, name] = LANDMARK[isl.region] || LANDMARK.home, dx = cell[0] - mk[0], dy = cell[1] - mk[1], p = (n) => n + ' pace' + (n === 1 ? '' : 's'), parts = [];
+      if (dx) parts.push(p(Math.abs(dx)) + (dx > 0 ? ' east' : ' west')); if (dy) parts.push(p(Math.abs(dy)) + (dy > 0 ? ' south' : ' north'));
+      const clue = (relic ? 'Where the drowned king sleeps: from ' : 'From ') + name + ', walk ' + parts.join(' and ') + '.';
+      const m = { isl: i, lx, lz, kind: relic ? 'relic' : 'gold', region: isl.region, cell, clue, marks: [{ c: mk, icon }, { c: dec, icon: ['🦴', '⚓', '🐚'][ri(3)] }] };
+      P.maps.push(m); save(); sfx.coins();
+      say((relic ? '📜 A map scratched on bone!' : '📜 A treasure map!') + ' An ✕ marks an island in the ' + rname(isl.region) + ', ' + compassName(lx - boat.x, lz - boat.z) + ' of here. Sail to it and LAND.', 5);
+      return true; } }
+  return false; }
+function startDig(m) { fishing = { s: { x: m.lx, z: m.lz } }; boat.wp = null; $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy');
+  minis.dig({ map: m, risk: m.region === 'mist' ? 0.2 : 0.13 }, (res) => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); fishing = null; boat.grace = 2; const k = P.tier + 1;
+    if (res.result === 'found') { P.maps.splice(P.maps.indexOf(m), 1);
+      if (m.kind === 'relic') { P.relics.bane = true; reward({ g: 80 * k }, m.lx, 3, m.lz); say("🗝 DRAUGR'S BANE! With this rune-carved relic your grappling hooks can bite into a ghost ship (Grappling Hooks III, at night).", 6); sfx.horn(); }
+      else { reward({ w: Math.round(rnd(20, 40) * k), i: Math.round(rnd(8, 18) * k), g: Math.round(rnd(90, 180) * k) }, m.lx, 3, m.lz); say('💰 You dig up a chest of hacksilver and gold!', 4); }
+      save(); }
+    else if (res.result === 'guardian') { const v = clamp(Math.round(P.tier - 1), 0, 2); let first = null; for (let n = 0; n < 2; n++) { const a = Math.random() * 6.28, mon = spawnMon({ type: 'crab', v, lv: MLV.crab[v] }, m.lx + Math.sin(a) * 9, m.lz + Math.cos(a) * 9); mon.state = 'chase'; if (!first) first = mon; }
+      warn('🦀 Giant crabs burst out of the sand!', 3); if (first) startBattle(first, false); }
+    else say('The tide turns. The treasure stays buried, and your map still shows the way.', 3.5); }); }
+
 // ---------- harbours, upgrades ----------
 let atHarbor = null;
 function openHarbor(h) { state = 'harbor'; atHarbor = h; P.home = h.idx; boat.v = 0; boat.wp = null; $('hud').classList.add('hidden'); $('harbor').classList.remove('hidden'); $('hbName').textContent = h.name.toUpperCase();
@@ -505,7 +556,12 @@ const costHtml = (c) => [['🪵', c[0], P.res.w], ['⚙️', c[1], P.res.i], ['�
 function drawHarbor() { $('hbRes').innerHTML = `<span>🪵 ${P.res.w}</span><span>⚙️ ${P.res.i}</span><span>🪙 ${P.res.g}</span><span>❤️ ${Math.ceil(P.hp)}/${maxHp()}</span>`; const list = $('hbList'); list.innerHTML = '';
   const miss = maxHp() - P.hp; if (miss > 0.5) { const c = [Math.ceil(miss / 10), 0, Math.ceil(miss / 6)]; const d = document.createElement('div'); d.className = 'card'; d.innerHTML = `<div class="ic">🔨</div><div class="tx"><b>Repair the hull</b><div>${Math.ceil(miss)} damage to mend</div><div class="cost">${costHtml(c)}</div></div>`; const b = document.createElement('button'); b.textContent = 'REPAIR'; b.disabled = !can(c); b.onclick = () => { if (!can(c)) return; P.res.w -= c[0]; P.res.g -= c[2]; P.hp = maxHp(); sfx.pickup(); drawHarbor(); hud(); save(); }; d.appendChild(b); list.appendChild(d); }
   if (P.wreck) { const c = [0, 0, wreckCost()]; const d = document.createElement('div'); d.className = 'card'; d.innerHTML = `<div class="ic">☠</div><div class="tx"><b>Hire a salvage crew</b><div>They raise your wreck and bring back ${wreckSum(P.wreck.res)}</div><div class="cost">${costHtml(c)}</div></div>`; const b = document.createElement('button'); b.textContent = 'RAISE'; b.disabled = !can(c); b.onclick = () => { if (!can(c) || !P.wreck) return; P.res.g -= c[2]; const r = P.wreck.res; for (const k of ['w', 'i', 'g', 'f']) P.res[k] += r[k] || 0; P.wreck = null; placeWreck(); sfx.coins(); drawHarbor(); hud(); save(); }; d.appendChild(b); list.appendChild(d); }
-  if (P.tier < 4) { const c = TIER_COST[P.tier + 1], nt = SHIP_TIERS[P.tier + 1]; const d = document.createElement('div'); d.className = 'card ship'; d.innerHTML = `<div class="ic">🐉</div><div class="tx"><b>Build a ${nt.name}</b><div>Ship size ${P.tier + 2} of 5 · ${nt.crew} crew · hull ${Math.round(100 * Math.pow(1.75, P.tier + 1))} · stronger seas</div><div class="cost">${costHtml(c)}</div></div>`; const b = document.createElement('button'); b.textContent = 'BUILD'; b.disabled = !can(c); b.onclick = () => { if (!can(c)) return; P.res.w -= c[0]; P.res.i -= c[1]; P.res.g -= c[2]; P.tier++; P.hp = maxHp(); rebuildShip(); sfx.horn(); drawHarbor(); save(); }; d.appendChild(b); list.appendChild(d); }
+  P.prizes.forEach((pz, i) => { const t = SHIP_TIERS[pz.tier], val = shipValue(pz), d = document.createElement('div'); d.className = 'card';
+    d.innerHTML = `<div class="ic">${pz.skin === 'ghost' ? '👻' : pz.skin === 'treasure' ? '💰' : '⚓'}</div><div class="tx"><b>Moored here: a ${t.name}</b><div>In ${skinLabel(pz.skin)}. Sail her (your ${T().name} waits here in her place) or sell her.${pz.skin === 'ghost' ? ' Night monsters hardly see a ghost hull.' : ''}</div><div class="cost"><span>Sells for ${val}🪙</span></div></div>`;
+    const col = document.createElement('div'); col.className = 'btn2'; const b1 = document.createElement('button'); b1.textContent = 'SAIL HER'; b1.onclick = () => { const cur = { tier: P.tier, skin: P.skin }; P.prizes[i] = cur; P.tier = pz.tier; P.skin = pz.skin; P.hp = maxHp(); rebuildShip(); sfx.horn(); drawHarbor(); hud(); save(); };
+    const b2 = document.createElement('button'); b2.className = 'ghost'; b2.textContent = 'SELL'; b2.onclick = () => { P.res.g += val; P.prizes.splice(i, 1); sfx.coins(); drawHarbor(); hud(); save(); };
+    col.append(b1, b2); d.appendChild(col); list.appendChild(d); });
+  if (P.tier < 4) { const c = TIER_COST[P.tier + 1], nt = SHIP_TIERS[P.tier + 1]; const d = document.createElement('div'); d.className = 'card ship'; d.innerHTML = `<div class="ic">🐉</div><div class="tx"><b>Build a ${nt.name}</b><div>Ship size ${P.tier + 2} of 5 · ${nt.crew} crew · hull ${Math.round(100 * Math.pow(1.75, P.tier + 1))} · stronger seas</div><div class="cost">${costHtml(c)}</div></div>`; const b = document.createElement('button'); b.textContent = 'BUILD'; b.disabled = !can(c); b.onclick = () => { if (!can(c)) return; P.res.w -= c[0]; P.res.i -= c[1]; P.res.g -= c[2]; P.tier++; P.skin = 'pats'; P.hp = maxHp(); rebuildShip(); sfx.horn(); drawHarbor(); save(); }; d.appendChild(b); list.appendChild(d); }
   for (const [k, u] of Object.entries(UPG)) { const lv = P.up[k], d = document.createElement('div'); d.className = 'card'; const capped = lv >= u.max, locked = !capped && lv >= P.tier + 1, c = capped ? null : u.cost[lv];
     d.innerHTML = `<div class="ic">${u.icon}</div><div class="tx"><b>${u.name}</b><span class="pips">${'◆'.repeat(lv)}${'◇'.repeat(u.max - lv)}</span><div>${capped ? 'Fully upgraded' : u.desc[lv] + (u.eff ? ' · ' + u.eff : '')}</div><div class="cost">${capped ? '' : locked ? '<span class="no">Needs a bigger ship</span>' : costHtml(c)}</div></div>`;
     if (!capped) { const b = document.createElement('button'); b.textContent = 'BUY'; b.disabled = locked || !can(c); b.onclick = () => { if (locked || !can(c)) return; P.res.w -= c[0]; P.res.i -= c[1]; P.res.g -= c[2]; P.up[k]++; if (k === 'armor') P.hp += maxHp() - Math.round(maxHp() / (1 + 0.25 * P.up.armor) * (1 + 0.25 * (P.up.armor - 1))); P.hp = Math.min(P.hp, maxHp()); rebuildShip(); sfx.pickup(); drawHarbor(); save(); }; d.appendChild(b); }
@@ -529,8 +585,8 @@ function winGame() { P.won = true; state = 'won'; $('hud').classList.add('hidden
 $('wonBtn').onclick = () => { $('won').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; };
 const SAVE = 'pr_save';
 function homeHarbor() { return world.harbors.find((h) => h.idx === P.home) || world.harbors[0]; }
-function save() { try { localStorage.setItem(SAVE, JSON.stringify({ v: 1, tier: P.tier, up: P.up, res: P.res, hp: P.hp, legends: P.legends, kills: P.kills, home: P.home, won: P.won, tod: P.tod, x: boat.x, z: boat.z, yaw: boat.yaw, wreck: P.wreck })); } catch { /* ignore */ } }
-function load() { try { const s = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (!s || s.v !== 1) return false; Object.assign(P, { tier: s.tier, up: { ...P.up, ...s.up }, res: s.res, hp: s.hp, legends: s.legends || {}, kills: s.kills || 0, home: s.home || 0, won: !!s.won, tod: s.tod ?? 0.2, wreck: s.wreck && s.wreck.res ? s.wreck : null }); boat.x = s.x; boat.z = s.z; boat.yaw = s.yaw; for (const L of world.lairs) if (P.legends[L.key]) L.beaten = true; return true; } catch { return false; } }
+function save() { try { localStorage.setItem(SAVE, JSON.stringify({ v: 1, tier: P.tier, up: P.up, res: P.res, hp: P.hp, legends: P.legends, kills: P.kills, home: P.home, won: P.won, tod: P.tod, x: boat.x, z: boat.z, yaw: boat.yaw, wreck: P.wreck, prizes: P.prizes, maps: P.maps, relics: P.relics, skin: P.skin })); } catch { /* ignore */ } }
+function load() { try { const s = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (!s || s.v !== 1) return false; Object.assign(P, { tier: s.tier, up: { ...P.up, ...s.up }, res: s.res, hp: s.hp, legends: s.legends || {}, kills: s.kills || 0, home: s.home || 0, won: !!s.won, tod: s.tod ?? 0.2, wreck: s.wreck && s.wreck.res ? s.wreck : null, prizes: s.prizes || [], maps: s.maps || [], relics: s.relics || {}, skin: s.skin || 'pats' }); boat.x = s.x; boat.z = s.z; boat.yaw = s.yaw; for (const L of world.lairs) if (P.legends[L.key]) L.beaten = true; return true; } catch { return false; } }
 
 // ---------- minimap and chart ----------
 const mapEl = $('map'), mapCtx = mapEl.getContext('2d'), chartEl = $('chartCv'), chartCtx = chartEl.getContext('2d');
@@ -542,6 +598,7 @@ function drawMap(cv, g, full) { const dpr = Math.min(2, devicePixelRatio || 1), 
   for (const h of world.harbors) { const [x, y] = P2(h.dock.x, h.dock.z); g.fillText('⚓', x, y); if (full) { g.font = 'bold ' + 11 * dpr + 'px Georgia'; g.fillStyle = '#f2e6c8'; g.fillText(h.name, x, y + 14 * dpr); g.font = fs + 'px serif'; } }
   for (const L of world.lairs) { const [x, y] = P2(L.x, L.z); g.globalAlpha = L.beaten ? 0.4 : 1; g.fillText(L.beaten ? '✔' : L.icon, x, y); g.globalAlpha = 1; }
   for (const w of world.wrecks) { if (w.looted) continue; const [x, y] = P2(w.x, w.z); g.fillStyle = '#c8a070'; g.fillRect(x - 1.5 * dpr, y - 1.5 * dpr, 3 * dpr, 3 * dpr); }
+  g.font = 'bold ' + (full ? 20 : 13) * dpr + 'px Georgia'; for (const mp of P.maps) { const [x, y] = P2(mp.lx, mp.lz); g.fillStyle = '#1a0e06'; g.fillText('✕', x + 1 * dpr, y + 1 * dpr); g.fillStyle = mp.kind === 'relic' ? '#d08aff' : '#ff4a3a'; g.fillText('✕', x, y); } g.font = fs + 'px serif';
   const fog = wx.type === 'fog' && wx.k > 0.5; for (const s of spots) { const [x, y] = P2(s.x, s.z); g.fillStyle = s.kind === 'treasure' ? '#ffd24a' : s.kind === 'flotsam' ? '#c8a070' : '#bfe6ff'; g.beginPath(); g.arc(x, y, 1.8 * dpr, 0, 6.28); g.fill(); }
   for (const mon of mons) { if (mon.dead) continue; const d = Math.hypot(mon.x - boat.x, mon.z - boat.z); if (fog && d > 45 && !mon.boss) continue; const [x, y] = P2(mon.x, mon.z); g.fillStyle = mon.treasure ? '#ffd24a' : mon.fleet ? '#ff4a3a' : mon.naval ? '#ff9a3a' : danger(mon.lv); g.beginPath(); g.arc(x, y, (mon.boss ? 4 : mon.treasure ? 3.6 : 2.2) * dpr, 0, 6.28); g.fill(); }
   for (const s of spouts) { const [x, y] = P2(s.x, s.z); g.fillText('🌪', x, y); }
@@ -592,7 +649,7 @@ function updateBoat(dt) {
   else thr = 0;
   const r0 = helm.angle / HMAX, rudder = Math.sign(r0) * Math.pow(Math.abs(r0), 1.4), tr = turnRate() * (0.35 + 0.65 * Math.min(1, boat.v / (t.speed * 0.6))); boat.yaw += -rudder * tr * dt + boat.spin * dt; boat.spin *= 1 - dt * 1.2;
   boat.sailK = (boat.sailK ?? 0) + (clamp((thr - 0.3) / 0.45, 0, 1) - (boat.sailK ?? 0)) * Math.min(1, dt * 1.5);
-  const top = topSpeed() * (1 - (LOOK[wx.type] === 'storm' ? 0.15 * wx.k : 0)); const acc = 3.2 * (1 + 0.15 * P.up.oars); boat.v += clamp(thr * top - boat.v, -acc * 1.2 * dt, acc * dt); boat.boost = Math.max(0, boat.boost - dt); boat.thor = Math.max(0, boat.thor - dt);
+  const top = topSpeed() * (1 - (LOOK[wx.type] === 'storm' ? 0.15 * wx.k : 0)); const acc = 3.2 * (1 + 0.15 * P.up.oars); boat.v += clamp(thr * top - boat.v, -acc * 1.2 * dt, acc * dt); boat.boost = Math.max(0, boat.boost - dt); boat.thor = Math.max(0, boat.thor - dt); boat.curse = Math.max(0, (boat.curse || 0) - dt);
   if (boat.bifrost > 0) { boat.bifrost = Math.max(0, boat.bifrost - dt); if (!battle && P.hp < maxHp()) { P.hp = Math.min(maxHp(), P.hp + maxHp() * 0.02 * dt); boat.hudT = (boat.hudT || 0) - dt; if (boat.hudT <= 0) { boat.hudT = 0.25; hud(); } } } boat.grace = Math.max(0, boat.grace - dt);
   let nx = boat.x + Math.sin(boat.yaw) * boat.v * dt, nz = boat.z + Math.cos(boat.yaw) * boat.v * dt;
   const bl = world.blockAt(nx, nz, t.B * 0.5 + t.L * 0.18) || world.blockAt(nx + Math.sin(boat.yaw) * t.L * 0.4, nz + Math.cos(boat.yaw) * t.L * 0.4, t.B * 0.3);
@@ -618,7 +675,8 @@ function updateHulls() { const list = []; const push = (s, x, z, yaw) => { s.g.u
   if (ship && !boat.air) push(ship, boat.x, boat.z, boat.yaw); for (const mon of mons) if (mon.naval && !mon.dead && !mon.air && list.length < 6 && Math.hypot(mon.x - boat.x, mon.z - boat.z) < 150) push(mon.m.ship, mon.x, mon.z, mon.yaw); ocean.setHulls(list); }
 
 // ---------- camera ----------
-$('viewBtn').onclick = () => { viewMode = viewMode === 'top' ? 'chase' : 'top'; $('viewBtn').textContent = viewMode === 'top' ? 'TOP' : 'CHASE'; };
+// views: TOP (high), CHASE (behind), HELM (the captain's eye at the steering place on the stern; the sail goes see-through)
+$('viewBtn').onclick = () => { viewMode = viewMode === 'top' ? 'chase' : viewMode === 'chase' ? 'helm' : 'top'; $('viewBtn').textContent = viewMode.toUpperCase(); };
 function updateCamera(dt) { const t = T(); let tgt, dist, pitch;
   if (state === 'title') { const a = time * 0.06; tgt = V(boat.x, 2, boat.z); dist = t.L * 2.2 + 14; pitch = 0.28; camYaw = a; }
   else if (battle && battle.mon.giant) { // frame your ship against one of the giant's eyes (the kraken's eye is about a ship long)
@@ -628,7 +686,10 @@ function updateCamera(dt) { const t = T(); let tgt, dist, pitch;
   else { tgt = V(boat.x + Math.sin(boat.yaw) * boat.v * 0.6, boat.air ? boat.air.h * 0.85 : 0, boat.z + Math.cos(boat.yaw) * boat.v * 0.6); const W = (34 + t.L * 1.6) * (viewMode === 'top' ? 1 : 0.7); dist = (W / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * Math.min(camera.aspect, 1))) * 0.62 * zoom * (boat.air ? 1 + boat.air.h / 20 : 1); pitch = viewMode === 'top' ? 0.98 : 0.42; const wantYaw = viewMode === 'top' ? Math.PI : boat.yaw; camYaw += angDiff(wantYaw, camYaw) * Math.min(1, dt * (viewMode === 'top' ? 3 : 1.5)); }
   const off = !!(battle || fishing); if (off !== viewOff) { viewOff = off; applyView(); }
   if (fishing && !battle) { const s = fishing.s; tgt = V((boat.x + s.x) / 2, 0, (boat.z + s.z) / 2); dist = 26 + t.L * 1.4; pitch = 0.75; }
-  camTgt.lerp(tgt, Math.min(1, dt * 4)); const lx = Math.sin(camYaw), lz = Math.cos(camYaw); const want = V(camTgt.x - lx * Math.cos(pitch) * dist, Math.sin(pitch) * dist + 2, camTgt.z - lz * Math.cos(pitch) * dist); camPos.lerp(want, Math.min(1, dt * 3)); camera.position.copy(camPos); camera.lookAt(camTgt); }
+  camTgt.lerp(tgt, Math.min(1, dt * 4)); const lx = Math.sin(camYaw), lz = Math.cos(camYaw); const want = V(camTgt.x - lx * Math.cos(pitch) * dist, Math.sin(pitch) * dist + 2, camTgt.z - lz * Math.cos(pitch) * dist); camPos.lerp(want, Math.min(1, dt * 3)); camera.position.copy(camPos); camera.lookAt(camTgt);
+  const helmCam = viewMode === 'helm' && !battle && !fishing && state !== 'title' && ship; if (helmCam) { ship.g.updateMatrixWorld(true); const eye = ship.body.localToWorld(V(t.B * 0.28, ship.deckY + 2.2 + t.L * 0.04, -t.L * 0.36)), look = ship.body.localToWorld(V(t.B * 0.1, ship.deckY + 0.6, t.L * 3)); camPos.copy(eye); camTgt.copy(look); camera.position.copy(eye); camera.lookAt(look); camera.rotateZ(-boat.roll * 0.5); }
+  const fov = helmCam ? 66 : 50; if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
+  if (ship) { const op = helmCam ? 0.35 : 1; if (ship.sailMat.opacity !== op) { ship.sailMat.transparent = op < 1 || P.skin === 'ghost'; ship.sailMat.opacity = op; ship.sailMat.depthWrite = op === 1; ship.sailMat.needsUpdate = true; } } }
 
 // ---------- HUD buttons ----------
 $('fireBtn').onclick = (e) => { e.stopPropagation(); unlockAudio(); fire(); }; $('actBtn').onclick = (e) => { e.stopPropagation(); doAction(); };
@@ -636,7 +697,7 @@ $('pauseBtn').onclick = () => { if (state !== 'play' || battle || fishing) retur
 $('resumeBtn').onclick = () => { $('paused').classList.add('hidden'); state = 'play'; };
 $('saveQuit').onclick = () => { save(); $('paused').classList.add('hidden'); toTitle(); };
 $('howBtn').onclick = () => { $('title').classList.add('hidden'); $('how').classList.remove('hidden'); }; $('howBack').onclick = () => { $('how').classList.add('hidden'); $('title').classList.remove('hidden'); };
-function begin(cont) { unlockAudio(); startSaga(); if (!cont) { localStorage.removeItem(SAVE); Object.assign(P, { tier: 0, up: { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 0, oars: 0, nets: 0, lights: 0, compass: 0 }, res: { w: 20, i: 5, g: 40, f: 0 }, legends: {}, kills: 0, home: 0, won: false, tod: 0.16, wreck: null }); placeWreck(); P.hp = maxHp(); const h = world.harbors[0]; boat.x = h.dock.x + Math.cos(h.dir) * 12; boat.z = h.dock.z + Math.sin(h.dir) * 12; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); for (const L of world.lairs) L.beaten = false; }
+function begin(cont) { unlockAudio(); startSaga(); if (!cont) { localStorage.removeItem(SAVE); Object.assign(P, { tier: 0, up: { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 0, oars: 0, nets: 0, lights: 0, compass: 0, hooks: 0 }, res: { w: 20, i: 5, g: 40, f: 0 }, legends: {}, kills: 0, home: 0, won: false, tod: 0.16, wreck: null, prizes: [], maps: [], relics: {}, skin: 'pats' }); placeWreck(); P.hp = maxHp(); const h = world.harbors[0]; boat.x = h.dock.x + Math.cos(h.dir) * 12; boat.z = h.dock.z + Math.sin(h.dir) * 12; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); for (const L of world.lairs) L.beaten = false; }
   boat.v = 0; boat.wp = null; for (const m of [...mons]) removeMon(m); rebuildShip(); $('title').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; fsCtl.play(); hud();
   boat.throttle = 0; helm.angle = 0; drawThrottle(); helmDrawn = null; say(cont ? 'Back at sea. Skål! Tap ROW, HALF or FULL to get under way.' : 'Tap ROW, HALF or FULL to get under way, and swipe along the wheel to steer. Tap the sea or the map to set a course.', 5.5); camYaw = Math.PI; }
 const codes = initSaveCodes(); $('codeBtn').onclick = () => codes.open(); $('pauseCode').onclick = () => { save(); codes.open(); };
@@ -709,7 +770,7 @@ function tick(dt) { time += dt;
   if (state === 'play') { updateTags(dt); if ((mapFlip ^= 1)) drawMap(mapEl, mapCtx, false);
     ctx = actionContext(); const key = ctx ? ctx.kind + ctx.label : ''; if (key !== ctxKey) { ctxKey = key; const b = $('actBtn'); if (ctx) { b.classList.remove('hidden'); b.innerHTML = '<em>' + ctx.icon + '</em><small>' + ctx.label + '</small>'; b.style.borderColor = ctx.kind === 'fight' ? '#ff5a3a' : ctx.kind === 'slow' ? '#c8c8c8' : '#7dff3a'; } else b.classList.add('hidden'); }
     const wk = P.up.ballista ? 'b' : 's'; if (wk !== fireKey) { fireKey = wk; $('fireBtn').innerHTML = '<em>' + (P.up.ballista ? '🏹' : '🗡') + '</em><small>' + (P.up.ballista ? 'BALLISTA' : 'SPEARS') + '</small><i class="cd" id="fireCd"></i>'; } $('fireCd').style.height = (boat.fireCd > 0 ? clamp(boat.fireCd / (P.up.ballista ? 2 : 1.2), 0, 1) * 100 : 0) + '%';
-    $('region').textContent = rname(world.regionAt(boat.x, boat.z)) + (isNight() ? ' · 🌙' : ''); $('wxTxt').textContent = wx.k > 0.3 ? WXNAME[wx.type] : ''; $('buff').textContent = [boat.thor > 0 ? '⚡ Thor ' + Math.ceil(boat.thor) + 's' : '', boat.bifrost > 0 ? '🌈 Bifröst ' + Math.ceil(boat.bifrost) + 's' : ''].filter(Boolean).join(' · '); $('hurt').classList.toggle('thor', boat.thor > 0); }
+    $('region').textContent = rname(world.regionAt(boat.x, boat.z)) + (isNight() ? ' · 🌙' : ''); $('wxTxt').textContent = wx.k > 0.3 ? WXNAME[wx.type] : ''; $('buff').textContent = [boat.thor > 0 ? '⚡ Thor ' + Math.ceil(boat.thor) + 's' : '', boat.bifrost > 0 ? '🌈 Bifröst ' + Math.ceil(boat.bifrost) + 's' : '', boat.curse > 0 ? '☠ Cursed ' + Math.ceil(boat.curse) + 's' : ''].filter(Boolean).join(' · '); $('hurt').classList.toggle('thor', boat.thor > 0); }
   else for (const mon of mons) mon.tag.style.display = 'none';
   msgT -= dt; if (msgT <= 0) $('msg').style.opacity = 0; warnT -= dt; if (warnT <= 0) $('warn').innerHTML = '';
   renderer.render(scene, camera); }
@@ -717,4 +778,4 @@ function tick(dt) { time += dt;
 { const h = world.harbors[0]; boat.x = h.dock.x + Math.cos(h.dir) * 12; boat.z = h.dock.z + Math.sin(h.dir) * 12; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); }
 const hadSave = load(); if (!hadSave) P.hp = maxHp(); rebuildShip(); placeWreck(); toTitle(); env.snap(P.tod, null, world.regionWeights(boat.x, boat.z, {})); camTgt.set(boat.x, 0, boat.z);
 requestAnimationFrame(frame);
-window.__pr = { spouts, startAir, liftK, pods, spawnPod, EV, startEvent, aur, get wreck() { return P.wreck; }, sink, get chartView() { return chartView; }, step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); }, helm, setThrottle, set timeScale(v) { timeScale = v; }, dmgLog, P, boat, mons, spots, floats, world, ocean, wx, setWeather, spawnMon, startBattle, startFishing, openHarbor, fire, get state() { return state; }, set state(v) { state = v; }, get battle() { return battle; }, minis, MLV, killMon, landBolt, warnRing, spawnSpout, rebuildShip, save, load, camera, renderer, scene, get ship() { return ship; }, setCourse };
+window.__pr = { giveMap, prizeChoice, startDig, boardInfo, spouts, startAir, liftK, pods, spawnPod, EV, startEvent, aur, get wreck() { return P.wreck; }, sink, get chartView() { return chartView; }, step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); }, helm, setThrottle, set timeScale(v) { timeScale = v; }, dmgLog, P, boat, mons, spots, floats, world, ocean, wx, setWeather, spawnMon, startBattle, startFishing, openHarbor, fire, get state() { return state; }, set state(v) { state = v; }, get battle() { return battle; }, minis, MLV, killMon, landBolt, warnRing, spawnSpout, rebuildShip, save, load, camera, renderer, scene, get ship() { return ship; }, setCourse };
