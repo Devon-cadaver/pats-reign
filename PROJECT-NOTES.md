@@ -293,6 +293,21 @@ disagree with this file, this file wins.
   the serpent size. Legends in a fight have no floating name tag (their bar is at the top).
 - Tested: a Skeid that never dodged beat the 1,205-hull Jormungandr in ~40 s with 91 of 536 left.
 
+## v0.7.2: legend fights, part 3: the Elder One's ward
+- LEGEND_KIND elder -> 'elder' (elder section in main.js): your ship is held. Modes: ward (7.5 s, young 6; violet ward
+  sphere, ghost lights drift at your ship every 0.75 s (enraged 0.5, young 1.3), 0.35 x dmg on contact, one hit banishes
+  them), show (it lights a sequence of the four runes RUNES/RUNE_COL floating round your ship, 0.65 s each), input (tap
+  them in order or keys 1-4 within 3 + 1.1 s per rune; wrong or slow -> 0.8 x dmg lash and back to ward), open (4 s,
+  young 5; ward down, shots 0.3 x attack, PERFECT x1.6 in the first 0.8 s). The sequence grows by one each round (3 -> 6,
+  young 2 -> 4). Lift (from the open phase): your ship is dragged up in front of it (boat.dunk negative); after 1.2 s its
+  eye flashes open for 0.55 s (young 0.8) at a random moment: a shot landing in that window drops you (0.8 x attack to it),
+  one landing early or late tightens the grip (0.5 s less); else slam (1.6 x dmg) or, 35%, flung like a tornado.
+  elderEye(mon) gives the eye spot. Camera: behind your ship toward it, low (pitch 0.42).
+- Legend fights clear ordinary monsters within 90 and stop new spawns until they end; killMon only marks a legend slain
+  when the boss has a lair.
+- Tested: a Drakkar bot (perfect runes, Space every 0.27 s) after 90 s had the Elder at 2% and 472 of 938 hull left
+  (5 ward breaks, 5 lifts: 2 drops, 2 slams).
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster

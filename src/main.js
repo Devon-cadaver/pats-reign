@@ -139,6 +139,7 @@ const thrKeyOk = () => state === 'play' && !fishing && (!battle || !!battle.broa
 function thrKeyStep(dir) { if (!thrKeyOk()) return; const cur = boat.throttle || 0, next = dir > 0 ? THR_LV.find((l) => l > cur + 0.02) : [...THR_LV].reverse().find((l) => l < cur - 0.02); if (next != null) setThrottle(next); }
 let thrHold = 0;
 const keys = {}; addEventListener('keydown', (e) => { const k = e.key.toLowerCase(); keys[k] = true; if (e.key === ' ' && !/INPUT|TEXTAREA/.test(e.target.tagName || '')) { e.preventDefault(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); if (state === 'play') fire(true); }
+  if (battle && battle.legend && battle.legend.kind === 'elder' && k >= '1' && k <= '4') elderRune(+k - 1);
   // C changes the view; E opens and shuts the sea chart
   if (k === 'c' && state === 'play' && !battle && !fishing) $('viewBtn').click(); if (k === 'e') { if (state === 'chart') closeChart(); else $('chartBtn').click(); }
   if (!e.repeat && (k === 'w' || k === 's' || k === 'arrowup' || k === 'arrowdown')) { thrHold = 0; thrKeyStep(k === 'w' || k === 'arrowup' ? 1 : -1); } }); addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
@@ -179,7 +180,7 @@ function spawnMon(e, x, z, o = {}) {
   mon.passive = e.type === 'jelly';
   mons.push(mon); return mon; }
 function removeMon(mon) { scene.remove(mon.g); mon.tag.remove(); const i = mons.indexOf(mon); if (i >= 0) mons.splice(i, 1); }
-function updateSpawns(dt) { spawnT -= dt; if (spawnT > 0) return; spawnT = 1.5;
+function updateSpawns(dt) { spawnT -= dt; if (spawnT > 0 || (battle && battle.legend)) return; spawnT = 1.5;
   for (const mon of [...mons]) { if (mon.boss) continue; if (Math.hypot(mon.x - boat.x, mon.z - boat.z) > 280 && !mon.dead) removeMon(mon); }
   const maxN = 5 + P.tier + (isNight() ? 2 : 0); if (mons.filter((m) => !m.boss).length >= maxN) return;
   const a = Math.random() * 6.28, d = rnd(95, 170), x = boat.x + Math.sin(a) * d, z = boat.z + Math.cos(a) * d; if (Math.abs(x) > HALF - 30 || Math.abs(z) > HALF - 30 || world.blockAt(x, z, 12) || Math.hypot(x, z + 40) < 70) return;
@@ -234,7 +235,7 @@ function killMon(mon) { mon.dead = 0.01; mon.tag.remove(); P.kills++; const lv =
   if (mon.young) { r.g = Math.round(r.g * 1.5); lairCool[mon.young] = time + rnd(60, 110); setTimeout(() => say('<b>The ' + mon.name + ' is slain!</b> ' + LAIR_NAMES[mon.young] + ' still sleeps below.', 4.5), 600); }
   reward(r, mon.x, mon.top + 1, mon.z); foam.splash(mon.x, mon.z, 2); if (mon.fleet) fleetDown(mon.fleet);
   if (mon.type === 'ghost' && !P.relics.bane && !P.maps.some((m) => m.kind === 'relic')) setTimeout(() => giveMap('relic'), 1500); else if (mon.naval && Math.random() < (mon.treasure ? 0.6 : 0.12)) setTimeout(() => giveMap(), 1600);
-  if (mon.boss) { P.legends[mon.lair] = true; world.lairs.find((l) => l.key === mon.lair).beaten = true; say('<b>' + mon.name.toUpperCase() + ' IS SLAIN!</b> Legends beaten: ' + Object.keys(P.legends).length + ' / 3', 5); sfx.horn(); if (Object.keys(P.legends).length >= 3 && !P.won) setTimeout(winGame, 2500); save(); } }
+  if (mon.boss && mon.lair) { P.legends[mon.lair] = true; world.lairs.find((l) => l.key === mon.lair).beaten = true; say('<b>' + mon.name.toUpperCase() + ' IS SLAIN!</b> Legends beaten: ' + Object.keys(P.legends).length + ' / 3', 5); sfx.horn(); if (Object.keys(P.legends).length >= 3 && !P.won) setTimeout(winGame, 2500); save(); } }
 
 // ---------- projectiles (spears, bolts, enemy arrows) ----------
 const spearGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.6, 5); spearGeo.rotateX(Math.PI / 2); const boltGeo = new THREE.CylinderGeometry(0.09, 0.09, 2.4, 6); boltGeo.rotateX(Math.PI / 2);
@@ -396,7 +397,7 @@ $('pauseBtn').addEventListener('click', () => { const b = $('broadToggle'); if (
 // slam down on your deck: shoot them first (tap one, or FIRE / Space for the one about to strike); each one you cut down hurts
 // the Kraken. Now and then its great eye opens (a gold ring): hit it for heavy damage, and every rearing tentacle flinches
 // away. Below half its health it sends them faster and more at once. FLEE breaks its grip at a cost.
-const LEGEND_KIND = { kraken: 'kraken', jormungandr: 'jorm' };
+const LEGEND_KIND = { kraken: 'kraken', jormungandr: 'jorm', elder: 'elder' };
 const lgRingGeo = (() => { const g = new THREE.RingGeometry(0.8, 1, 36); g.rotateX(-Math.PI / 2); return g; })();
 function legendRing(color, geo = lgRingGeo) { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthTest: false, depthWrite: false, side: THREE.DoubleSide })); m.renderOrder = 7; scene.add(m); return m; }
 const eyeRingGeo = new THREE.TorusGeometry(1, 0.09, 6, 40);
@@ -411,14 +412,16 @@ function startLegend(mon) {
     for (const c of [0, 0.6, -0.6, 1.2, -1.2, Math.PI]) { const a = boat.yaw + c, x = boat.x + Math.sin(a) * dist, z = boat.z + Math.cos(a) * dist; if (!world.blockAt(x, z, mon.size * 0.3)) { dir = a; break; } }
     mon.x = boat.x + Math.sin(dir) * dist; mon.z = boat.z + Math.cos(dir) * dist; mon.yaw = dir + Math.PI; mon.stState.reach = 0.35; helm.held = false; setThrottle(0, true); boat.v = 0; }
   else if (kind === 'jorm') jormStart(L, mon);
+  else if (kind === 'elder') elderStart(L, mon);
+  for (const m of [...mons]) if (m !== mon && !m.boss && !m.dead && Math.hypot(m.x - boat.x, m.z - boat.z) < 90) removeMon(m);
   battle = { mon, t: 0, legend: L }; boat.wp = null; setBattle(true);
   const held = !L.sail; if (held) { $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy'); } document.body.classList.add('legendOn');
   const ui = document.createElement('div'); ui.id = 'broad'; ui.className = 'legend' + (held ? '' : ' sail');
-  const hint = kind === 'kraken' ? 'Tentacles rise where the red rings are: tap one (or FIRE) to cut it down before it slams your deck!' : 'It hunts you under the water. When the red ring appears, turn or change speed to dodge its strike, then shoot its head!';
+  const hint = kind === 'kraken' ? 'Tentacles rise where the red rings are: tap one (or FIRE) to cut it down before it slams your deck!' : kind === 'elder' ? 'Shoot the ghost lights before they reach you! Then watch the runes…' : 'It hunts you under the water. When the red ring appears, turn or change speed to dodge its strike, then shoot its head!';
   ui.innerHTML = `<div class="bFoe"><b>${mon.name} <small>Lv ${Math.round(mon.lv) + 1}</small></b><div class="hp foe"><i id="bFoeHp"></i></div></div><div class="bHint" id="bHint">${hint}</div>` +
     (held ? '<button class="bFire" id="bFire">FIRE<i id="bLoad"></i></button>' : '') + '<div class="bSide"><button class="ghost" id="bFlee">FLEE</button></div>';
   $('hud').appendChild(ui); if (held) $('bFire').onpointerdown = (e) => { e.preventDefault(); e.stopPropagation(); legendFire(); }; $('bFlee').onclick = (e) => { e.stopPropagation(); endLegend('flee'); };
-  warn(kind === 'kraken' ? (young ? '⚠ THE HATCHLING ATTACKS! ⚠' : '⚠ THE KRAKEN SEIZES YOUR SHIP! ⚠') : young ? '⚠ THE WHELP HUNTS YOU! ⚠' : '⚠ JORMUNGANDR HUNTS YOU! ⚠', 3); sfx.horn(); sfx.thunder(); return true; }
+  warn(kind === 'kraken' ? (young ? '⚠ THE HATCHLING ATTACKS! ⚠' : '⚠ THE KRAKEN SEIZES YOUR SHIP! ⚠') : kind === 'elder' ? (young ? '⚠ THE SPAWN BINDS YOUR SHIP! ⚠' : '⚠ THE ELDER ONE BINDS YOUR SHIP! ⚠') : young ? '⚠ THE WHELP HUNTS YOU! ⚠' : '⚠ JORMUNGANDR HUNTS YOU! ⚠', 3); sfx.horn(); sfx.thunder(); return true; }
 const legendReload = () => (battle && battle.legend && battle.legend.grab ? 0.2 : P.up.ballista ? 0.6 : 0.8);
 function krakenTentacle(L) { const t = T(), mon = battle.mon, taken = L.tents.map((x) => x.a), behind = Math.atan2(boat.x - mon.x, boat.z - mon.z); let a = 0;
   for (let k = 0; k < 16; k++) { a = Math.random() * Math.PI * 2; if (Math.abs(angDiff(a, behind)) > 1.0 && taken.every((b) => Math.abs(angDiff(a, b)) > 0.7)) break; }
@@ -457,7 +460,7 @@ function updateKraken(dt) { const L = battle.legend, mon = battle.mon, t = T(), 
   if (mon.hp <= 0) { endLegend('win'); return; } }
 // what FIRE / Space shoots: the open eye first, else the tentacle that will strike soonest
 function krakenTarget(L) { if (L.grab && L.grab.K.phase === 'grab') return { K: L.grab.K }; if (L.eyeOpen) return { eye: true }; let best = null, bt = 1e9; for (const K of L.tents) { const left = K.phase === 'rise' ? 9 + (0.7 - K.t) : K.phase === 'coil' ? 0 + (9 - K.t) : 1e9; if (left < bt) { bt = left; best = K; } } return best ? { K: best } : null; }
-function legendFire(target) { const L = battle && battle.legend; if (!L || L.reload > 0) return; if (L.kind === 'jorm') { jormFire(L, battle.mon); return; } const tg = target || krakenTarget(L); if (!tg) return; L.reload = legendReload(); unlockAudio(); sfx.throw();
+function legendFire(target) { const L = battle && battle.legend; if (!L || L.reload > 0) return; if (L.kind === 'jorm') { jormFire(L, battle.mon); return; } if (L.kind === 'elder') { elderFire(L, battle.mon, target); return; } const tg = target || krakenTarget(L); if (!tg) return; L.reload = legendReload(); unlockAudio(); sfx.throw();
   const mon = battle.mon, kind = P.up.ballista ? 'bolt' : 'spear', from = { x: boat.x, y: boat.y + 2.2, z: boat.z };
   if (tg.eye) { const [ex, ey, ez] = krakenEye(mon); launch(from, { x: ex, y: ey, z: ez }, kind, () => { const L2 = battle && battle.legend; if (L2 !== L || !L.eyeOpen) { pop(ex, ey + 1, ez, 'MISS', '#9ab8c8'); return; }
       const d = Math.round(attack() * 2.4 * (boat.thor > 0 ? 2 : 1) * rnd(0.9, 1.1)); mon.hp -= d; mon.stState.hurt = 1; pop(ex, ey + 2, ez, '👁 THE EYE! −' + d, '#ffd24a'); sfx.hit(); sfx.boom();
@@ -467,6 +470,7 @@ function legendFire(target) { const L = battle && battle.legend; if (!L || L.rel
     if (K.hp <= 0) { K.phase = 'cut'; K.t = 0; } else if (K.phase === 'coil') K.t = Math.max(0, K.t - 0.7); }); }
 // a tap in a legend fight shoots what is under your finger (the open eye or a tentacle), if anything
 function legendTap(x, y) { const L = battle.legend, mon = battle.mon; let best = null, bd = 80;
+  if (L.kind === 'elder') { elderTap(L, mon, x, y); return; }
   if (L.kind === 'jorm') { const [hx, hy, hz] = jormHead(mon), s0 = toScreen(hx, hy, hz); if (s0 && Math.hypot(s0[0] - x, s0[1] - y) < 110) legendFire(); return; }
   if (L.eyeOpen) { const [ex, ey, ez] = krakenEye(mon), s = toScreen(ex, ey, ez); if (s) { const d = Math.hypot(s[0] - x, s[1] - y); if (d < bd + 30) { bd = d; best = { eye: true }; } } }
   for (const K of L.tents) { if (K.phase !== 'rise' && K.phase !== 'coil' && K.phase !== 'grab') continue; for (const i of [6, 10, 14]) { const p = K.pts[i], s = toScreen(p.x, p.y, p.z); if (!s) continue; const d = Math.hypot(s[0] - x, s[1] - y); if (d < bd) { bd = d; best = { K }; } } }
@@ -515,10 +519,74 @@ function jormFire(L, mon) { if (L.mode !== 'exposed' && !(L.mode === 'coil' && L
     if (L.mode !== 'exposed') { pop(hx, hy + 2, hz, 'MISS', '#9ab8c8'); return; } const d = Math.round(attack() * 0.9 * (perfect ? 1.6 : 1) * (boat.thor > 0 ? 2 : 1) * rnd(0.9, 1.1)); mon.hp -= d; mon.stState.hurt = 1; sfx.hit(); pop(hx, hy + 2, hz, (perfect ? 'PERFECT! ' : '') + '−' + d, perfect ? '#ffd24a' : '#ffffff'); });
   return true; }
 
+// THE ELDER ONE, the ward: its power holds your ship still. A violet ward shields it while ghost lights drift at your
+// ship (shoot them first). Then it lights the four runes floating round your ship in a sequence: tap them in the same
+// order (or keys 1-4) to shatter the ward, then shoot it while it is down. Get the runes wrong and it lashes out. Each
+// round the sequence grows. Sometimes it drags your ship up into the air: shoot its eye while you hang there and it drops
+// you; if not, it slams you into the sea, or flings you away like a tornado.
+const RUNES = ['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ'], RUNE_COL = [0xff6a4a, 0x6ad0ff, 0x9fe86a, 0xffd24a];
+const runeTex = RUNES.map((r, i) => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.strokeStyle = '#fff'; g.lineWidth = 7; g.beginPath(); g.arc(64, 64, 56, 0, Math.PI * 2); g.stroke();
+  g.fillStyle = '#fff'; g.font = 'bold 74px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(r, 64, 66); g.font = 'bold 26px sans-serif'; g.fillText(String(i + 1), 104, 22); return new THREE.CanvasTexture(c); });
+const runeGeo = (() => { const g = new THREE.PlaneGeometry(1, 1); g.rotateX(-Math.PI / 2); return g; })(), wardGeo = new THREE.SphereGeometry(1, 24, 16), wispGeo = new THREE.SphereGeometry(1, 10, 8);
+// the Elder's eyes (the head sits 7.6 R up the torso, the eyes 1.6 R forward of it)
+function elderEye(mon) { const R = mon.size / 4.5, sy = Math.sin(mon.yaw), cy = Math.cos(mon.yaw), f = 2.4 * R; return [mon.x + sy * f, mon.g.position.y + 6.6 * R, mon.z + cy * f, R]; }
+function elderStart(L, mon) { const t = T(), R = mon.size / 4.5, dist = (L.young ? 15 : 21) + t.L * 0.5;
+  mon.x = boat.x + Math.sin(boat.yaw) * dist; mon.z = boat.z + Math.cos(boat.yaw) * dist; mon.yaw = boat.yaw + Math.PI; helm.held = false; setThrottle(0, true); boat.v = 0;
+  const ward = new THREE.Mesh(wardGeo, new THREE.MeshBasicMaterial({ color: 0xb06aff, transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending })); scene.add(ward);
+  // four runes on the water round your ship: two toward the Elder, two toward the camera
+  const rr = t.L * 0.5 + 5.5, runes = [-0.7, 0.7, -2.4, 2.4].map((da, i) => { const a = boat.yaw + da, x = boat.x + Math.sin(a) * rr, z = boat.z + Math.cos(a) * rr;
+    const m = new THREE.Mesh(runeGeo, new THREE.MeshBasicMaterial({ map: runeTex[i], color: RUNE_COL[i], transparent: true, opacity: 0.55, depthTest: false, depthWrite: false })); m.renderOrder = 7; m.position.set(x, ocean.heightAt(x, z) + 0.4, z); m.scale.setScalar(4); scene.add(m); return { m, x, z, lit: 0 }; });
+  Object.assign(L, { R, ward, runes, mode: 'ward', mt: 0, dur: L.young ? 6 : 7.5, seqLen: L.young ? 2 : 3, seq: [], si: 0, wisps: [], wispT: 1.2, lift: null, mark: legendRing(0xffd24a, eyeRingGeo), liftNext: rnd(0.3, 0.5) });
+  L.mark.visible = false; mon.stState.rise = 1; mon.stState.dive = 0; }
+function elderHint(txt) { const h = $('bHint'); if (h) h.textContent = txt; }
+function elderWisp(L, mon) { const [ex, ey, ez] = elderEye(mon), m = new THREE.Mesh(wispGeo, new THREE.MeshBasicMaterial({ color: 0x8affc0, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false })); m.scale.setScalar(L.young ? 0.8 : 1.1); m.position.set(ex + rnd(-3, 3), ey - 2, ez + rnd(-3, 3)); scene.add(m); L.wisps.push({ m, wob: Math.random() * 6 }); }
+function dropWisp(L, W) { scene.remove(W.m); W.m.material.dispose(); L.wisps.splice(L.wisps.indexOf(W), 1); }
+function elderRune(i) { const L = battle && battle.legend; if (!L || L.kind !== 'elder' || L.mode !== 'input') return; const R = L.runes[i]; R.lit = 0.35;
+  if (L.seq[L.si] === i) { L.si++; R.m.material.color.setHex(0xffffff); sfx.coins(); if (L.si >= L.seq.length) { L.mode = 'open'; L.mt = 0; L.perfect = true; L.ward.visible = false; foam.splash(battle.mon.x, battle.mon.z, 3); sfx.boom(); warn('✨ THE WARD SHATTERS! ✨', 2); elderHint('The ward is down: SHOOT THE ELDER ONE NOW!'); L.seqLen = Math.min(L.young ? 4 : 6, L.seqLen + 1); } }
+  else { L.mode = 'ward'; L.mt = 0; L.dur = 4; R.m.material.color.setHex(0xff2a2a); flash = 0.6; sfx.zap(); damage(battle.mon.dmg * 0.8 * (1 - defense()), 'Wrong rune! The Elder One lashes out!'); if (battle) elderHint('Shoot the ghost lights before they reach you! Then watch the runes…'); } }
+function updateElder(dt) { const L = battle.legend, mon = battle.mon, st = mon.stState, t = T(), enraged = mon.hp < mon.maxHp * 0.5; L.mt += dt;
+  const [ex, ey, ez, R] = elderEye(mon); L.ward.position.set(mon.x, mon.g.position.y + 5 * R, mon.z); L.ward.scale.setScalar(R * 6.5 * (1 + 0.03 * Math.sin(battle.t * 3)));
+  for (const [i, Rn] of L.runes.entries()) { Rn.lit = Math.max(0, Rn.lit - dt); Rn.m.material.opacity = Rn.lit > 0 ? 1 : L.mode === 'input' ? 0.75 : 0.45; Rn.m.scale.setScalar(4 * (1 + Rn.lit * 0.6)); if (Rn.lit <= 0) Rn.m.material.color.setHex(RUNE_COL[i]); }
+  // ghost lights drift at your ship while the ward is up
+  if (L.mode === 'ward') { L.wispT -= dt; if (L.wispT <= 0) { elderWisp(L, mon); L.wispT = (L.young ? 1.3 : enraged ? 0.5 : 0.75) * rnd(0.8, 1.2); } st.attack += (0.15 - st.attack) * Math.min(1, dt * 2);
+    if (L.mt > L.dur) { L.mode = 'show'; L.mt = 0; L.seq = Array.from({ length: L.seqLen }, () => (Math.random() * 4) | 0); L.si = 0; elderHint('Watch the runes it lights…'); sfx.groan && sfx.groan(); } }
+  for (const W of [...L.wisps]) { W.wob += dt * 3; const p = W.m.position, dx = boat.x - p.x, dy = boat.y + 2 - p.y, dz = boat.z - p.z, d = Math.hypot(dx, dy, dz), sp = (L.young ? 5 : 7) * dt; p.x += (dx / d) * sp + Math.sin(W.wob) * dt * 2; p.y += (dy / d) * sp; p.z += (dz / d) * sp + Math.cos(W.wob) * dt * 2;
+    if (d < t.B * 0.6 + 1.5) { dropWisp(L, W); flash = Math.max(flash, 0.3); damage(mon.dmg * 0.35 * (1 - defense()), 'A ghost light burns your ship!'); if (!battle) return; } }
+  if (L.mode === 'show') { st.attack += (0.5 - st.attack) * Math.min(1, dt * 3); const step = L.young ? 0.85 : 0.65, k = Math.floor(L.mt / step); if (k < L.seq.length && L.mt - k * step < dt * 1.5) { L.runes[L.seq[k]].lit = step * 0.75; sfx.throw(); }
+    if (L.mt > L.seq.length * step + 0.3) { L.mode = 'input'; L.mt = 0; L.limit = 3 + L.seq.length * 1.1; } }
+  if (L.mode === 'input') { elderHint('Tap the runes in the same order (or keys 1-4): ' + L.si + ' / ' + L.seq.length + ' · ' + Math.max(0, Math.ceil(L.limit - L.mt)) + ' s');
+    if (L.mt > L.limit) { L.mode = 'ward'; L.mt = 0; L.dur = 4; flash = 0.6; sfx.zap(); damage(mon.dmg * 0.8 * (1 - defense()), 'Too slow! The Elder One lashes out!'); if (!battle) return; elderHint('Shoot the ghost lights before they reach you! Then watch the runes…'); } }
+  if (L.mode === 'open') { st.attack += (0 - st.attack) * Math.min(1, dt * 3); if (L.mt > 0.8) L.perfect = false; L.mark.visible = true; L.mark.position.set(ex, ey, ez); L.mark.scale.setScalar(R * 1.6 * (1 + 0.1 * Math.sin(battle.t * 10))); L.mark.lookAt(camera.position);
+    if (L.mt > L.liftNext * (L.young ? 5 : 4) && !L.lift && !boat.air && Math.random() < dt * (enraged ? 0.9 : 0.5)) { L.mode = 'lift'; L.mt = 0; L.lift = { x0: boat.x, z0: boat.z, h: 0, hit: false, grip: 0, win: rnd(0.3, 1.2), wl: L.young ? 0.8 : 0.55 }; L.ward.visible = true; warn('👁 IT LIFTS YOUR SHIP!', 2); elderHint('Wait for its eye to FLASH, then shoot it to break free!'); if (ship.mask) ship.mask.visible = false; sfx.whoosh(); }
+    else if (L.mt > (L.young ? 5 : 4)) { L.mode = 'ward'; L.mt = 0; L.dur = L.young ? 6 : 7; L.ward.visible = true; L.mark.visible = false; L.liftNext = rnd(0.3, 0.8); elderHint('The ward returns! Shoot the ghost lights, then watch the runes…'); } }
+  if (L.mode === 'lift') { const F = L.lift, k = Math.min(1, L.mt / 1.2), px = mon.x + Math.sin(mon.yaw) * R * 5, pz = mon.z + Math.cos(mon.yaw) * R * 5; st.attack += (1 - st.attack) * Math.min(1, dt * 4);
+    boat.x = lerp(F.x0, px, k * 0.6); boat.z = lerp(F.z0, pz, k * 0.6); F.h = R * 6 * k * (2 - k); boat.dunk = -F.h; boat.shake = 0.15;
+    const lt = L.mt - 1.2, open = lt >= F.win && lt <= F.win + F.wl; L.mark.visible = true; L.mark.position.set(ex, ey, ez); L.mark.scale.setScalar(R * (open ? 2.2 : 1.2) * (1 + 0.1 * Math.sin(battle.t * 14))); L.mark.material.opacity = open ? 1 : 0.3; L.mark.lookAt(camera.position); if (open && !F.flashed) { F.flashed = true; sfx.zap(); }
+    if (F.hit) { L.mode = 'drop'; L.mt = 0; F.from = F.h; L.mark.material.opacity = 0.85; mon.hp -= attack() * 0.8; st.hurt = 1; pop(ex, ey + 2, ez, 'IT DROPS YOU! −' + Math.round(attack() * 0.8), '#7dff3a'); sfx.hit(); }
+    else if (L.mt > 1.2 + (L.young ? 2.6 : 2) - F.grip) { L.mark.material.opacity = 0.85; L.mode = 'slam'; L.mt = 0; F.from = F.h; F.throw = Math.random() < 0.35; } }
+  if (L.mode === 'drop' || L.mode === 'slam') { const F = L.lift, dur = L.mode === 'drop' ? 0.7 : 0.35, k = Math.min(1, L.mt / dur); boat.dunk = -F.from * (1 - k * k);
+    if (k >= 1) { boat.dunk = 0; foam.splash(boat.x, boat.z, L.mode === 'slam' ? 3 : 1.6); sfx.splash();
+      if (L.mode === 'slam') { boat.shake = 1; sfx.boom(); damage(mon.dmg * (L.young ? 1.1 : 1.6) * (1 - defense()), F.throw ? 'The Elder One hurls your ship away!' : 'The Elder One slams your ship into the sea!'); if (!battle) return;
+        if (F.throw) { boat.air = startAir(boat, { x: mon.x, z: mon.z, r: 8, vs: 1 }, 0.6, 1); say('…and flings you away!', 2); } }
+      else damage(maxHp() * 0.03 * (1 - defense()), 'You crash back onto the sea!');
+      if (!battle) return; if (ship.mask && !boat.air) ship.mask.visible = true; L.lift = null; L.mode = 'ward'; L.mt = 0; L.dur = L.young ? 6 : 7; L.mark.visible = false; L.liftNext = rnd(0.3, 0.8); elderHint('The ward returns! Shoot the ghost lights, then watch the runes…'); } }
+  if (mon.hp <= 0) { endLegend('win'); return; } }
+// what FIRE / Space shoots in the Elder fight: its eye while you hang in its grip, the Elder while the ward is down, else the nearest ghost light
+function elderFire(L, mon, pick) { const [ex, ey, ez] = elderEye(mon), kind = P.up.ballista ? 'bolt' : 'spear', from = { x: boat.x, y: boat.y + 2.2 - (boat.dunk || 0), z: boat.z };
+  if (L.mode === 'lift' || (L.mode === 'open' && (!pick || pick.elder))) { L.reload = legendReload(); sfx.throw(); const lifting = L.mode === 'lift', perfect = L.mode === 'open' && L.perfect;
+    launch(from, { x: ex, y: ey, z: ez }, kind, () => { const L2 = battle && battle.legend; if (L2 !== L) return; if (lifting) { const F = L.lift; if (L.mode !== 'lift' || !F) return; const lt = L.mt - 1.2; if (lt >= F.win && lt <= F.win + F.wl) { F.hit = true; return; } F.grip += 0.5; pop(ex, ey + 2, ez, lt < F.win ? 'TOO EARLY!' : 'TOO LATE!', '#ff7a5a'); sfx.creak(); return; } if (L.mode !== 'open') { pop(ex, ey + 2, ez, 'WARDED', '#b06aff'); return; }
+      const d = Math.round(attack() * 0.3 * (perfect ? 1.6 : 1) * (boat.thor > 0 ? 2 : 1) * rnd(0.9, 1.1)); mon.hp -= d; mon.stState.hurt = 1; sfx.hit(); pop(ex, ey + 2, ez, (perfect ? 'PERFECT! ' : '') + '−' + d, perfect ? '#ffd24a' : '#ffffff'); }); return; }
+  let W = pick && pick.W; if (!W) { let bd = 1e9; for (const w of L.wisps) { const d = w.m.position.distanceTo(V(boat.x, boat.y, boat.z)); if (d < bd) { bd = d; W = w; } } } if (!W) return;
+  L.reload = legendReload(); sfx.throw(); const p = W.m.position; launch(from, { x: p.x, y: p.y, z: p.z }, kind, () => { if (L.wisps.includes(W)) { pop(W.m.position.x, W.m.position.y + 1, W.m.position.z, 'BANISHED', '#8affc0'); dropWisp(L, W); sfx.hit(); } }); }
+function elderTap(L, mon, x, y) { const near = (wx, wy, wz, r) => { const s = toScreen(wx, wy, wz); return s ? Math.hypot(s[0] - x, s[1] - y) < r : false; };
+  if (L.mode === 'input') { let best = -1, bd = 90; L.runes.forEach((Rn, i) => { const s = toScreen(Rn.x, Rn.m.position.y, Rn.z); if (s) { const d = Math.hypot(s[0] - x, s[1] - y); if (d < bd) { bd = d; best = i; } } }); if (best >= 0) elderRune(best); return; }
+  if (L.reload > 0) return; const [ex, ey, ez] = elderEye(mon); if ((L.mode === 'open' || L.mode === 'lift') && near(ex, ey, ez, 120)) { elderFire(L, mon, { elder: true }); return; }
+  for (const W of L.wisps) if (near(W.m.position.x, W.m.position.y, W.m.position.z, 70)) { elderFire(L, mon, { W }); return; } }
+
 function updateLegend(dt) { const L = battle.legend, mon = battle.mon; battle.t += dt; L.reload = Math.max(0, L.reload - dt); if (!L.sail) { boat.v = 0; boat.wp = null; }
-  if (L.kind === 'kraken') updateKraken(dt); else if (L.kind === 'jorm') updateJorm(dt); if (!battle) return;
+  if (L.kind === 'kraken') updateKraken(dt); else if (L.kind === 'jorm') updateJorm(dt); else if (L.kind === 'elder') updateElder(dt); if (!battle) return;
   L.hudT = (L.hudT || 0) - dt; if (L.hudT <= 0) { L.hudT = 0.1; $('bFoeHp').style.width = clamp(mon.hp / mon.maxHp, 0, 1) * 100 + '%'; if ($('bFire')) { $('bLoad').style.width = (1 - clamp(L.reload / legendReload(), 0, 1)) * 100 + '%'; $('bFire').classList.toggle('ready', L.reload <= 0); } } }
-function clearLegend() { const L = battle && battle.legend; if (!L) return; for (const k of ['shadow', 'ring', 'mark']) if (L[k]) { scene.remove(L[k]); L[k].material.dispose(); } boat.dunk = 0; L.grab = null; if (ship.mask && !boat.air) ship.mask.visible = true; for (const K of L.tents) dropTentacle(K); L.tents.length = 0; if (L.eyeMark) { scene.remove(L.eyeMark); L.eyeMark.material.dispose(); }
+function clearLegend() { const L = battle && battle.legend; if (!L) return; for (const k of ['shadow', 'ring', 'mark', 'ward']) if (L[k]) { scene.remove(L[k]); L[k].material.dispose(); } for (const Rn of L.runes || []) { scene.remove(Rn.m); Rn.m.material.dispose(); } for (const W of [...(L.wisps || [])]) dropWisp(L, W); boat.dunk = 0; L.grab = null; if (ship.mask && !boat.air) ship.mask.visible = true; for (const K of L.tents) dropTentacle(K); L.tents.length = 0; if (L.eyeMark) { scene.remove(L.eyeMark); L.eyeMark.material.dispose(); }
   const ui = $('broad'); if (ui) ui.remove(); document.body.classList.remove('busy', 'legendOn'); $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); if (battle.mon.stState) { battle.mon.stState.attack = 0; battle.mon.stState.reach = 1; } }
 function endLegend(result) { const L = battle && battle.legend; if (!L) return; const mon = battle.mon; clearLegend(); battle = null; setBattle(false); boat.lastHit = time; boat.grace = 4; hud();
   if (result === 'win') { killMon(mon); setThrottle(0, true); }
@@ -985,6 +1053,7 @@ function updateCamera(dt) { const t = T(); let tgt, dist, pitch; if (!!battle !=
     const B = battle.broad, ni = nearFoe(B), f = B.foes[ni] || battle.mon, sep = clamp((B.foes.length ? foeAt(B, ni) : B.sp) - B.sp, -16, 16), [fx, fz] = lanePos(B, B.sp + sep / 2, (B.yC + B.eC) / 2), hfov = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect, W = Math.max(18, Math.abs(sep) + tierOf(f).L + 6, t.L * 2.2);
     tgt = V(fx, 1.2, fz); dist = Math.max(5, clamp(W / (2 * hfov), 16, 60) * zoom); pitch = 0.28; camYaw += angDiff(B.camYaw, camYaw) * Math.min(1, dt * 2.5); }
   else if (battle && battle.legend && battle.legend.kind === 'jorm') { const mon = battle.mon, sep = Math.min(60, Math.hypot(mon.x - boat.x, mon.z - boat.z)); tgt = V(lerp(boat.x, mon.x, 0.25), 1, lerp(boat.z, mon.z, 0.25)); dist = Math.max(10, (40 + t.L * 1.6 + sep * 0.7 + mon.size * 0.6) * zoom); pitch = 0.82; camYaw += angDiff(boat.yaw, camYaw) * Math.min(1, dt * 1.5); }
+  else if (battle && battle.legend && battle.legend.kind === 'elder') { const mon = battle.mon, d = Math.hypot(mon.x - boat.x, mon.z - boat.z); tgt = V(lerp(boat.x, mon.x, 0.45), 4 - (boat.dunk || 0) * 0.5, lerp(boat.z, mon.z, 0.45)); dist = Math.max(8, (d * 0.9 + mon.size * 2.2 + t.L * 1.4 + 14) * zoom); pitch = 0.42; camYaw += angDiff(Math.atan2(mon.x - boat.x, mon.z - boat.z), camYaw) * Math.min(1, dt * 2); }
   else if (battle && battle.legend) { const mon = battle.mon, [ex, , ez] = krakenEye(mon), d = Math.hypot(ex - boat.x, ez - boat.z); tgt = V(lerp(boat.x, ex, 0.5), 1, lerp(boat.z, ez, 0.5)); dist = Math.max(8, (d * 0.8 + mon.size * 0.55 + t.L * 1.6 + 18) * zoom); pitch = 0.62; camYaw += angDiff(Math.atan2(ex - boat.x, ez - boat.z), camYaw) * Math.min(1, dt * 2); }
   else if (battle && battle.mon.giant) { // frame your ship against one of the giant's eyes (the kraken's eye is about a ship long)
     const mon = battle.mon, Rk = mon.size / 6, sy = Math.sin(mon.yaw), cy = Math.cos(mon.yaw), lx = 0.9 * Rk, lz = 1.15 * Rk, ex = mon.x + lx * cy + lz * sy, ez = mon.z + lz * cy - lx * sy, de = Math.hypot(ex - boat.x, ez - boat.z);
