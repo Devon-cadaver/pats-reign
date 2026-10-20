@@ -34,4 +34,4 @@ Same stack as Dead City (D:\ClaudeCode\010_2026-10-16_newgame): Three.js 0.170 +
 ## Workflow
 - Patch with node .cjs scripts in the scratchpad (normalise CRLF; anchors must match; never put `\n` escapes inside template-literal patch text that writes into JS strings). Build with `npx vite build`. Dev server: preview_start `game` (port 5173, falls back to 5174).
 - Testing in the hidden browser pane runs at ~2 fps: use `__pr.timeScale`, drive through `window.__pr`, auto-tap mini-games with DOM events.
-- Not yet published anywhere (no GitHub repo). Dead City deploys from Devon-cadaver/office-outbreak via GitHub Pages.
+- Live: https://devon-cadaver.github.io/pats-reign/ (repo Devon-cadaver/pats-reign, branch main, GitHub Pages via .github/workflows/deploy.yml on push, about 1 min). Commit as sean duvall <328185017+Devon-cadaver@users.noreply.github.com> (set in the repo config); GitHub rejects pushes that use the private email. No gh CLI on this PC: API calls use the git credential manager token.
