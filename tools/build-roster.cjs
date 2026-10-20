@@ -65,7 +65,7 @@ const SHIPFOES = [
 
 // ---------- page ----------
 const cards = [];
-const noteBox = (id, label) => `<div class="note" data-id="${id}"><label for="n-${id}">${esc(label)}</label><p class="reply" hidden></p><textarea id="n-${id}" rows="2" placeholder="What should change? Shape, colour, size, how it moves…"></textarea><div class="noterow"><button type="button" class="flag" aria-pressed="false">Needs a redesign</button><span class="st" aria-live="polite"></span></div></div>`;
+const noteBox = (id, label, flag = 'Needs a redesign') => `<div class="note" data-id="${id}"><label for="n-${id}">${esc(label)}</label><p class="reply" hidden></p><textarea id="n-${id}" rows="2" placeholder="What should change? Shape, colour, size, how it moves…"></textarea><div class="noterow"><button type="button" class="flag" aria-pressed="false">${esc(flag)}</button><span class="st" aria-live="polite"></span></div></div>`;
 function variantCard(id, name, chips, lines, sea, full, seaCap = '') {
   cards.push(id);
   return `<article class="card" id="${id}"><div class="pics">${sea ? `<figure><img src="${sea}" alt="${esc(name)} in the sea" loading="lazy" width="300" height="300"><figcaption>${seaCap || 'In the sea'}</figcaption></figure>` : ''}${full ? `<figure><img src="${full}" alt="${esc(name)}, full body" loading="lazy" width="300" height="300"><figcaption>Full body</figcaption></figure>` : ''}</div>
@@ -83,7 +83,7 @@ for (const sp of SPECIES) {
 <div class="about"><ul>${sp.does.map((d) => `<li>${esc(d)}</li>`).join('')}<li>Speed ${sp.speed} <span class="dim">(your ships sail at 9 to 13)</span>.</li>${sp.atk.length ? `<li>In battle it ${sp.atk.map((a) => '<em>' + esc(a.toLowerCase()) + '</em>').join(', ').replace(/, ([^,]*)$/, ' or $1')}.</li>` : ''}</ul>${noteBox('sp-' + sp.key, 'Notes for all ' + sp.name)}</div>
 <div class="grid">${vs}</div></section>`;
 }
-nav += '<a href="#legends">Legends</a><a href="#ships">Ships</a>';
+nav += '<a href="#legends">Legends</a><a href="#ships">Ships</a><a href="#mechanics">Game mechanics</a>';
 let leg = '';
 for (const L of LEGENDS) {
   let vs = '';
@@ -97,6 +97,12 @@ sections += `<section class="species" id="legends"><header><h2>Legends</h2><span
 let sh = '';
 for (const s of SHIPFOES) sh += variantCard('ship-' + s.id, s.name, [[s.lv, 'lv']], [esc(s.what)], img(s.img), '');
 sections += `<section class="species" id="ships"><header><h2>Ships at sea</h2><span class="count">6 kinds</span></header><div class="about"><ul><li>Raider longships come in every ship size (a raider's level is its size). They shoot four-arrow volleys from 12 to 34 away, then fight a ship battle. Half again as common in the Mist Sea.</li><li>Raider fleets (a sea event) bring two to four ships of one clan, led by a Warlord one size bigger. Sink them all for their war chest.</li><li>Winning a ship battle pays timber, iron and gold.</li></ul>${noteBox('sp-ships', 'Notes for all ships')}</div><div class="grid">${sh}</div></section>`;
+
+// ---------- game mechanics (tools/roster-mechanics.cjs): a card and a notes box for every mechanic ----------
+const MECH = require('./roster-mechanics.cjs'); let mech = '', mechN = 0;
+for (const [group, items] of MECH) { let cs = ''; for (const [key, name, ...lines] of items) { mechN++; cards.push('mech-' + key); cs += `<article class="card mech" id="mech-${key}"><div class="body"><h3>${esc(name)}</h3>${lines.map((l) => '<p>' + esc(l) + '</p>').join('')}${noteBox('mech-' + key, 'Notes for ' + name, 'Needs a change')}</div></article>`; }
+  mech += `<div class="legend" id="mg-${esc(group).toLowerCase().replace(/[^a-z]+/g, '-')}"><header><h3 class="lh">${esc(group)}</h3><span class="count">${items.length} mechanics</span></header><div class="grid">${cs}</div></div>`; }
+sections += `<section class="species" id="mechanics"><header><h2>Game mechanics</h2><span class="count">${mechN} mechanics (v0.8.7)</span></header><div class="about"><ul><li>Everything the game does, as it stands now: sailing, the world, fighting, harbours and the ship, fishing and treasure, Helheim, saving. Each has a notes box and a <b>Needs a change</b> flag, like the monsters.</li><li>Numbers are the game's own (ship sizes, levels, percentages), so a note can say what should move and by how much.</li></ul>${noteBox('mech-general', 'Notes on the game as a whole (the loop, pacing, what is missing)', 'Needs a change')}</div>${mech}</section>`;
 
 const CSS = `
 /* layout: a long single-column bestiary; species blocks of variant cards (2 up on wide screens), sticky jump bar */
@@ -137,6 +143,7 @@ button:focus-visible, textarea:focus-visible { outline: 2px solid var(--gold-hi)
 .legend { display: grid; gap: 14px; scroll-margin-top: 110px; }
 .grid { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .card { display: grid; grid-template-columns: minmax(0, 1fr); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; scroll-margin-top: 110px; }
+.card.mech .body p { color: var(--ink); }
 .card.has { border-color: #6a5330; } .card.flagged { border-color: var(--flag); }
 .pics { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 2px; background: #000; }
 figure { margin: 0; position: relative; }
@@ -163,6 +170,7 @@ figcaption { position: absolute; left: 6px; bottom: 6px; font: 13px var(--label)
 .st.ok { color: var(--ok); } .st.bad { color: var(--flag); }
 body.onlyflag .card:not(.flagged) { display: none; }
 body.onlyflag .species .about, body.onlyflag .legend .about { display: none; }
+body.onlyflag .legend:not(:has(.card.flagged)) { display: none; }
 footer { color: var(--muted); font-size: 14px; }
 @media (max-width: 720px) { .grid { grid-template-columns: minmax(0, 1fr); } .about { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
@@ -220,7 +228,7 @@ const html = `<title>Pats Reign Bestiary</title>
 <style>${CSS}</style>
 <div class="wrap">
 <div class="intro"><h1>Pats Reign Bestiary</h1>
-<p>Every creature and enemy ship in the game as of v0.4.0: ${total} kinds in 13 families (one of them friendly), plus 6 ships. Each one has a picture in the sea (how you meet it) and a full-body picture with the sea taken away, so you can judge the whole model.</p>
+<p>Every creature and enemy ship in the game: ${total} kinds in 13 families (one of them friendly), plus 6 ships, and now (v0.8.7) <a href="#mechanics" style="color:var(--gold-hi)">every game mechanic</a> at the end, each with its own notes box. Each one has a picture in the sea (how you meet it) and a full-body picture with the sea taken away, so you can judge the whole model.</p>
 <p>Write what you would change in any box and tap <b>Needs a redesign</b> to flag it. There is a box for each kind and one for each whole family (use that for changes to the shared body, like the eel's neck).</p></div>
 <div class="rules"><div><b>Level.</b> The name tag shows Lv. Its colour compares it with your ship: <span class="tags"><span style="color:#7dff3a">green</span> weaker, <span style="color:#fff">white</span> even, <span style="color:#ffb03a">orange</span> stronger, <span style="color:#ff4a3a">red</span> much stronger, <span style="color:#d06aff">purple</span> deadly.</span></div>
 <div><b>Hull and Hits</b> are its health and one hit before your shields. Monsters come from about one level below your ship to nearly two above, so <b>Meets ships</b> says which ship sizes run into it.</div>
