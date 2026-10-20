@@ -192,7 +192,7 @@ const courseMark = new THREE.Mesh(new THREE.RingGeometry(1.6, 2.2, 32), new THRE
 
 // ---------- HUD ----------
 const rname = (k) => (world.regions || REGIONS)[k].name;
-function hud() { P.hp = Math.min(P.hp, maxHp()); $('hullFill').style.width = clamp(P.hp / maxHp(), 0, 1) * 100 + '%'; $('hullTxt').textContent = Math.ceil(P.hp) + ' / ' + maxHp(); $('rW').textContent = P.res.w; $('rI').textContent = P.res.i; $('rG').textContent = P.res.g; $('rF').textContent = P.res.f; $('rS').textContent = P.res.s || 0; $('rSw').classList.toggle('hidden', !(P.res.s > 0 || P.realm === 'hel')); $('shipName').textContent = P.shipName ? '“' + P.shipName + '” · ' + T().name : T().name; }
+function hud() { P.hp = Math.min(P.hp, maxHp()); $('hullFill').style.width = clamp(P.hp / maxHp(), 0, 1) * 100 + '%'; $('hullTxt').textContent = Math.ceil(P.hp) + ' / ' + maxHp(); $('rW').textContent = P.res.w; $('rI').textContent = P.res.i; $('rG').textContent = P.res.g; $('rF').textContent = P.res.f; $('rS').textContent = P.res.s || 0; $('rSw').classList.toggle('hidden', !(P.res.s > 0 || P.realm === 'hel')); $('shipName').textContent = P.shipName ? '“' + P.shipName + '”' : T().name; $('shipName').title = T().name; $('rF').parentElement.classList.toggle('hidden', !P.res.f); }
 function say(t, secs = 2.6) { const m = $('msg'); m.innerHTML = t; m.style.opacity = 1; msgT = secs; }
 function warn(t, secs = 3) { $('warn').innerHTML = t; warnT = secs; }
 const tmpV = new THREE.Vector3();

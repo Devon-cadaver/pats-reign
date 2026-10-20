@@ -347,3 +347,8 @@ html.tabletHud body.legendOn #msg, html.tabletHud body.broadOn #msg { top: calc(
 /* the round action buttons: long labels (BALLISTA, SALVAGE) fit inside the circle */
 .act small { letter-spacing: 0; max-width: 92%; overflow: hidden; white-space: nowrap; }
 html:not(.tabletHud) .act small { font-size: 9px; }
+/* phones: the second HUD line stays clear of the right-hand column and wraps (buffs on a line of their own) */
+html:not(.tabletHud) #hud .row2 { max-width: calc(100% - 64px); flex-wrap: wrap; row-gap: 1px; white-space: normal; }
+html:not(.tabletHud) #hud .row2 > span { white-space: nowrap; }
+html.leftHand:not(.tabletHud) #hud .row2 { margin-left: auto; }
+html:not(.tabletHud) #compWrap { top: calc(84px + env(safe-area-inset-top, 0)); } /* below a wrapped second HUD line */
