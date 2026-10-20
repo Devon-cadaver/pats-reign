@@ -184,6 +184,27 @@ disagree with this file, this file wins.
 - Gotcha (twice this session): a // comment appended to a long one-line function cuts off the rest of that line; node
   --check can still pass (the next lines close the braces) while the game breaks at runtime. Put comments on their own line.
 
+## v0.6.2: the broadside becomes a battle line; pause in fights; fleets join (Sean: circling might make people sick; pause did not work in a fight; other fleet ships circled but could not be shot)
+- The rings are gone. Lane model (main.js, ACTION SHIP BATTLE section): a straight line O + a*s + c*v; you on lane v = yC,
+  her column on v = eC, gap apart; along positions B.sp (you) and foeAt(B, i) = anchor + (i - (n-1)/2) * spacing (the
+  column, in line astern). You ease forward and back (vp = throttle x 3.2 x cos(0.45 t), |sp| <= 8; STOP holds you).
+  broadAI: the column sails to the far end (+-0.75 Lh), 45% of passes it heaves to abeam for 1.6-2.8 s ("SHE HEAVES TO:
+  TRADE VOLLEYS!"), holds briefly at each end; one-on-one, every 3rd sweep 60%: broadSwap = coming about, both ships
+  orbit the point between them by half a turn in 5 s (no firing), then the lane frame is flipped (O' = 2M - O, a and c
+  negated). The camera looks along the fixed B.camYaw and only slides along the line (it never turns; after a swap she is
+  the nearer ship). Measured: camera turns 0.025 rad in 10 s once settled.
+- Shots: yours land on her lane at your along position after the flight time; the nearest ship within L/2 + 1.5 is hit
+  (PERFECT in the middle 35%). Each foe aims on its own (err within hlY x clamp(2.6 - 0.3 lv, 1, 2.6), reload 3.2 s) when
+  within 14 along; its red arrow flashes while it aims. The strip shows a dot per ship (+-24 units), the green zone at
+  -column speed x flight time.
+- Fleets: startBroadside takes the contacted ship plus up to 3 other naval ships within 90 that are chasing or of the same
+  fleet (not bosses, not treasure). inFight(mon) replaces battle.mon === mon checks (their own AI, tornado lifts and
+  whirlpools leave them alone; no floating tags). A ship at 0 hull leaves the line (killMon) and the column closes up
+  smoothly; the fight is won when the last one sinks. BOARD targets the nearest ship abeam below 40% (others stunned 9 s).
+- Pause: the pause button now works in every fight and mini-game (tick runs nothing while state is 'paused').
+- Tested: pass, heave-to and return pattern; on-time hit 20, far miss 0; swap; a 3-ship fleet sunk one by one; pause
+  freezes the battle clock (classic fights too); phone and tablet.
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster

@@ -184,7 +184,7 @@ function updateMons(dt) {
   for (const mon of [...mons]) {
     const st = mon.stState || (mon.stState = { t: 0, speed: 0, attack: 0, dive: 0, hurt: 0, rise: 1 }); st.t += dt;
     if (mon.dead) { mon.dead += dt; st.dive = Math.min(1, mon.dead / 2); mon.g.position.y -= dt * (mon.naval ? 1.2 : 0.6); if (mon.naval) { mon.g.rotation.z = Math.min(1.2, mon.dead * 0.5); } mon.m.anim(dt, st); if (mon.dead > 3.5) removeMon(mon); continue; }
-    if (battle && battle.mon === mon) { animMon(mon, dt, st); continue; }
+    if (inFight(mon)) { animMon(mon, dt, st); continue; }
     if (mon.air) { const A = mon.air; flyStep(A, mon, dt); st.speed = 0; st.dive = 0; mon.g.position.set(mon.x, ocean.heightAt(mon.x, mon.z) + A.h, mon.z); mon.g.rotation.y = mon.yaw;
       if (mon.naval) { mon.m.ship.body.rotation.x = -A.pitch; mon.m.ship.body.rotation.z = A.roll; } else { mon.g.rotation.x = A.pitch * 0.6; mon.g.rotation.z = A.roll * 0.6; }
       mon.m.anim(dt, st); if (A.done) { mon.g.rotation.x = mon.g.rotation.z = 0; landMon(mon, A); } continue; }
@@ -269,81 +269,114 @@ function battleFoeAct(d) { if (!battle) return; const mon = battle.mon; mon.attT
 function updateBattle(dt) { if (battle.broad) { updateBroadside(dt); return; } const mon = battle.mon; battle.t += dt; mon.x += (mon.bx - mon.x) * Math.min(1, dt * 2); mon.z += (mon.bz - mon.z) * Math.min(1, dt * 2); mon.yaw += angDiff(Math.atan2(boat.x - mon.x, boat.z - mon.z), mon.yaw) * Math.min(1, dt * 3);
   if (mon.attT >= 0 && mon.attT < 0.5) { const k = Math.sin((mon.attT / 0.5) * Math.PI) * 2; mon.x += Math.sin(mon.yaw) * k * dt * 4; mon.z += Math.cos(mon.yaw) * k * dt * 4; } boat.v *= 1 - dt * 2; }
 
-// ---------- ACTION SHIP BATTLE (broadside) ----------
-// You and the enemy ship circle in opposite directions, you on an inner ring and she on an outer one, so you pass
-// broadside every few seconds. Your gold arrow points out of the side facing her: it is where your volley flies. Fire as
-// her bow meets it (the volley takes a moment to cross, so lead her a little). Her red arrow is her aim; it flashes before
-// she fires, and changing your speed on the telegraph spoils it. Below 40% hull, BOARD HER (the boarding mini-game).
+// ---------- ACTION SHIP BATTLE (broadside): a battle line ----------
+// You and the enemy lie side by side on two straight lanes, a gap apart. You ease forward and back (the telegraph sets how
+// much; STOP holds you still); she sails past you, now and then stopping abeam to trade volleys, then turns back. Other
+// ships of her fleet join the line astern of her, so every ship in the fight can shoot and be shot. Your gold arrow points
+// across at her lane; fire as a ship comes abeam (the timing strip shows when). One-on-one, you sometimes come about: the
+// two ships circle round each other once and swap sides. The camera only slides along the line, it never spins.
 // The pause menu switches ship fights between this and the classic battle.
 const BROAD = { on: true }; try { BROAD.on = localStorage.getItem('pr_broad') !== '0'; } catch (e) { /* ignore */ }
 const arrowGeo = (() => { const s = new THREE.Shape(); s.moveTo(-0.35, 0); s.lineTo(0.35, 0); s.lineTo(0.35, 0.82); s.lineTo(0.9, 0.82); s.lineTo(0, 1); s.lineTo(-0.9, 0.82); s.lineTo(-0.35, 0.82); s.closePath(); const g = new THREE.ShapeGeometry(s); g.rotateX(Math.PI / 2); return g; })(); // points along +z, length 1
 function broadArrow(color) { const m = new THREE.Mesh(arrowGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7, depthTest: false, depthWrite: false, side: THREE.DoubleSide })); m.renderOrder = 6; scene.add(m); return m; }
+const inFight = (mon) => !!battle && (battle.mon === mon || (!!battle.broad && battle.broad.foes.includes(mon)));
+const tierOf = (mon) => SHIP_TIERS[mon.e.v] || SHIP_TIERS[2];
 function startBroadside(mon) {
-  const t = T(), eT = SHIP_TIERS[mon.e.v] || SHIP_TIERS[2], gap = 9 + (t.B + eT.B) * 1.1, rIn = 11 + t.L * 0.55, rOut = rIn + gap, TAU2 = Math.PI * 2;
-  // a centre with open water all round both rings (else the classic battle)
-  const mx = (boat.x + mon.x) / 2, mz = (boat.z + mon.z) / 2; let C = null;
-  for (let c = 0; c <= 12 && !C; c++) { const a = (c / 12) * TAU2, o = c ? rOut * 0.9 : 0, cx = mx + Math.sin(a) * o, cz = mz + Math.cos(a) * o; let ok = Math.abs(cx) < HALF - rOut - 25 && Math.abs(cz) < HALF - rOut - 25;
-    for (let k = 0; ok && k < 28; k++) { const b = (k / 28) * TAU2; if (world.blockAt(cx + Math.sin(b) * (rOut + eT.B), cz + Math.cos(b) * (rOut + eT.B), 1) || world.blockAt(cx + Math.sin(b) * (rIn - t.B), cz + Math.cos(b) * (rIn - t.B), 1)) ok = false; } if (ok) C = [cx, cz]; }
-  if (!C) return false;
-  const ap = Math.atan2(boat.x - C[0], boat.z - C[1]);
-  battle = { mon, t: 0, broad: { C, rIn, rOut, gap, eT, ap, ae: ap + Math.PI, k: 0, sx: boat.x, sz: boat.z, ex: mon.x, ez: mon.z, reload: 0.8, eReload: 2.5, shots: [], aimErr: 0, aimT: 0, lastPred: null, armed: !mon.treasure, my: broadArrow(0xffd24a), her: broadArrow(0xff4a3a), burn: 0 } };
-  boat.wp = null; helm.held = false; setBattle(true); if ((boat.throttle || 0) < 0.3) setThrottle(0.6, true);
+  const t = T(), foes = [mon, ...mons.filter((m) => m !== mon && m.naval && !m.dead && !m.boss && !m.treasure && !m.air && !mon.treasure && (m.state === 'chase' || (mon.fleet && m.fleet === mon.fleet)) && Math.hypot(m.x - boat.x, m.z - boat.z) < 90).slice(0, 3)];
+  const Lmax = Math.max(...foes.map((f) => tierOf(f).L)), Bmax = Math.max(...foes.map((f) => tierOf(f).B)), gap = 9 + (t.B + Bmax) * 1.1, spacing = Lmax + 7, Lh = 20 + ((foes.length - 1) * spacing) / 2 + Lmax * 0.5;
+  // the line runs across the line between you and her (so she starts beside you); try other headings and centres for open water
+  const toHer = Math.atan2(mon.x - boat.x, mon.z - boat.z), mx = (boat.x + mon.x) / 2, mz = (boat.z + mon.z) / 2; let F = null;
+  for (let c = 0; c < 24 && !F; c++) { const th = toHer + Math.PI / 2 + [0, 0.45, -0.45, 0.9, -0.9, 1.35, -1.35, 1.57][c % 8], sh = Math.floor(c / 8) * 18, ax = Math.sin(th), az = Math.cos(th), cx = Math.sin(th - Math.PI / 2), cz = Math.cos(th - Math.PI / 2), ox = mx + cx * sh * (c % 2 ? 1 : -1), oz = mz + cz * sh * (c % 2 ? 1 : -1);
+    let ok = true; for (let u = -(Lh + Lmax); ok && u <= Lh + Lmax; u += 5) for (const v of [-(gap / 2 + t.B + 3), 0, gap / 2 + Bmax + 3]) { const x = ox + ax * u + cx * v, z = oz + az * u + cz * v; if (Math.abs(x) > HALF - 25 || Math.abs(z) > HALF - 25 || world.blockAt(x, z, 1)) { ok = false; break; } }
+    if (ok) F = { ox, oz, ax, az, cx, cz }; }
+  if (!F) return false;
+  const B = { ...F, gap, spacing, Lh, foes, yC: -gap / 2, eC: gap / 2, sp: 0, vp: 0, anchor: Lh * 0.7, ve: 0, mode: 'move', target: -Lh * 0.75, holdT: 0, stopNext: Math.random() < 0.5, sweeps: 0, swap: null, k: 0, reload: 0.8, start: [[boat.x, boat.z], ...foes.map((f) => [f.x, f.z])], camYaw: Math.atan2(F.cx, F.cz), my: broadArrow(0xffd24a), shots: [], burn: new Map() };
+  for (const f of foes) { f.bx = { reload: 2 + Math.random(), err: 0, last: null, aimT: 0, arrow: broadArrow(0xff4a3a) }; f.state = 'chase'; }
+  battle = { mon, t: 0, broad: B }; boat.wp = null; helm.held = false; setBattle(true); if ((boat.throttle || 0) < 0.3) setThrottle(0.6, true);
   $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy', 'broadOn');
   const ui = document.createElement('div'); ui.id = 'broad';
-  ui.innerHTML = `<div class="bFoe"><b>${mon.name} <small>Lv ${Math.round(mon.lv) + 1}</small></b><div class="hp foe"><i id="bFoeHp"></i></div></div><div class="bHint" id="bHint">Fire when her red mark is in the green: your volley lands as she crosses your gold arrow.</div><div class="bStrip"><b id="bZone"></b><b id="bPerf"></b><em>▲</em><i id="bShip"></i><span id="bAim">⚠ SHE AIMS</span></div>
+  ui.innerHTML = `<div class="bFoe"><b id="bFoeName"></b><div class="hp foe"><i id="bFoeHp"></i></div></div><div class="bHint" id="bHint">Fire when a red mark is in the green: your volley lands as she comes abeam of your gold arrow.</div><div class="bStrip"><b id="bZone"></b><b id="bPerf"></b><em>▲</em>${foes.map((_, i) => `<i id="bShip${i}"></i>`).join('')}<span id="bAim">⚠ SHE AIMS</span></div>
     <button class="bFire" id="bFire">FIRE<i id="bLoad"></i></button><div class="bSide"><button class="mgBoard hidden" id="bBoard">🪝 BOARD HER</button><button class="ghost" id="bFlee">FLEE</button></div>`;
   $('hud').appendChild(ui); $('bFire').onpointerdown = (e) => { e.preventDefault(); e.stopPropagation(); broadFire(); }; $('bFlee').onclick = (e) => { e.stopPropagation(); endBroadside('flee'); }; $('bBoard').onclick = (e) => { e.stopPropagation(); endBroadside('board'); };
-  warn(mon.treasure ? '⚔ RUN HER DOWN! ⚔' : '⚔ SHIP BATTLE! ⚔', 2.5); sfx.horn(); broadHud(); return true; }
-function broadHud() { const B = battle && battle.broad; if (!B) return; const mon = battle.mon; $('bFoeHp').style.width = clamp(mon.hp / mon.maxHp, 0, 1) * 100 + '%'; $('bLoad').style.width = (1 - clamp(B.reload / broadReload(), 0, 1)) * 100 + '%'; $('bFire').classList.toggle('ready', B.reload <= 0 && B.k >= 1);
-  const bi = mon.hp / mon.maxHp <= 0.4 ? boardInfo(mon) : undefined, bb = $('bBoard'); bb.classList.toggle('hidden', bi === undefined); if (bi !== undefined) { bb.textContent = bi ? '🪝 ' + bi : '🪝 BOARD HER'; bb.classList.toggle('off', !!bi); } }
+  warn(mon.treasure ? '⚔ RUN HER DOWN! ⚔' : foes.length > 1 ? '⚔ ' + foes.length + ' SHIPS FORM A BATTLE LINE! ⚔' : '⚔ SHIP BATTLE! ⚔', 2.5); sfx.horn(); return true; }
+const lanePos = (B, s, v) => [B.ox + B.ax * s + B.cx * v, B.oz + B.az * s + B.cz * v];
+const foeAt = (B, i) => B.anchor + (i - (B.foes.length - 1) / 2) * B.spacing; // the column: lead ship first, in line astern
+function nearFoe(B) { let best = 0, bd = 1e9; B.foes.forEach((f, i) => { const d = Math.abs(foeAt(B, i) - B.sp); if (d < bd) { bd = d; best = i; } }); return best; }
 const broadReload = () => 2.4 - 0.3 * P.up.ballista;
 const broadFlight = () => clamp(battle.broad.gap / 34, 0.25, 1.1); // the same time launch() gives a bolt over that gap
-function broadFire() { const B = battle && battle.broad; if (!B || B.reload > 0 || B.k < 1) return; B.reload = broadReload(); unlockAudio(); sfx.throw();
-  const t = T(), mon = battle.mon, phi = B.ap, ux = Math.sin(phi), uz = Math.cos(phi), tx = Math.cos(phi), tz = -Math.sin(phi), n = 3 + P.up.ballista;
-  for (let i = 0; i < n; i++) { const s = (i / (n - 1) - 0.5) * t.L * 0.6, fx = boat.x + tx * s + ux * t.B * 0.5, fz = boat.z + tz * s + uz * t.B * 0.5, hx = B.C[0] + ux * B.rOut + tx * s, hz = B.C[1] + uz * B.rOut + tz * s;
+function broadFire() { const B = battle && battle.broad; if (!B || B.reload > 0 || B.k < 1 || B.swap) return; B.reload = broadReload(); unlockAudio(); sfx.throw();
+  const t = T(), n = 3 + P.up.ballista, dir = Math.sign(B.eC - B.yC);
+  for (let i = 0; i < n; i++) { const s = (i / (n - 1) - 0.5) * t.L * 0.6, [fx, fz] = lanePos(B, B.sp + s, B.yC + dir * t.B * 0.5), [hx, hz] = lanePos(B, B.sp + s, B.eC);
     setTimeout(() => { if (battle && battle.broad === B) launch({ x: fx, y: boat.y + 1.8, z: fz }, { x: hx, y: 1, z: hz }, P.up.ballista ? 'bolt' : 'spear'); }, i * 50); }
-  B.shots.push({ me: true, phi, t: broadFlight() + 0.05 }); }
-function broadEnemyFire(phi) { const B = battle.broad, mon = battle.mon, ux = Math.sin(phi), uz = Math.cos(phi), tx = Math.cos(phi), tz = -Math.sin(phi);
-  for (let i = 0; i < 4; i++) { const s = (i / 3 - 0.5) * B.eT.L * 0.6; setTimeout(() => { if (battle && battle.broad === B) launch({ x: mon.x + tx * s - ux * B.eT.B * 0.5, y: 2.5, z: mon.z + tz * s - uz * B.eT.B * 0.5 }, { x: B.C[0] + ux * B.rIn + tx * s, y: 1, z: B.C[1] + uz * B.rIn + tz * s }, 'arrow'); }, i * 60); }
-  B.shots.push({ me: false, phi, t: broadFlight() + 0.05 }); sfx.throw(); }
-function updateBroadside(dt) { const B = battle.broad, mon = battle.mon, t = T(); battle.t += dt; B.k = Math.min(1, B.k + dt / 1.4); const e = B.k * B.k * (3 - 2 * B.k);
-  const wp = 0.42 * Math.pow(clamp(boat.throttle || 0, 0, 1), 0.6), we = (0.3 + 0.03 * Math.min(4, mon.lv)) * (mon.stun > 0 ? 0.4 : 1); mon.stun = Math.max(0, mon.stun - dt);
-  B.ap += wp * dt * e; B.ae -= we * dt * e; B.reload = Math.max(0, B.reload - dt); B.eReload = Math.max(0, B.eReload - dt);
-  const px = B.C[0] + Math.sin(B.ap) * B.rIn, pz = B.C[1] + Math.cos(B.ap) * B.rIn, ex = B.C[0] + Math.sin(B.ae) * B.rOut, ez = B.C[1] + Math.cos(B.ae) * B.rOut;
-  boat.x = lerp(B.sx, px, e); boat.z = lerp(B.sz, pz, e); mon.x = lerp(B.ex, ex, e); mon.z = lerp(B.ez, ez, e); boat.v = wp * B.rIn;
-  boat.yaw += angDiff(Math.atan2(Math.cos(B.ap), -Math.sin(B.ap)), boat.yaw) * Math.min(1, dt * 4); mon.yaw += angDiff(Math.atan2(-Math.cos(B.ae), Math.sin(B.ae)), mon.yaw) * Math.min(1, dt * 4);
-  // the arrows: yours from your hull out across her ring, hers from her hull in across yours
-  const y0 = ocean.heightAt(boat.x, boat.z) + 0.4, len = B.gap + 4 - t.B * 0.5, my = B.my, her = B.her;
-  my.position.set(B.C[0] + Math.sin(B.ap) * (B.rIn + t.B * 0.6), y0, B.C[1] + Math.cos(B.ap) * (B.rIn + t.B * 0.6)); my.rotation.y = B.ap; my.scale.set(1.4, 1, len);
-  my.material.opacity = B.reload <= 0 && B.k >= 1 ? 0.85 : 0.25; my.material.color.setHex(B.reload <= 0 ? 0xffd24a : 0x9a8a6a);
-  her.position.set(B.C[0] + Math.sin(B.ae) * (B.rOut - B.eT.B * 0.6), y0, B.C[1] + Math.cos(B.ae) * (B.rOut - B.eT.B * 0.6)); her.rotation.y = B.ae + Math.PI; her.scale.set(1.4, 1, B.gap + 4 - B.eT.B * 0.5);
-  // her aim: each pass she picks an error (smaller for higher levels); she fires when, by her reckoning of your speed, you
-  // will be that far off her line when her volley lands. Her arrow flashes for the last moment before she fires.
-  const tf = broadFlight(), hlP = (t.L / 2 + 1.5) / B.rIn, pred = angDiff(B.ap + wp * tf, B.ae);
-  if (B.armed && B.k >= 1 && B.eReload <= 0 && Math.abs(pred) < 0.9) { if (B.lastPred == null) { B.aimErr = (Math.random() * 2 - 1) * hlP * clamp(2.2 - 0.3 * mon.lv, 0.8, 2.2); B.lastPred = pred; }
-    const d0 = B.lastPred - B.aimErr, d1 = pred - B.aimErr; B.aimT = Math.abs(d1) < Math.abs(wp + we) * 0.6 ? B.aimT + dt : 0; if (Math.sign(d0) !== Math.sign(d1)) { broadEnemyFire(B.ae); B.eReload = 3.2; B.lastPred = null; B.aimT = 0; } else B.lastPred = pred; }
-  else if (B.eReload > 0) B.lastPred = null;
-  her.material.opacity = !B.armed ? 0.12 : B.aimT > 0 ? 0.55 + 0.4 * Math.sin(battle.t * 30) : 0.35;
+  B.shots.push({ me: true, s: B.sp, t: broadFlight() + 0.05 }); }
+function broadFoeFire(B, f, i) { const L = tierOf(f).L, dir = Math.sign(B.yC - B.eC), se = foeAt(B, i);
+  for (let k = 0; k < 4; k++) { const s = (k / 3 - 0.5) * L * 0.6, [fx, fz] = lanePos(B, se + s, B.eC + dir * tierOf(f).B * 0.5), [hx, hz] = lanePos(B, se + s, B.yC); setTimeout(() => { if (battle && battle.broad === B) launch({ x: fx, y: 2.5, z: fz }, { x: hx, y: 1, z: hz }, 'arrow'); }, k * 60); }
+  B.shots.push({ me: false, f, s: se, t: broadFlight() + 0.05 }); sfx.throw(); }
+// her column: sail past you to the far end, sometimes stopping abeam to trade volleys; one-on-one, sometimes come about
+function broadAI(B, dt) { const lv = B.foes[0].lv, vmax = 5.5 + 0.3 * Math.min(4, lv);
+  if (B.mode === 'hold') { B.ve += clamp(-B.ve, -4 * dt, 4 * dt); B.holdT -= dt; if (B.holdT <= 0) B.mode = 'move'; return; }
+  const d = B.target - B.anchor, want = Math.sign(d) * Math.min(vmax, Math.abs(d) * 0.8 + 0.6); B.ve += clamp(want - B.ve, -3.5 * dt, 3.5 * dt);
+  if (B.stopNext && Math.abs(B.anchor - B.sp) < 1.2 && Math.abs(B.ve) > 0.5) { B.stopNext = false; B.mode = 'hold'; B.holdT = 1.6 + Math.random() * 1.2; warn('⚔ SHE HEAVES TO: TRADE VOLLEYS! ⚔', 1.6); return; }
+  if (Math.abs(d) < 1) { B.sweeps++; B.target = -Math.sign(B.target) * B.Lh * 0.75; B.stopNext = Math.random() < 0.45; B.mode = 'hold'; B.holdT = 0.6 + Math.random() * 0.6;
+    if (B.foes.length === 1 && B.sweeps % 3 === 0 && Math.random() < 0.6) broadSwap(B); } }
+// coming about: both ships circle the point between them by half a turn and end on each other's side of the line
+function broadSwap(B) { const f = B.foes[0], [yx, yz] = lanePos(B, B.sp, B.yC), [ex, ez] = lanePos(B, foeAt(B, 0), B.eC), mx = (yx + ex) / 2, mz = (yz + ez) / 2;
+  B.swap = { t: 0, dur: 5, mx, mz, y: [yx - mx, yz - mz], e: [ex - mx, ez - mz], yaw0: boat.yaw, eyaw0: f.yaw }; $('bHint').textContent = 'Coming about! Hold your fire.'; }
+function updateBroadside(dt) { const B = battle.broad, t = T(); battle.t += dt; B.k = Math.min(1, B.k + dt / 1.4); const e = B.k * B.k * (3 - 2 * B.k);
+  for (const f of B.foes) f.stun = Math.max(0, (f.stun || 0) - dt);
+  const tf = broadFlight(), hlY = t.L / 2 + 1.5;
+  if (B.swap) { const S = B.swap; S.t += dt; const u = Math.min(1, S.t / S.dur), a = Math.PI * u * u * (3 - 2 * u), c = Math.cos(a), s = Math.sin(a), rot = (v) => [v[0] * c + v[1] * s, -v[0] * s + v[1] * c];
+    const [yx, yz] = rot(S.y), [ex, ez] = rot(S.e), f = B.foes[0]; boat.x = S.mx + yx; boat.z = S.mz + yz; f.x = S.mx + ex; f.z = S.mz + ez; boat.yaw = S.yaw0 + a; f.yaw = S.eyaw0 + a; boat.v = 4;
+    if (u >= 1) { B.ox = 2 * S.mx - B.ox; B.oz = 2 * S.mz - B.oz; B.ax = -B.ax; B.az = -B.az; B.cx = -B.cx; B.cz = -B.cz; B.swap = null; $('bHint').textContent = 'Fire when a red mark is in the green: your volley lands as she comes abeam of your gold arrow.'; } }
+  else {
+    // you ease forward and back (STOP holds you); she works her column along her lane
+    const thr = clamp(boat.throttle || 0, 0, 1), vpWant = thr * 3.2 * Math.cos(battle.t * 0.45); B.vp += clamp(vpWant - B.vp, -3 * dt, 3 * dt); B.sp = clamp(B.sp + B.vp * dt * e, -8, 8);
+    if (B.k >= 1) broadAI(B, dt); B.anchor += B.ve * dt * e; B.reload = Math.max(0, B.reload - dt);
+    const [px, pz] = lanePos(B, B.sp, B.yC); boat.x = lerp(B.start[0][0], px, e); boat.z = lerp(B.start[0][1], pz, e); boat.yaw += angDiff(Math.atan2(B.ax, B.az), boat.yaw) * Math.min(1, dt * 3); boat.v = Math.abs(B.vp);
+    // each ship to its slot in the column (it closes up smoothly when a ship goes down)
+    B.foes.forEach((f, i) => { const [fx, fz] = lanePos(B, foeAt(B, i), B.eC), st0 = B.start[i + 1] || [fx, fz]; if (B.k < 1) { f.x = lerp(st0[0], fx, e); f.z = lerp(st0[1], fz, e); } else { f.x += (fx - f.x) * Math.min(1, dt * 3); f.z += (fz - f.z) * Math.min(1, dt * 3); } f.yaw += angDiff(Math.atan2(-B.ax, -B.az), f.yaw) * Math.min(1, dt * 3); });
+    // her aim, ship by ship: a random error per pass (smaller for higher levels); she fires when her reckoning of where you
+    // will be (at your current speed) when her volley lands crosses it; her arrow flashes as she aims; change speed to spoil it
+    B.foes.forEach((f, i) => { const A = f.bx, se = foeAt(B, i); A.reload = Math.max(0, A.reload - dt * (f.stun > 0 ? 0.3 : 1));
+      if (B.k < 1 || f.treasure || A.reload > 0 || Math.abs(se - B.sp) > 14) { A.last = null; A.aimT = 0; return; }
+      if (A.last == null) A.err = (Math.random() * 2 - 1) * hlY * clamp(2.6 - 0.3 * f.lv, 1, 2.6);
+      const diff = se - (B.sp + B.vp * tf) - A.err; A.aimT = Math.abs(diff) < 3 ? A.aimT + dt : 0; if (A.last != null && Math.sign(diff) !== Math.sign(A.last)) { broadFoeFire(B, f, i); A.reload = 3.2; A.last = null; A.aimT = 0; } else A.last = diff; }); }
+  // the arrows: yours from your hull across to her lane, each of theirs from her hull across to yours
+  const dirE = Math.sign(B.eC - B.yC), yawE = Math.atan2(B.cx * dirE, B.cz * dirE), y0 = ocean.heightAt(boat.x, boat.z) + 0.4, show = !B.swap && B.k >= 1;
+  const [ax0, az0] = lanePos(B, B.sp, B.yC + dirE * t.B * 0.6); B.my.position.set(ax0, y0, az0); B.my.rotation.y = yawE; B.my.scale.set(1.4, 1, B.gap + 4 - t.B * 0.6); B.my.visible = show;
+  B.my.material.opacity = B.reload <= 0 ? 0.85 : 0.25; B.my.material.color.setHex(B.reload <= 0 ? 0xffd24a : 0x9a8a6a);
+  B.foes.forEach((f, i) => { const A = f.bx, eT = tierOf(f), [hx, hz] = lanePos(B, foeAt(B, i), B.eC - dirE * eT.B * 0.6); A.arrow.position.set(hx, y0, hz); A.arrow.rotation.y = yawE + Math.PI; A.arrow.scale.set(1.4, 1, B.gap + 4 - eT.B * 0.6); A.arrow.visible = show;
+    A.arrow.material.opacity = f.treasure ? 0.12 : A.aimT > 0 ? 0.55 + 0.4 * Math.sin(battle.t * 30) : 0.3; });
   // volleys landing
   for (let i = B.shots.length - 1; i >= 0; i--) { const s = B.shots[i]; s.t -= dt; if (s.t > 0) continue; B.shots.splice(i, 1);
-    if (s.me) { const hl = (B.eT.L / 2 + 1.5) / B.rOut, off = Math.abs(angDiff(B.ae, s.phi)), hx = B.C[0] + Math.sin(s.phi) * B.rOut, hz = B.C[1] + Math.cos(s.phi) * B.rOut;
-      if (off < hl) { const perfect = off < hl * 0.35, d = Math.round(attack() * 1.15 * (perfect ? 1.6 : 1) * (boat.thor > 0 ? 2 : 1) * rnd(0.9, 1.1)); mon.hp -= d; if (mon.stState) mon.stState.hurt = 1; sfx.hit(); foam.splash(mon.x, mon.z, 1.4);
-        pop(mon.x, mon.g.position.y + mon.top + 1, mon.z, (perfect ? 'PERFECT! ' : '') + '−' + d, perfect ? '#ffd24a' : '#ffffff'); if (P.up.fire) B.burn = 3 + P.up.fire; }
+    if (s.me) { let hit = -1, best = 1e9; B.foes.forEach((f, j) => { const off = Math.abs(foeAt(B, j) - s.s); if (off < tierOf(f).L / 2 + 1.5 && off < best) { best = off; hit = j; } }); const [hx, hz] = lanePos(B, s.s, B.eC);
+      if (hit >= 0) { const f = B.foes[hit], perfect = best < (tierOf(f).L / 2 + 1.5) * 0.35, d = Math.round(attack() * 1.15 * (perfect ? 1.6 : 1) * (boat.thor > 0 ? 2 : 1) * rnd(0.9, 1.1)); f.hp -= d; if (f.stState) f.stState.hurt = 1; sfx.hit(); foam.splash(f.x, f.z, 1.4);
+        pop(f.x, f.g.position.y + f.top + 1, f.z, (perfect ? 'PERFECT! ' : '') + '−' + d, perfect ? '#ffd24a' : '#ffffff'); if (P.up.fire) B.burn.set(f, 3 + P.up.fire); }
       else { foam.splash(hx, hz, 0.9); sfx.splash(0.6); pop(hx, 3, hz, 'MISS', '#9ab8c8'); } }
-    else { const off = Math.abs(angDiff(B.ap, s.phi)), hx = B.C[0] + Math.sin(s.phi) * B.rIn, hz = B.C[1] + Math.cos(s.phi) * B.rIn;
-      if (off < hlP) { boat.shake = 0.5; damage(mon.dmg * (off < hlP * 0.35 ? 1.25 : 1) * (1 - defense()), mon.name + ' hits you with a volley!'); if (!battle) return; } else { foam.splash(hx, hz, 0.8); sfx.splash(0.5); } } }
-  // fire pots set her burning
-  if (B.burn > 0) { B.burn -= dt; mon.hp -= attack() * 0.12 * dt; if (Math.random() < dt * 14) embers.add(mon.x + rnd(-1.5, 1.5), mon.z + rnd(-1.5, 1.5), { spray: true, y: mon.g.position.y + 2, vx: rnd(-1, 1), vz: rnd(-1, 1), vy: rnd(3, 6), g: 3, s: 0.4, grow: 0, life: 0.9, a: 1 }); }
-  if (mon.hp <= 0) { endBroadside('win'); return; }
-  const SPAN = 1.1, xOf = (a) => 50 + clamp(a / SPAN, -1, 1) * 50, hl = (B.eT.L / 2 + 1.5) / B.rOut, lead = we * tf, d = angDiff(B.ae, B.ap); // her angle from your arrow; she comes from the right
+    else if (B.foes.includes(s.f)) { const off = Math.abs(B.sp - s.s), [hx, hz] = lanePos(B, s.s, B.yC);
+      if (off < hlY) { boat.shake = 0.5; damage(s.f.dmg * (off < hlY * 0.35 ? 1.25 : 1) * (1 - defense()), s.f.name + ' hits you with a volley!'); if (!battle) return; } else { foam.splash(hx, hz, 0.8); sfx.splash(0.5); } } }
+  // burning ships, and ships going down
+  for (const [f, tb] of B.burn) { if (tb <= 0 || f.dead) { B.burn.delete(f); continue; } B.burn.set(f, tb - dt); f.hp -= attack() * 0.12 * dt; if (Math.random() < dt * 14) embers.add(f.x + rnd(-1.5, 1.5), f.z + rnd(-1.5, 1.5), { spray: true, y: f.g.position.y + 2, vx: rnd(-1, 1), vz: rnd(-1, 1), vy: rnd(3, 6), g: 3, s: 0.4, grow: 0, life: 0.9, a: 1 }); }
+  for (const f of [...B.foes]) if (f.hp <= 0) { const i = B.foes.indexOf(f); B.foes.splice(i, 1); scene.remove(f.bx.arrow); f.bx.arrow.material.dispose(); B.burn.delete(f); killMon(f); const el = $('bShip' + B.foes.length); if (el) el.remove(); if (B.foes.length) battle.mon = B.foes[0]; }
+  if (!B.foes.length) { endBroadside('win'); return; }
+  // the timing strip: every ship's place along the line from your arrow, the green zone where one must be when you fire
+  // (her column's speed times the flight already allowed for), its PERFECT middle, and the warning while one aims
+  const SPAN = 24, xOf = (v) => 50 + clamp(v / SPAN, -1, 1) * 50, ni = nearFoe(B), hl = tierOf(B.foes[ni]).L / 2 + 1.5, lead = -B.ve * tf;
   $('bZone').style.left = xOf(lead - hl) + '%'; $('bZone').style.width = xOf(lead + hl) - xOf(lead - hl) + '%'; $('bPerf').style.left = xOf(lead - hl * 0.35) + '%'; $('bPerf').style.width = xOf(lead + hl * 0.35) - xOf(lead - hl * 0.35) + '%';
-  const sh = $('bShip'); sh.style.left = xOf(d) + '%'; sh.style.opacity = Math.abs(d) < SPAN ? 1 : 0.25; $('bAim').style.opacity = B.aimT > 0 ? 1 : 0;
+  B.foes.forEach((f, i) => { const el = $('bShip' + i); if (!el) return; const v = foeAt(B, i) - B.sp; el.style.left = xOf(v) + '%'; el.style.opacity = B.swap ? 0 : Math.abs(v) < SPAN ? 1 : 0.25; });
+  $('bAim').style.opacity = B.foes.some((f) => f.bx.aimT > 0) ? 1 : 0; document.querySelector('#broad .bStrip').style.opacity = B.swap ? 0.3 : 1;
   B.hudT = (B.hudT || 0) - dt; if (B.hudT <= 0) { B.hudT = 0.1; broadHud(); } }
-function clearBroadside() { const B = battle && battle.broad; if (!B) return; for (const a of [B.my, B.her]) { scene.remove(a); a.material.dispose(); } const ui = $('broad'); if (ui) ui.remove(); document.body.classList.remove('busy', 'broadOn'); $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); }
-function endBroadside(result) { const B = battle && battle.broad; if (!B) return; const mon = battle.mon; clearBroadside(); battle = null; setBattle(false); boat.lastHit = time; boat.grace = 3.5; hud();
-  if (result === 'win') { killMon(mon); setThrottle(0, true); }
-  else if (result === 'flee') { damage(mon.dmg * 0.5 * (1 - defense()), 'You break away under fire!'); mon.stun = 7; boat.boost = 3.5; boat.v = topSpeed(); setThrottle(1, true); }
-  else if (result === 'board') startBattle(mon, true, { classic: true, board: true }); }
+function broadHud() { const B = battle && battle.broad; if (!B || !B.foes.length) return; const f = B.foes[nearFoe(B)];
+  $('bFoeName').innerHTML = f.name + ' <small>Lv ' + (Math.round(f.lv) + 1) + '</small>' + (B.foes.length > 1 ? ' <small>· ' + B.foes.length + ' ships</small>' : ''); $('bFoeHp').style.width = clamp(f.hp / f.maxHp, 0, 1) * 100 + '%';
+  $('bLoad').style.width = (1 - clamp(B.reload / broadReload(), 0, 1)) * 100 + '%'; $('bFire').classList.toggle('ready', B.reload <= 0 && B.k >= 1 && !B.swap);
+  const bf = boardTarget(B), bi = bf ? boardInfo(bf) : undefined, bb = $('bBoard'); bb.classList.toggle('hidden', !bf); if (bf) { bb.textContent = bi ? '🪝 ' + bi : '🪝 BOARD HER'; bb.classList.toggle('off', !!bi); } }
+// the ship you can board: the nearest one abeam whose hull is below 40%
+function boardTarget(B) { let best = null, bd = 1e9; B.foes.forEach((f, i) => { const d = Math.abs(foeAt(B, i) - B.sp); if (f.hp / f.maxHp <= 0.4 && d < bd && d < 16) { bd = d; best = f; } }); return best; }
+function clearBroadside() { const B = battle && battle.broad; if (!B) return; for (const a of [B.my, ...B.foes.map((f) => f.bx.arrow)]) { scene.remove(a); a.material.dispose(); } const ui = $('broad'); if (ui) ui.remove(); document.body.classList.remove('busy', 'broadOn'); $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); }
+function endBroadside(result) { const B = battle && battle.broad; if (!B) return; const foes = [...B.foes], target = result === 'board' ? boardTarget(B) : null; clearBroadside(); battle = null; setBattle(false); boat.lastHit = time; boat.grace = 3.5; hud();
+  if (result === 'win') setThrottle(0, true);
+  else if (result === 'flee') { damage(Math.max(...foes.map((f) => f.dmg)) * 0.5 * (1 - defense()), 'You break away under fire!'); for (const f of foes) f.stun = 7; boat.boost = 3.5; boat.v = topSpeed(); setThrottle(1, true); }
+  else if (result === 'board' && target) { if (boardInfo(target)) return; for (const f of foes) if (f !== target) f.stun = 9; startBattle(target, true, { classic: true, board: true }); } }
 $('pauseBtn').addEventListener('click', () => { const b = $('broadToggle'); if (b) b.textContent = '⚔ SHIP FIGHTS: ' + (BROAD.on ? 'ACTION' : 'CLASSIC'); });
 { const b = document.createElement('button'); b.id = 'broadToggle'; b.className = 'ghost'; b.onclick = () => { BROAD.on = !BROAD.on; try { localStorage.setItem('pr_broad', BROAD.on ? '1' : '0'); } catch (e) { /* ignore */ } b.textContent = '⚔ SHIP FIGHTS: ' + (BROAD.on ? 'ACTION' : 'CLASSIC'); }; $('paused').insertBefore(b, $('saveQuit')); }
 
@@ -449,7 +482,7 @@ function updateWeather(dt) {
     if (d < R2 * 1.7 && kb > 0 && state === 'play' && !battle && !boat.air && !(boat.airCd > 0) && grow > 0.6) { const ux = (boat.x - s.x) / (d || 1), uz = (boat.z - s.z) / (d || 1), pull = kb * str * (d < R2 ? 7 : 3.5);
       boat.x += (-uz * 6 * kb * str - ux * pull) * dt; boat.z += (ux * 6 * kb * str - uz * pull) * dt; boat.spin = Math.max(boat.spin, 1.2 * kb);
       if (d < R2 * 0.8) { boat.air = startAir(boat, s, kb, str); if (ship.mask) ship.mask.visible = false; say(s.tornado ? 'The sea tornado lifts you into the sky!' : 'The waterspout lifts you off the sea!', 2.5); sfx.whoosh(); } }
-    for (const mon of mons) { if (mon.dead || mon.air || mon.boss || GIANTS.has(mon.type) || mon.airCd > time || (battle && battle.mon === mon)) continue; const dm = Math.hypot(mon.x - s.x, mon.z - s.z), km = liftK(mon.size, vs); if (km <= 0 || dm > R2) continue;
+    for (const mon of mons) { if (mon.dead || mon.air || mon.boss || GIANTS.has(mon.type) || mon.airCd > time || inFight(mon)) continue; const dm = Math.hypot(mon.x - s.x, mon.z - s.z), km = liftK(mon.size, vs); if (km <= 0 || dm > R2) continue;
       if (dm < R2 * 0.8) { mon.air = startAir(mon, s, km, str); if (mon.naval && mon.m.ship.mask) mon.m.ship.mask.visible = false; } else { mon.x += ((mon.x - s.x) / dm) * -4 * dt; mon.z += ((mon.z - s.z) / dm) * -4 * dt; mon.yaw += dt * 3; } }
     for (let j = spots.length - 1; j >= 0; j--) { const sp2 = spots[j]; if (sp2.kind === 'fish' && Math.hypot(sp2.x - s.x, sp2.z - s.z) < R2) { removeSpot(sp2); for (let k = 0; k < 6; k++) spawnFloat(boat.x + rnd(-25, 25), boat.z + rnd(-25, 25), 'f', 1); say('It\'s raining fish! 🐟', 2.5); } }
     if (s.life <= 0) { twisters.remove(s.g); spouts.splice(i, 1); } }
@@ -493,7 +526,7 @@ function updateWhirl(dt) { const E = EV.whirl, W = ocean.whirl; if (!E) return; 
       if (!E.warned && s.r < 1.15) { E.warned = true; say('The maelstrom has you! Full sail and steer out of the spin.', 3); }
       E.sndT -= dt; if (E.sndT <= 0) { E.sndT = 2.2; sfx.whoosh(); }
       if (s.r < 0.32) { E.hitT -= dt; if (E.hitT <= 0) { E.hitT = 0.8; damage(maxHp() * 0.045 * (1 - defense() * 0.5), 'The maelstrom grinds your hull!'); sfx.creak(); } } } }
-  for (const mon of mons) { if (mon.dead || mon.air || mon.boss || (battle && battle.mon === mon)) continue; const s = swirlAt(mon.x, mon.z, E, k); if (!s) continue; mon.x += s.vx * dt * 0.8; mon.z += s.vz * dt * 0.8; mon.yaw += k * s.e * dt; if (s.r < 0.3) { mon.hp -= mon.maxHp * 0.06 * dt; if (mon.hp <= 0) killMon(mon); } }
+  for (const mon of mons) { if (mon.dead || mon.air || mon.boss || inFight(mon)) continue; const s = swirlAt(mon.x, mon.z, E, k); if (!s) continue; mon.x += s.vx * dt * 0.8; mon.z += s.vz * dt * 0.8; mon.yaw += k * s.e * dt; if (s.r < 0.3) { mon.hp -= mon.maxHp * 0.06 * dt; if (mon.hp <= 0) killMon(mon); } }
   for (const f of floats) { const s = swirlAt(f.x, f.z, E, k); if (!s) continue; f.x += (s.tx + (s.vx - s.tx) * 0.12) * dt * 0.8; f.z += (s.tz + (s.vz - s.tz) * 0.12) * dt * 0.8; }
   // foam streaks circling down into the eye, spray thrown up from it
   E.fxT -= dt; while (E.fxT <= 0) { E.fxT += 0.035; const a = Math.random() * 6.28, rr = E.R * rnd(0.2, 1.5), px = E.x + Math.sin(a) * rr, pz = E.z + Math.cos(a) * rr, s = swirlAt(px, pz, E, k); if (s) foam.add(px, pz, { vx: s.vx * 1.3, vz: s.vz * 1.3, s: rnd(0.8, 1.8), grow: 0.3, life: 2.2, a: 0.5 * k }); }
@@ -731,7 +764,7 @@ $('chartClose').onclick = closeChart;
 
 
 // ---------- tags and pops ---------- (an enemy in a broadside has her bar at the top instead)
-function updateTags(dt) { for (const mon of mons) { const t = mon.tag; if (mon.dead || state === 'title' || (battle && battle.broad && battle.mon === mon)) { t.style.display = 'none'; continue; } const d = Math.hypot(mon.x - boat.x, mon.z - boat.z); const sp = d < 90 && mon.rise > 0.5 ? toScreen(mon.x, mon.g.position.y + mon.top + 1.2, mon.z) : null; if (!sp || (wx.type === 'fog' && wx.k > 0.5 && d > 40)) { t.style.display = 'none'; continue; }
+function updateTags(dt) { for (const mon of mons) { const t = mon.tag; if (mon.dead || state === 'title' || (battle && battle.broad && battle.broad.foes.includes(mon))) { t.style.display = 'none'; continue; } const d = Math.hypot(mon.x - boat.x, mon.z - boat.z); const sp = d < 90 && mon.rise > 0.5 ? toScreen(mon.x, mon.g.position.y + mon.top + 1.2, mon.z) : null; if (!sp || (wx.type === 'fog' && wx.k > 0.5 && d > 40)) { t.style.display = 'none'; continue; }
     t.style.display = 'block'; t.style.left = sp[0] + 'px'; t.style.top = sp[1] + 'px'; const html = '<span style="color:' + (mon.naval ? '#ffb03a' : danger(mon.lv)) + '">' + mon.name + ' · ' + (mon.lv - P.tier > 1.6 ? '💀 Lv ' + (Math.round(mon.lv) + 1) : 'Lv ' + (Math.round(mon.lv) + 1)) + '</span>' + (mon.hp < mon.maxHp ? '<i><b style="width:' + clamp(mon.hp / mon.maxHp, 0, 1) * 100 + '%"></b></i>' : ''); if (t._h !== html) { t.innerHTML = html; t._h = html; } }
   for (let i = pops.length - 1; i >= 0; i--) { const p = pops[i]; p.t += dt; const sp = toScreen(p.x, p.y + p.t * 2.5, p.z); if (!sp || p.t > p.life) { p.el.remove(); pops.splice(i, 1); continue; } p.el.style.left = sp[0] + 'px'; p.el.style.top = sp[1] + 'px'; p.el.style.opacity = Math.min(1, (p.life - p.t) * 2); } }
 
@@ -787,9 +820,9 @@ function updateHulls() { const list = []; const push = (s, x, z, yaw) => { s.g.u
 $('viewBtn').onclick = () => { viewMode = viewMode === 'top' ? 'chase' : viewMode === 'chase' ? 'helm' : 'top'; $('viewBtn').textContent = viewMode.toUpperCase(); if (tut) tut.views.add(viewMode); };
 function updateCamera(dt) { const t = T(); let tgt, dist, pitch;
   if (state === 'title') { const a = time * 0.06; tgt = V(boat.x, 2, boat.z); dist = t.L * 2.2 + 14; pitch = 0.28; camYaw = a; }
-  else if (battle && battle.broad) { // the action ship battle: from inside the rings, side-on to your ship, looking out across her ring
-    const B = battle.broad, ux = Math.sin(B.ap), uz = Math.cos(B.ap), hfov = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect, W = Math.max(18, B.eT.L * 2.2, t.L * 2.2);
-    tgt = V(boat.x + ux * B.gap * 0.5, 1.2, boat.z + uz * B.gap * 0.5); dist = clamp(W / (2 * hfov), 16, 60); pitch = 0.28; camYaw += angDiff(B.ap, camYaw) * Math.min(1, dt * 2.5); }
+  else if (battle && battle.broad) { // the battle line side-on: the camera slides along the line and never turns
+    const B = battle.broad, ni = nearFoe(B), f = B.foes[ni] || battle.mon, sep = clamp((B.foes.length ? foeAt(B, ni) : B.sp) - B.sp, -16, 16), [fx, fz] = lanePos(B, B.sp + sep / 2, (B.yC + B.eC) / 2), hfov = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect, W = Math.max(18, Math.abs(sep) + tierOf(f).L + 6, t.L * 2.2);
+    tgt = V(fx, 1.2, fz); dist = clamp(W / (2 * hfov), 16, 60); pitch = 0.28; camYaw += angDiff(B.camYaw, camYaw) * Math.min(1, dt * 2.5); }
   else if (battle && battle.mon.giant) { // frame your ship against one of the giant's eyes (the kraken's eye is about a ship long)
     const mon = battle.mon, Rk = mon.size / 6, sy = Math.sin(mon.yaw), cy = Math.cos(mon.yaw), lx = 0.9 * Rk, lz = 1.15 * Rk, ex = mon.x + lx * cy + lz * sy, ez = mon.z + lz * cy - lx * sy, de = Math.hypot(ex - boat.x, ez - boat.z);
     tgt = V((boat.x + ex) / 2, Rk * 0.3, (boat.z + ez) / 2); dist = de * 0.5 + t.L * 1.8 + 12; pitch = 0.16; const want = Math.atan2(ex - boat.x, ez - boat.z); camYaw += angDiff(want, camYaw) * Math.min(1, dt * 1.5); }
@@ -804,7 +837,7 @@ function updateCamera(dt) { const t = T(); let tgt, dist, pitch;
 
 // ---------- HUD buttons ----------
 $('fireBtn').onclick = (e) => { e.stopPropagation(); unlockAudio(); fire(); }; $('actBtn').onclick = (e) => { e.stopPropagation(); doAction(); };
-$('pauseBtn').onclick = () => { if (state !== 'play' || battle || fishing) return; state = 'paused'; $('pauseText').textContent = T().name + ' · ' + P.kills + ' foes slain · legends ' + Object.keys(P.legends).length + ' / 3'; $('paused').classList.remove('hidden'); };
+$('pauseBtn').onclick = () => { if (state !== 'play') return; state = 'paused'; $('pauseText').textContent = T().name + ' · ' + P.kills + ' foes slain · legends ' + Object.keys(P.legends).length + ' / 3'; $('paused').classList.remove('hidden'); };
 $('resumeBtn').onclick = () => { $('paused').classList.add('hidden'); state = 'play'; };
 $('saveQuit').onclick = () => { save(); $('paused').classList.add('hidden'); toTitle(); };
 $('howBtn').onclick = () => { $('title').classList.add('hidden'); $('how').classList.remove('hidden'); }; $('howBack').onclick = () => { $('how').classList.add('hidden'); $('title').classList.remove('hidden'); };
@@ -974,4 +1007,4 @@ function tick(dt) { time += dt;
 { const h = world.harbors[0]; boat.x = h.dock.x + Math.cos(h.dir) * 12; boat.z = h.dock.z + Math.sin(h.dir) * 12; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); }
 const hadSave = load(); if (!hadSave) P.hp = maxHp(); rebuildShip(); placeWreck(); toTitle(); env.snap(P.tod, null, world.regionWeights(boat.x, boat.z, {})); camTgt.set(boat.x, 0, boat.z);
 requestAnimationFrame(frame);
-window.__pr = { startBroadside, broadFire, endBroadside, BROAD, planRoute, autoDock, cleanSave, giveMap, prizeChoice, startDig, boardInfo, spouts, startAir, liftK, pods, spawnPod, EV, startEvent, aur, get wreck() { return P.wreck; }, sink, get chartView() { return chartView; }, step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); }, helm, setThrottle, set timeScale(v) { timeScale = v; }, dmgLog, P, boat, mons, spots, floats, world, ocean, wx, setWeather, spawnMon, startBattle, startFishing, openHarbor, fire, get state() { return state; }, set state(v) { state = v; }, get battle() { return battle; }, minis, MLV, killMon, landBolt, warnRing, spawnSpout, rebuildShip, save, load, camera, renderer, scene, get ship() { return ship; }, setCourse };
+window.__pr = { broadSwap, startBroadside, broadFire, endBroadside, BROAD, planRoute, autoDock, cleanSave, giveMap, prizeChoice, startDig, boardInfo, spouts, startAir, liftK, pods, spawnPod, EV, startEvent, aur, get wreck() { return P.wreck; }, sink, get chartView() { return chartView; }, step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); }, helm, setThrottle, set timeScale(v) { timeScale = v; }, dmgLog, P, boat, mons, spots, floats, world, ocean, wx, setWeather, spawnMon, startBattle, startFishing, openHarbor, fire, get state() { return state; }, set state(v) { state = v; }, get battle() { return battle; }, minis, MLV, killMon, landBolt, warnRing, spawnSpout, rebuildShip, save, load, camera, renderer, scene, get ship() { return ship; }, setCourse };
