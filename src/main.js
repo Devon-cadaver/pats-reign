@@ -134,7 +134,11 @@ let thrId = null; thrEl.addEventListener('pointerdown', (e) => { e.preventDefaul
 thrEl.addEventListener('pointermove', (e) => { if (e.pointerId === thrId) thrPick(e); });
 for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) thrEl.addEventListener(ev, (e) => { if (e.pointerId === thrId) thrId = null; });
 canvas.addEventListener('wheel', (e) => { zoom = clamp(zoom * Math.exp(e.deltaY * 0.001), 0.3, 2.6); }, { passive: true });
-const keys = {}; addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; if (e.key === ' ' && state === 'play') fire(); }); addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+// W / S (or up / down): a tap moves the sail telegraph one notch (STOP, ROW, HALF, FULL); held, it steps on through them
+const thrKeyOk = () => state === 'play' && !fishing && (!battle || !!battle.broad);
+function thrKeyStep(dir) { if (!thrKeyOk()) return; const cur = boat.throttle || 0, next = dir > 0 ? THR_LV.find((l) => l > cur + 0.02) : [...THR_LV].reverse().find((l) => l < cur - 0.02); if (next != null) setThrottle(next); }
+let thrHold = 0;
+const keys = {}; addEventListener('keydown', (e) => { const k = e.key.toLowerCase(); keys[k] = true; if (e.key === ' ' && state === 'play') fire(); if (!e.repeat && (k === 'w' || k === 's' || k === 'arrowup' || k === 'arrowdown')) { thrHold = 0; thrKeyStep(k === 'w' || k === 'arrowup' ? 1 : -1); } }); addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 const ray = new THREE.Raycaster(), seaPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 function tapSea(x, y) { ray.setFromCamera(new THREE.Vector2((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1), camera); const p = new THREE.Vector3(); if (!ray.ray.intersectPlane(seaPlane, p)) return; setCourse(p.x, p.z); }
 function setCourse(x, z) { boat.wp = { x: clamp(x, -HALF + 20, HALF - 20), z: clamp(z, -HALF + 20, HALF - 20) }; courseMark.visible = true; sfx.throw(); if ((boat.throttle || 0) < 0.3) setThrottle(0.8, true); }
@@ -777,8 +781,8 @@ function updateBoat(dt) {
   if (boat.airCd > 0) boat.airCd -= dt;
   const t = T(); let thr = boat.throttle || 0, want = null;
   const kTurn = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0), kThr = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0);
-  if (state === 'play' && battle && battle.broad && kThr) setThrottle((boat.throttle || 0) + kThr * dt * 0.7); // W and S set your speed in a ship battle too
-  if (state === 'play' && !battle && !fishing) { if (kTurn) helm.angle = clamp(helm.angle + kTurn * dt * 2.2, -HMAX, HMAX); if (kThr) setThrottle((boat.throttle || 0) + kThr * dt * 0.7);
+  if (kThr && thrKeyOk()) { thrHold += dt; if (thrHold > 0.4) { thrHold -= 0.22; thrKeyStep(kThr); } } else thrHold = 0; // held: the next notch every 0.22 s after 0.4 s
+  if (state === 'play' && !battle && !fishing) { if (kTurn) helm.angle = clamp(helm.angle + kTurn * dt * 2.2, -HMAX, HMAX);
     if (boat.wp) { const dx = boat.wp.x - boat.x, dz = boat.wp.z - boat.z, d = Math.hypot(dx, dz);
       if (d < 4 + t.L * 0.3) { const au = autoOn() && boat.auto.h; boat.wp = null; boat.auto = null; courseMark.visible = false; setThrottle(0, true); if (au) openHarbor(au); else say('Arrived. Sails furled.'); }
       else { courseMark.position.set(boat.wp.x, ocean.heightAt(boat.wp.x, boat.wp.z) + 0.2, boat.wp.z); courseMark.rotation.z += dt; thr = Math.min(thr, clamp(d / 18, 0.25, 1));

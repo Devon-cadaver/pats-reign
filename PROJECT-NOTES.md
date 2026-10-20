@@ -223,6 +223,10 @@ disagree with this file, this file wins.
   in 9, wheeled out 142, back to the sailing zoom after.
 - In a battle the fog look runs at 0.4 strength (wxLook k), easing in and out with env.apply, so the ships stay visible.
 
+## v0.6.5: W / S step the telegraph (Sean: on PC, a tap moves one step, holding runs all the way)
+- keydown (not e.repeat) of W / S / up / down calls thrKeyStep(+-1): the next THR_LV notch (STOP, ROW, HALF, FULL). Held, the
+  tick steps again after 0.4 s and then every 0.22 s (thrHold). Works while sailing and in a ship battle (thrKeyOk).
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster
