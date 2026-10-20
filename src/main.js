@@ -92,7 +92,7 @@ const pUp = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pinch0 =
 
 // ---------- the helm: a big ship's wheel across the bottom of the screen, its hub just below the edge so the top half
 // shows. Swipe along it to turn it; it stays where you leave it, and on a set course it steers itself back toward the
-// mark when you let go. Double-tap it to centre it. The sail telegraph (STOP / ROW / HALF / FULL; up the left on phones, above the wheel on tablets) sets sail and
+// mark when you let go. Double-tap it to centre it. The sail telegraph (BACK / STOP / ROW / HALF / FULL; a column on the controls side, see ⇄) sets sail and
 // oar power with a tap; STOP furls the sails and cancels the course. Taps and sideways swipes only, so nothing on the
 // controls is a downward swipe (iPad Safari closes full screen on those). ----------
 const HMAX = 2.4; // the wheel turns about 140 degrees each way
@@ -138,7 +138,10 @@ canvas.addEventListener('wheel', (e) => { zoom = clamp(zoom * Math.exp(e.deltaY 
 const thrKeyOk = () => state === 'play' && !fishing && (!battle || !!battle.broad);
 function thrKeyStep(dir) { if (!thrKeyOk()) return; const cur = boat.throttle || 0, next = dir > 0 ? THR_LV.find((l) => l > cur + 0.02) : [...THR_LV].reverse().find((l) => l < cur - 0.02); if (next != null) setThrottle(next); }
 let thrHold = 0;
-const keys = {}; addEventListener('keydown', (e) => { const k = e.key.toLowerCase(); keys[k] = true; if (e.key === ' ' && !/INPUT|TEXTAREA/.test(e.target.tagName || '')) { e.preventDefault(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); if (state === 'play') fire(); } if (!e.repeat && (k === 'w' || k === 's' || k === 'arrowup' || k === 'arrowdown')) { thrHold = 0; thrKeyStep(k === 'w' || k === 'arrowup' ? 1 : -1); } }); addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+const keys = {}; addEventListener('keydown', (e) => { const k = e.key.toLowerCase(); keys[k] = true; if (e.key === ' ' && !/INPUT|TEXTAREA/.test(e.target.tagName || '')) { e.preventDefault(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); if (state === 'play') fire(true); }
+  // C changes the view; E opens and shuts the sea chart
+  if (k === 'c' && state === 'play' && !battle && !fishing) $('viewBtn').click(); if (k === 'e') { if (state === 'chart') closeChart(); else $('chartBtn').click(); }
+  if (!e.repeat && (k === 'w' || k === 's' || k === 'arrowup' || k === 'arrowdown')) { thrHold = 0; thrKeyStep(k === 'w' || k === 'arrowup' ? 1 : -1); } }); addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 const ray = new THREE.Raycaster(), seaPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 function tapSea(x, y) { ray.setFromCamera(new THREE.Vector2((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1), camera); const p = new THREE.Vector3(); if (!ray.ray.intersectPlane(seaPlane, p)) return; setCourse(p.x, p.z); }
 function setCourse(x, z) { boat.wp = { x: clamp(x, -HALF + 20, HALF - 20), z: clamp(z, -HALF + 20, HALF - 20) }; courseMark.visible = true; sfx.throw(); if ((boat.throttle || 0) < 0.3) setThrottle(0.8, true); }
@@ -238,12 +241,15 @@ function launch(a, b, kind, onHit) { const g = new THREE.Group(); const m = new 
   g.position.set(a.x, a.y, a.z); scene.add(g); const dist = Math.hypot(b.x - a.x, b.z - a.z); projs.push({ g, a: V(a.x, a.y, a.z), b: V(b.x, b.y, b.z), t: 0, dur: clamp(dist / 34, 0.25, 1.1), arc: dist * 0.12, onHit, kind }); }
 function updateProjs(dt) { for (let i = projs.length - 1; i >= 0; i--) { const p = projs[i]; p.t += dt / p.dur; const k = Math.min(1, p.t); const pos = p.a.clone().lerp(p.b, k); pos.y += Math.sin(k * Math.PI) * p.arc; const nxt = p.a.clone().lerp(p.b, Math.min(1, k + 0.02)); nxt.y += Math.sin(Math.min(1, k + 0.02) * Math.PI) * p.arc; p.g.position.copy(pos); p.g.lookAt(nxt);
     if (p.t >= 1) { scene.remove(p.g); projs.splice(i, 1); if (p.onHit) p.onHit(); } } }
-function fire() { if (battle && battle.broad) { broadFire(); return; } if (state !== 'play' || battle || fishing || boat.fireCd > 0) return; const range = fireRange(); let best = null, bd = 1e9;
-  for (const mon of mons) { if (mon.dead || mon.rise < 1) continue; const d = Math.hypot(mon.x - boat.x, mon.z - boat.z); if (d < range && d < bd) { bd = d; best = mon; } }
+// a spear or bolt hitting a monster
+function spearHit(tgt, kind) { if (tgt.dead) return; const d = Math.round(attack() * (kind === 'bolt' ? 0.75 : 0.45) * (boat.thor > 0 ? 2 : 1) * rnd(0.85, 1.15)); tgt.hp -= d; tgt.stState && (tgt.stState.hurt = 1); pop(tgt.x, tgt.top + tgt.g.position.y, tgt.z, '−' + d, '#ffd24a'); sfx.hit(); foam.splash(tgt.x, tgt.z, 0.7);
+  if (tgt.hp <= 0) killMon(tgt); else if (!tgt.passive) tgt.state = 'chase'; }
+// ahead (Space on a keyboard): only aim at a monster in front of the bow, else throw straight ahead (it still hits what it lands on)
+function fire(ahead = false) { if (battle && battle.broad) { broadFire(); return; } if (state !== 'play' || battle || fishing || boat.fireCd > 0) return; const range = fireRange(); let best = null, bd = 1e9;
+  for (const mon of mons) { if (mon.dead || mon.rise < 1) continue; const d = Math.hypot(mon.x - boat.x, mon.z - boat.z); if (ahead && Math.abs(angDiff(Math.atan2(mon.x - boat.x, mon.z - boat.z), boat.yaw)) > 0.55) continue; if (d < range && d < bd) { bd = d; best = mon; } }
   const kind = P.up.ballista ? 'bolt' : 'spear'; boat.fireCd = P.up.ballista ? 2.2 - P.up.ballista * 0.25 : 1.2; const from = { x: boat.x + Math.sin(boat.yaw) * T().L * 0.35, y: boat.y + 2, z: boat.z + Math.cos(boat.yaw) * T().L * 0.35 };
-  if (!best) { const tx = boat.x + Math.sin(boat.yaw) * range * 0.8, tz = boat.z + Math.cos(boat.yaw) * range * 0.8; launch(from, { x: tx, y: 0, z: tz }, kind, () => { foam.splash(tx, tz, 0.6); sfx.splash(0.6); }); say('No target in range'); sfx.throw(); return; }
-  const tgt = best; sfx.throw(); launch(from, { x: tgt.x, y: Math.max(1, tgt.top * 0.4) + tgt.g.position.y, z: tgt.z }, kind, () => { if (tgt.dead) return; const d = Math.round(attack() * (kind === 'bolt' ? 0.75 : 0.45) * (boat.thor > 0 ? 2 : 1) * rnd(0.85, 1.15)); tgt.hp -= d; tgt.stState && (tgt.stState.hurt = 1); pop(tgt.x, tgt.top + tgt.g.position.y, tgt.z, '−' + d, '#ffd24a'); sfx.hit(); foam.splash(tgt.x, tgt.z, 0.7);
-    if (tgt.hp <= 0) killMon(tgt); else if (!tgt.passive) { tgt.state = 'chase'; } }); }
+  if (!best) { const tx = boat.x + Math.sin(boat.yaw) * range * 0.8, tz = boat.z + Math.cos(boat.yaw) * range * 0.8; launch(from, { x: tx, y: 0, z: tz }, kind, () => { const hit = mons.find((m) => !m.dead && m.rise >= 1 && Math.hypot(m.x - tx, m.z - tz) < m.size * 0.5 + 2); if (hit) spearHit(hit, kind); else { foam.splash(tx, tz, 0.6); sfx.splash(0.6); } }); if (!ahead) say('No target in range'); sfx.throw(); return; }
+  const tgt = best; sfx.throw(); launch(from, { x: tgt.x, y: Math.max(1, tgt.top * 0.4) + tgt.g.position.y, z: tgt.z }, kind, () => spearHit(tgt, kind)); }
 
 // ---------- battle ----------
 function startBattle(mon, firstStrike, opts = {}) {

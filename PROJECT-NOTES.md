@@ -236,6 +236,13 @@ disagree with this file, this file wins.
   / THROW / the middle block, A and D = left and right (W too for the block), F = fire pot, B = board; fishing Space = cast,
   hold Space = reel; salvage A / D = pull. Space never presses the last clicked button (main.js blurs it and fires).
 
+## v0.6.7: keyboard: Space throws ahead, C view, E chart (Sean)
+- fire(ahead): Space passes true, so it only aims at a monster within 0.55 rad of the bow (and in range); otherwise the spear
+  or bolt flies straight ahead and hits any monster it lands on (spearHit). The SPEARS button still aims at the nearest.
+- C cycles the view (not in a fight or mini-game); E opens the sea chart and shuts it again.
+- Note: a // comment appended to a one-line handler swallowed the rest of the line once more; scratchpad scan-comments.cjs
+  flags lines where code follows a comment.
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster
