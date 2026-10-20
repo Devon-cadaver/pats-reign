@@ -215,6 +215,14 @@ disagree with this file, this file wins.
 - Fixed: in a ship battle body.busy hid the telegraph, so speed could not be changed to spoil her aim; now
   body.busy.broadOn keeps it, and W / S work in a ship battle. BOARD / FLEE sit on the minimap's side.
 
+## v0.6.4: zoom in battles; fog thins in a fight (Sean: fog made it too hard to see; zoom all the way in and out)
+- Pinch and the mouse wheel now work in every battle (the canvas pointerdown no longer returns in a battle; a tap does
+  not set a course there). Each battle has its own zoom: it starts at 1 (the battle framing) and your sailing zoom comes
+  back after (camBattle / zoomSail in updateCamera). The battle cameras multiply their distance by zoom (broadside min 5,
+  classic min 6, giant min 8). Zoom range everywhere is now 0.3-2.6 (was 0.55-2.2). Measured: battle start 54, pinched
+  in 9, wheeled out 142, back to the sailing zoom after.
+- In a battle the fog look runs at 0.4 strength (wxLook k), easing in and out with env.apply, so the ships stay visible.
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster
