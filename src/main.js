@@ -53,21 +53,21 @@ const UPG = {
 };
 const TIER_COST = [null, [60, 20, 90], [150, 70, 250], [320, 160, 560], [650, 330, 1300]];
 // monster levels per species variant, speeds, and what their attacks are called in battle
-const MLV = { shark: [0, 0.6, 1.2, 2, 3.4], serpent: [1.3, 2, 2.4, 3, 3.6, 3, 4.1], eel: [0.4, 1, 1.6], octopus: [0.9, 1.6, 2.2, 2.8], crab: [1, 2, 3], angler: [2, 3], jelly: [0, 0.3, 0.5], whale: [2, 3, 4.2], kraken: [5, 5, 5], elder: [5.6, 5.6, 5.6], jormungandr: [6.2, 6.2] };
-const MSPEED = { shark: 10.5, serpent: 9.2, eel: 10, octopus: 7, crab: 6, angler: 7.5, jelly: 1.2, whale: 8, kraken: 6, elder: 5, jormungandr: 9 };
+const MLV = { shark: [0, 0.6, 1.2, 2], megalodon: [3.4, 3.8, 4.2, 4.6, 5.0], serpent: [1.3, 2, 2.4, 3, 3.6, 3, 4.1], eel: [0.4, 1, 1.6], octopus: [0.9, 1.6, 2.2, 2.8], crab: [1, 2, 3], angler: [2, 3], jelly: [0, 0.3, 0.5], leviathan: [2, 3, 4.2], kraken: [5, 5, 5], elder: [5.6, 5.6, 5.6], jormungandr: [6.2, 6.2] };
+const MSPEED = { shark: 10.5, megalodon: 9.5, serpent: 9.2, eel: 10, octopus: 7, crab: 6, angler: 7.5, jelly: 1.2, leviathan: 8.5, kraken: 6, elder: 5, jormungandr: 9 };
 const ATK = { shark: { L: 'lunges from the right', R: 'lunges from the left', U: 'leaps to bite' }, serpent: { L: 'whips its tail from the right', R: 'whips its tail from the left', U: 'rears up to strike' }, eel: { L: 'arcs lightning from the right', R: 'arcs lightning from the left', U: 'coils to shock' },
   octopus: { L: 'swings a tentacle from the right', R: 'swings a tentacle from the left', U: 'slams down its arms' }, kraken: { L: 'sweeps a tentacle from the right', R: 'sweeps a tentacle from the left', U: 'drags at the hull' }, crab: { L: 'snaps a claw from the right', R: 'snaps a claw from the left', U: 'crushes with both claws' },
-  angler: { L: 'snaps from the right', R: 'snaps from the left', U: 'lunges with its jaws' }, whale: { L: 'rams from the right', R: 'rams from the left', U: 'breaches to crash down' }, jelly: { L: 'stings from the right', R: 'stings from the left', U: 'pulses' },
+  angler: { L: 'snaps from the right', R: 'snaps from the left', U: 'lunges with its jaws' }, leviathan: { L: 'snaps three jaws from the right', R: 'snaps three jaws from the left', U: 'strikes with all three heads' }, megalodon: { L: 'rams from the right', R: 'rams from the left', U: 'surges up to swallow you whole' }, jelly: { L: 'stings from the right', R: 'stings from the left', U: 'pulses' },
   elder: { L: 'claws from the right', R: 'claws from the left', U: 'calls the crushing deep' }, jormungandr: { L: 'coils in from the right', R: 'coils in from the left', U: 'strikes with venom' } };
-const VBIAS = { frost: { 'serpent:5': 5, 'whale:1': 3, 'octopus:3': 2, 'jelly:1': 2 }, storm: { 'serpent:1': 3, 'serpent:6': 2, 'crab:2': 5, 'eel:0': 3, 'eel:2': 3 }, mist: { 'serpent:4': 5, 'octopus:3': 4, 'angler:0': 2, 'eel:1': 2 }, warm: { 'serpent:3': 5, 'crab:0': 3, 'shark:1': 2, 'shark:2': 2, 'jelly:0': 2, 'jelly:2': 2 } };
-const REGION_BIAS = { frost: { serpent: 2, whale: 2, crab: 0.5 }, storm: { eel: 3, jelly: 2, octopus: 1.5 }, mist: { angler: 3, octopus: 1.5, ghost: 3, raider: 1.5 }, warm: { shark: 2, crab: 3, jelly: 1.5 }, home: { shark: 1.5, jelly: 1.5 } };
+const VBIAS = { frost: { 'serpent:5': 5, 'leviathan:1': 3, 'megalodon:0': 2, 'octopus:3': 2, 'jelly:1': 2 }, storm: { 'megalodon:2': 3, 'serpent:1': 3, 'serpent:6': 2, 'crab:2': 5, 'eel:0': 3, 'eel:2': 3 }, mist: { 'megalodon:3': 3, 'serpent:4': 5, 'octopus:3': 4, 'angler:0': 2, 'eel:1': 2 }, warm: { 'megalodon:1': 3, 'serpent:3': 5, 'crab:0': 3, 'shark:1': 2, 'shark:2': 2, 'jelly:0': 2, 'jelly:2': 2 } };
+const REGION_BIAS = { frost: { serpent: 2, leviathan: 2, crab: 0.5 }, storm: { eel: 3, jelly: 2, octopus: 1.5 }, mist: { angler: 3, octopus: 1.5, ghost: 3, raider: 1.5 }, warm: { shark: 2, crab: 3, jelly: 1.5 }, home: { shark: 1.5, jelly: 1.5 } };
 
 // ---------- player ----------
 const P = { tier: 0, up: { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 0, oars: 0, nets: 0, lights: 0, compass: 0 }, res: { w: 20, i: 5, g: 40, f: 0 }, hp: 100, legends: {}, kills: 0, home: 0, won: false, tod: 0.16, wreck: null };
 const boat = { grace: 0, x: 0, z: -20, yaw: Math.PI, v: 0, want: Math.PI, thr: 0, wp: null, fireCd: 0, thor: 0, boost: 0, spin: 0, shake: 0, hitCd: 0, y: 0, pitch: 0, roll: 0 };
 const T = () => SHIP_TIERS[P.tier];
 const maxHp = () => Math.round(100 * Math.pow(1.75, P.tier) * (1 + 0.25 * P.up.armor));
-const topSpeed = () => T().speed * (1 + 0.1 * P.up.sail) * (boat.boost > 0 ? 1.35 : 1) * (boat.bifrost > 0 ? 1.25 : 1);
+const topSpeed = () => T().speed * (1 + 0.1 * P.up.sail) * (boat.boost > 0 ? 1.35 : 1) * (boat.bifrost > 0 ? 1.25 : 1) * (boat.pod ? 1.1 : 1);
 const turnRate = () => T().turn * (1 + 0.14 * P.up.oars);
 const defense = () => Math.min(0.85, 0.12 * P.up.shields + 0.08 * P.up.armor + (boat.thor > 0 ? 0.3 : 0));
 const attack = () => 12 * Math.pow(1.65, P.tier) * (1 + 0.3 * P.up.ballista);
@@ -135,7 +135,7 @@ const dmgLog = []; function damage(d, why) { d = Math.round(d); if (d <= 0) retu
 // ---------- monsters and raiders ----------
 const danger = (lv) => { const d = lv - P.tier; return d < -0.6 ? '#7dff3a' : d < 0.6 ? '#ffffff' : d < 1.6 ? '#ffb03a' : d < 3 ? '#ff4a3a' : '#d06aff'; };
 function spawnTable(region, night) { const out = [], tier = P.tier, bias = REGION_BIAS[region] || {};
-  for (const [type, lvs] of Object.entries(MLV)) { if (type === 'kraken' || type === 'elder' || type === 'jormungandr') continue; lvs.forEach((lv, v) => { if (lv > tier + 1.7 || lv < tier - 1.4) return; let w = (bias[type] || 1) * (lv > tier + 0.8 ? 0.45 : 1); if (type === 'angler') w *= night ? 3 : 0.3; if (type === 'serpent' && tier === 0) w *= 0.6; w *= (VBIAS[region] || {})[type + ':' + v] || 1; out.push({ type, v, lv, w }); }); }
+  for (const [type, lvs] of Object.entries(MLV)) { if (type === 'kraken' || type === 'elder' || type === 'jormungandr') continue; lvs.forEach((lv, v) => { if (lv > tier + 1.7 || lv < tier - 1.4) return; let w = (bias[type] || 1) * (lv > tier + 0.8 ? 0.45 : 1); if (type === 'angler') w *= night ? 3 : 0.3; if (type === 'serpent' && tier === 0) w *= 0.6; if (type === 'megalodon') w *= v === 4 ? (night ? 1 : 0.08) : 0.35; w *= (VBIAS[region] || {})[type + ':' + v] || 1; out.push({ type, v, lv, w }); }); }
   for (let st = 0; st <= 4; st++) { const lv = st + 0.4; if (lv > tier + 1.6 || lv < tier - 1.2) continue; out.push({ type: 'raider', v: st, lv, w: 0.6 * (bias.raider || 1) }); }
   if ((night || region === 'mist') && tier >= 2) out.push({ type: 'ghost', v: 3, lv: 3.5, w: 0.8 * (bias.ghost || 1) });
   return out; }
@@ -148,8 +148,8 @@ function spawnMon(e, x, z, o = {}) {
   const lv = e.lv, hpMax = Math.round(45 * Math.pow(1.65, lv) * (o.boss ? 0.8 : 1));
   const tag = document.createElement('div'); tag.className = 'tag'; $('tags').appendChild(tag);
   const mon = { e, m, g: m.g, type: e.type, lv, hp: hpMax, maxHp: hpMax, dmg: Math.round(9 * Math.pow(1.5, lv)), speed: (MSPEED[e.type] || (naval ? SHIP_TIERS[e.v].speed * 0.85 : 8)), size, top, naval, boss: !!o.boss, lair: o.lair || null,
-    x, z, yaw: Math.random() * 6.28, state: o.boss ? 'rise' : 'wander', t: 0, wanderT: 0, att: 0, attT: -1, dive: o.boss ? 1 : 0, rise: o.boss ? 0 : 1, stun: 0, tag, name: m.name || SPECIES[e.type]?.variants[e.v]?.name || 'Monster', shotT: rnd(2, 4), dead: 0 };
-  mon.passive = e.type === 'jelly' || (e.type === 'whale' && Math.random() < 0.5);
+    giant: !!m.giant, x, z, yaw: Math.random() * 6.28, state: o.boss ? 'rise' : 'wander', t: 0, wanderT: 0, att: 0, attT: -1, dive: o.boss ? 1 : 0, rise: o.boss ? 0 : 1, stun: 0, tag, name: m.name || SPECIES[e.type]?.variants[e.v]?.name || 'Monster', shotT: rnd(2, 4), dead: 0 };
+  mon.passive = e.type === 'jelly';
   mons.push(mon); return mon; }
 function removeMon(mon) { scene.remove(mon.g); mon.tag.remove(); const i = mons.indexOf(mon); if (i >= 0) mons.splice(i, 1); }
 function updateSpawns(dt) { spawnT -= dt; if (spawnT > 0) return; spawnT = 1.5;
@@ -212,13 +212,13 @@ function fire() { if (state !== 'play' || battle || fishing || boat.fireCd > 0) 
   const kind = P.up.ballista ? 'bolt' : 'spear'; boat.fireCd = P.up.ballista ? 2.2 - P.up.ballista * 0.25 : 1.2; const from = { x: boat.x + Math.sin(boat.yaw) * T().L * 0.35, y: boat.y + 2, z: boat.z + Math.cos(boat.yaw) * T().L * 0.35 };
   if (!best) { const tx = boat.x + Math.sin(boat.yaw) * range * 0.8, tz = boat.z + Math.cos(boat.yaw) * range * 0.8; launch(from, { x: tx, y: 0, z: tz }, kind, () => { foam.splash(tx, tz, 0.6); sfx.splash(0.6); }); say('No target in range'); sfx.throw(); return; }
   const tgt = best; sfx.throw(); launch(from, { x: tgt.x, y: Math.max(1, tgt.top * 0.4) + tgt.g.position.y, z: tgt.z }, kind, () => { if (tgt.dead) return; const d = Math.round(attack() * (kind === 'bolt' ? 0.75 : 0.45) * (boat.thor > 0 ? 2 : 1) * rnd(0.85, 1.15)); tgt.hp -= d; tgt.stState && (tgt.stState.hurt = 1); pop(tgt.x, tgt.top + tgt.g.position.y, tgt.z, '−' + d, '#ffd24a'); sfx.hit(); foam.splash(tgt.x, tgt.z, 0.7);
-    if (tgt.hp <= 0) killMon(tgt); else if (!tgt.passive || tgt.type === 'whale') { tgt.state = 'chase'; tgt.passive = false; } }); }
+    if (tgt.hp <= 0) killMon(tgt); else if (!tgt.passive) { tgt.state = 'chase'; } }); }
 
 // ---------- battle ----------
 function startBattle(mon, firstStrike) {
   if (battle) return; battle = { mon, t: 0 }; boat.wp = null; helm.held = false; setBattle(true);
   // place the foe beside the ship, facing it
-  const gap = T().L * 0.25 + mon.size * 0.75 + 4; let side = boat.yaw + Math.PI / 2; const toFoe = Math.atan2(mon.x - boat.x, mon.z - boat.z);
+  const gap = mon.giant ? mon.size * 0.36 + T().L * 0.3 : T().L * 0.25 + mon.size * 0.75 + 4; let side = boat.yaw + Math.PI / 2; const toFoe = Math.atan2(mon.x - boat.x, mon.z - boat.z);
   for (const c of [toFoe, boat.yaw + Math.PI / 2, boat.yaw - Math.PI / 2, boat.yaw + Math.PI, boat.yaw, toFoe + 2.4, toFoe - 2.4]) { const x = boat.x + Math.sin(c) * gap, z = boat.z + Math.cos(c) * gap; if (!world.blockAt(x, z, mon.size * 0.6 + 2) && !world.blockAt((x + boat.x) / 2, (z + boat.z) / 2, 2)) { side = c; break; } }
   mon.bx = boat.x + Math.sin(side) * gap; mon.bz = boat.z + Math.cos(side) * gap; battle.side = side;
   $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden');
@@ -431,6 +431,27 @@ const wreckSum = (r) => [['🪵', r.w], ['⚙️', r.i], ['🪙', r.g], ['🐟',
 const wreckCost = () => { const r = P.wreck.res; return 15 + 10 * P.tier + Math.round(0.15 * ((r.w || 0) + 2 * (r.i || 0) + (r.g || 0))); };
 function takeWreck(frac, x, z) { const r = P.wreck.res, got = {}; for (const k of ['w', 'i', 'g', 'f']) { got[k] = Math.round((r[k] || 0) * frac); r[k] = (r[k] || 0) - got[k]; } reward(got, x, 3, z); if (!(r.w + r.i + r.g + r.f > 0)) { P.wreck = null; placeWreck(); } save(); }
 
+// ---------- porpoises: friendly pods that swim with your ship, leap, and ride its bow wave (+10% speed while 2+ are with you) ----------
+const pods = []; let podT = 30;
+function spawnPod() { if (world.regionAt(boat.x, boat.z) === 'storm') return; const a = Math.random() * 6.28, d = rnd(60, 110), cx = boat.x + Math.sin(a) * d, cz = boat.z + Math.cos(a) * d; if (world.blockAt(cx, cz, 10) || Math.abs(cx) > HALF - 20 || Math.abs(cz) > HALF - 20) return;
+  const v = (Math.random() * 3) | 0, n = 3 + ((Math.random() * 3) | 0), members = [];
+  for (let i = 0; i < n; i++) { const m = makeMonster('porpoise', v, 1), x = cx + rnd(-6, 6), z = cz + rnd(-6, 6); m.g.position.set(x, 0, z); scene.add(m.g); members.push({ m, x, z, yaw: Math.random() * 6.28, leap: -1, st: { t: 0, speed: 0.6, attack: 0, dive: 0, hurt: 0, rise: 1 }, slot: (i / n) * 2 - 1, r: rnd(0, 1) }); }
+  pods.push({ members, life: rnd(80, 120) }); }
+function updatePods(dt) { podT -= dt; if (podT <= 0) { podT = rnd(40, 75); if (pods.length < 2 && !battle) spawnPod(); }
+  let riders = 0; const fx = Math.sin(boat.yaw), fz = Math.cos(boat.yaw), t = T();
+  for (let p = pods.length - 1; p >= 0; p--) { const pod = pods[p]; pod.life -= dt; const leaving = pod.life <= 0; let far = 0;
+    for (const Mb of pod.members) { const d = Math.hypot(boat.x - Mb.x, boat.z - Mb.z); let tx, tz, sp;
+      if (leaving) { tx = Mb.x + Math.sin(Mb.yaw) * 10; tz = Mb.z + Math.cos(Mb.yaw) * 10; sp = 9; }
+      else if (d < 45) { const side = Mb.slot < 0 ? -1 : 1, ahead = t.L * 0.55 + 2 + Mb.r * 5 - Math.abs(Mb.slot) * 4, out = t.B * 0.7 + 1.5 + Math.abs(Mb.slot) * 3; tx = boat.x + fx * ahead + fz * side * out; tz = boat.z + fz * ahead - fx * side * out; sp = Math.max(5, boat.v * 1.05 + Math.min(4, Math.hypot(tx - Mb.x, tz - Mb.z) * 0.5)); }
+      else { tx = boat.x; tz = boat.z; sp = 9; }
+      const want = Math.atan2(tx - Mb.x, tz - Mb.z); Mb.yaw += clamp(angDiff(want, Mb.yaw), -dt * 2.6, dt * 2.6); const spd = Math.min(sp, Math.hypot(tx - Mb.x, tz - Mb.z) * 2 + 1.5);
+      let nx = Mb.x + Math.sin(Mb.yaw) * spd * dt, nz = Mb.z + Math.cos(Mb.yaw) * spd * dt; if (world.blockAt(nx, nz, 1)) { Mb.yaw += dt * 3; nx = Mb.x; nz = Mb.z; } Mb.x = nx; Mb.z = nz;
+      if (Mb.leap < 0 && Math.random() < dt * 0.22) Mb.leap = 0; if (Mb.leap >= 0) { Mb.leap += dt / 1.2; Mb.st.attack = Math.min(1, Mb.leap); if (Mb.leap >= 1) { Mb.leap = -1; Mb.st.attack = 0; foam.splash(Mb.x, Mb.z, 0.45); } }
+      Mb.st.speed = Math.min(1, spd / 10); Mb.m.g.position.set(Mb.x, ocean.heightAt(Mb.x, Mb.z), Mb.z); Mb.m.g.rotation.y = Mb.yaw; Mb.m.anim(dt, Mb.st);
+      if (!leaving && d < 20) riders++; if (d > (leaving ? 140 : 320)) far++; }
+    if (far === pod.members.length) { for (const Mb of pod.members) scene.remove(Mb.m.g); pods.splice(p, 1); } }
+  const was = boat.pod; boat.pod = riders >= 2 && boat.v > 3 && state === 'play'; if (boat.pod && !was && !boat.podSaid) { boat.podSaid = true; say('🐬 Porpoises ride your bow wave! +10% speed while they swim with you.', 3.5); } }
+
 // ---------- harbours, upgrades ----------
 let atHarbor = null;
 function openHarbor(h) { state = 'harbor'; atHarbor = h; P.home = h.idx; boat.v = 0; boat.wp = null; $('hud').classList.add('hidden'); $('harbor').classList.remove('hidden'); $('hbName').textContent = h.name.toUpperCase();
@@ -453,7 +474,7 @@ let lairWarned = {};
 function updateLairs() { for (const L of world.lairs) { if (L.beaten || P.legends[L.key]) continue; const d = Math.hypot(boat.x - L.x, boat.z - L.z);
     if (d < 95 && !lairWarned[L.key]) { lairWarned[L.key] = true; say(P.tier >= LAIR_NEED[L.key] ? 'You enter ' + L.name + '. ' + LAIR_NAMES[L.key] + ' stirs below…' : L.name + ': ' + LAIR_NAMES[L.key] + ' sleeps here. Come back with a ' + SHIP_TIERS[LAIR_NEED[L.key]].name + ' or bigger.', 4); }
     if (d > 130) lairWarned[L.key] = false;
-    if (d < 40 && P.tier >= LAIR_NEED[L.key] && !mons.some((m) => m.boss && m.lair === L.key)) { const lv = MLV[L.monster][0], mon = spawnMon({ type: L.monster, v: L.key === 'jorm' ? 0 : 0, lv }, L.x, L.z, { boss: true, lair: L.key, scale: L.monster === 'kraken' ? 1.6 : L.monster === 'elder' ? 1.5 : 1 }); mon.name = LAIR_NAMES[L.key]; warn('⚠ ' + LAIR_NAMES[L.key].toUpperCase() + ' RISES! ⚠', 4); sfx.horn(); sfx.thunder(); flash = 1; } } }
+    if (d < 40 && P.tier >= LAIR_NEED[L.key] && !mons.some((m) => m.boss && m.lair === L.key)) { const lv = MLV[L.monster][0], mon = spawnMon({ type: L.monster, v: L.key === 'jorm' ? 0 : 0, lv }, L.x, L.z, { boss: true, lair: L.key, scale: L.monster === 'kraken' ? 17.5 : L.monster === 'elder' ? 1.5 : 1 }); mon.name = LAIR_NAMES[L.key]; warn('⚠ ' + LAIR_NAMES[L.key].toUpperCase() + ' RISES! ⚠', 4); sfx.horn(); sfx.thunder(); flash = 1; } } }
 
 // ---------- sinking, saving ----------
 function sink() { if (state !== 'play') return; state = 'sunk'; battle = null; fishing = null; minis.close(); const lost = {}; for (const k of ['w', 'i', 'g', 'f']) { lost[k] = Math.floor(P.res[k] / 2); P.res[k] -= lost[k]; }
@@ -480,6 +501,7 @@ function drawMap(cv, g, full) { const dpr = Math.min(2, devicePixelRatio || 1), 
   const fog = wx.type === 'fog' && wx.k > 0.5; for (const s of spots) { const [x, y] = P2(s.x, s.z); g.fillStyle = s.kind === 'treasure' ? '#ffd24a' : s.kind === 'flotsam' ? '#c8a070' : '#bfe6ff'; g.beginPath(); g.arc(x, y, 1.8 * dpr, 0, 6.28); g.fill(); }
   for (const mon of mons) { if (mon.dead) continue; const d = Math.hypot(mon.x - boat.x, mon.z - boat.z); if (fog && d > 45 && !mon.boss) continue; const [x, y] = P2(mon.x, mon.z); g.fillStyle = mon.treasure ? '#ffd24a' : mon.fleet ? '#ff4a3a' : mon.naval ? '#ff9a3a' : danger(mon.lv); g.beginPath(); g.arc(x, y, (mon.boss ? 4 : mon.treasure ? 3.6 : 2.2) * dpr, 0, 6.28); g.fill(); }
   for (const s of spouts) { const [x, y] = P2(s.x, s.z); g.fillText('🌪', x, y); }
+  g.fillStyle = '#e8f6ff'; for (const pod of pods) for (const Mb of pod.members) { const [x, y] = P2(Mb.x, Mb.z); g.fillRect(x - 1 * dpr, y - 1 * dpr, 2 * dpr, 2 * dpr); }
   if (EV.whirl) { const [x, y] = P2(EV.whirl.x, EV.whirl.z); g.fillText('🌀', x, y); } { const pa = aur.pillarAt; if (pa) { const [x, y] = P2(pa.x, pa.z); g.fillText('🌈', x, y); } } if (P.wreck) { const [x, y] = P2(P.wreck.x, P.wreck.z); g.fillText('☠', x, y); }
   if (boat.wp) { const [x, y] = P2(boat.wp.x, boat.wp.z); g.strokeStyle = '#ffd24a'; g.lineWidth = 2 * dpr; const q = 4 * dpr; g.beginPath(); g.moveTo(x - q, y - q); g.lineTo(x + q, y + q); g.moveTo(x + q, y - q); g.lineTo(x - q, y + q); g.stroke(); const [bx, by] = P2(boat.x, boat.z); g.setLineDash([3 * dpr, 4 * dpr]); g.lineWidth = 1 * dpr; g.beginPath(); g.moveTo(bx, by); g.lineTo(x, y); g.stroke(); g.setLineDash([]); }
   const [bx, by] = P2(boat.x, boat.z); g.save(); g.translate(bx, by); g.rotate(-boat.yaw + Math.PI); g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 1; const s2 = (full ? 7 : 5) * dpr; g.beginPath(); g.moveTo(0, -s2 * 1.4); g.lineTo(s2, s2); g.lineTo(-s2, s2); g.closePath(); g.fill(); g.stroke(); g.restore();
@@ -550,6 +572,9 @@ function updateHulls() { const list = []; const push = (s, x, z, yaw) => { s.g.u
 $('viewBtn').onclick = () => { viewMode = viewMode === 'top' ? 'chase' : 'top'; $('viewBtn').textContent = viewMode === 'top' ? 'TOP' : 'CHASE'; };
 function updateCamera(dt) { const t = T(); let tgt, dist, pitch;
   if (state === 'title') { const a = time * 0.06; tgt = V(boat.x, 2, boat.z); dist = t.L * 2.2 + 14; pitch = 0.28; camYaw = a; }
+  else if (battle && battle.mon.giant) { // frame your ship against one of the giant's eyes (the kraken's eye is about a ship long)
+    const mon = battle.mon, Rk = mon.size / 6, sy = Math.sin(mon.yaw), cy = Math.cos(mon.yaw), lx = 0.9 * Rk, lz = 1.15 * Rk, ex = mon.x + lx * cy + lz * sy, ez = mon.z + lz * cy - lx * sy, de = Math.hypot(ex - boat.x, ez - boat.z);
+    tgt = V((boat.x + ex) / 2, Rk * 0.3, (boat.z + ez) / 2); dist = de * 0.5 + t.L * 1.8 + 12; pitch = 0.16; const want = Math.atan2(ex - boat.x, ez - boat.z); camYaw += angDiff(want, camYaw) * Math.min(1, dt * 1.5); }
   else if (battle) { const mon = battle.mon; tgt = V((boat.x + mon.x) / 2, 1.5, (boat.z + mon.z) / 2); const hfov = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect, needW = Math.hypot(mon.x - boat.x, mon.z - boat.z) + t.L * 0.7 + mon.size + 6; dist = Math.max(needW / (2 * hfov * 0.9), mon.top * 2.2 + 10); pitch = 0.4; const want = Math.atan2(mon.x - boat.x, mon.z - boat.z) + Math.PI / 2; camYaw += angDiff(want - Math.PI, camYaw) * Math.min(1, dt * 1.5); }
   else { tgt = V(boat.x + Math.sin(boat.yaw) * boat.v * 0.6, 0, boat.z + Math.cos(boat.yaw) * boat.v * 0.6); const W = (34 + t.L * 1.6) * (viewMode === 'top' ? 1 : 0.7); dist = (W / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * Math.min(camera.aspect, 1))) * 0.62 * zoom; pitch = viewMode === 'top' ? 0.98 : 0.42; const wantYaw = viewMode === 'top' ? Math.PI : boat.yaw; camYaw += angDiff(wantYaw, camYaw) * Math.min(1, dt * (viewMode === 'top' ? 3 : 1.5)); }
   const off = !!(battle || fishing); if (off !== viewOff) { viewOff = off; applyView(); }
@@ -623,7 +648,7 @@ function frame(now) { const dt = Math.min(0.05, (now - last) / 1000) * timeScale
 let mapFlip = 0;
 function tick(dt) { time += dt;
   if (state === 'play' || state === 'title' || state === 'harbor' || state === 'chart') {
-    if (state === 'play') { P.tod = (P.tod + dt / 420) % 1; updateWeather(dt); updateEvents(dt); updateSpawns(dt); updateLairs(); boat.fireCd = Math.max(0, boat.fireCd - dt); saveT += dt; if (saveT > 30) { saveT = 0; save(); } }
+    if (state === 'play') { P.tod = (P.tod + dt / 420) % 1; updateWeather(dt); updateEvents(dt); updateSpawns(dt); updatePods(dt); updateLairs(); boat.fireCd = Math.max(0, boat.fireCd - dt); saveT += dt; if (saveT > 30) { saveT = 0; save(); } }
     if (state !== 'harbor') updateBoat(dt); updateMons(dt); if (battle) updateBattle(dt); updateSea(dt); updateProjs(dt); minis.update(dt);
     if (fishing) { const s = fishing.s, a = V(boat.x, boat.y + T().mast * 0.5, boat.z), b = V(s.x, ocean.heightAt(s.x, s.z), s.z); line.geometry.setFromPoints([a, b]); }
   }
@@ -643,4 +668,4 @@ function tick(dt) { time += dt;
 { const h = world.harbors[0]; boat.x = h.dock.x + Math.cos(h.dir) * 12; boat.z = h.dock.z + Math.sin(h.dir) * 12; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); }
 const hadSave = load(); if (!hadSave) P.hp = maxHp(); rebuildShip(); placeWreck(); toTitle(); env.snap(P.tod, null, world.regionWeights(boat.x, boat.z, {})); camTgt.set(boat.x, 0, boat.z);
 requestAnimationFrame(frame);
-window.__pr = { EV, startEvent, aur, get wreck() { return P.wreck; }, sink, get chartView() { return chartView; }, step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); }, helm, setThrottle, set timeScale(v) { timeScale = v; }, dmgLog, P, boat, mons, spots, floats, world, ocean, wx, setWeather, spawnMon, startBattle, startFishing, openHarbor, fire, get state() { return state; }, set state(v) { state = v; }, get battle() { return battle; }, minis, MLV, killMon, landBolt, warnRing, spawnSpout, rebuildShip, save, load, camera, renderer, scene, get ship() { return ship; }, setCourse };
+window.__pr = { pods, spawnPod, EV, startEvent, aur, get wreck() { return P.wreck; }, sink, get chartView() { return chartView; }, step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); }, helm, setThrottle, set timeScale(v) { timeScale = v; }, dmgLog, P, boat, mons, spots, floats, world, ocean, wx, setWeather, spawnMon, startBattle, startFishing, openHarbor, fire, get state() { return state; }, set state(v) { state = v; }, get battle() { return battle; }, minis, MLV, killMon, landBolt, warnRing, spawnSpout, rebuildShip, save, load, camera, renderer, scene, get ship() { return ship; }, setCourse };

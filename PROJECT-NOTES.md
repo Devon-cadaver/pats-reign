@@ -1,6 +1,6 @@
 # Pats Reign: project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.3.0. Where older notes or memory
+READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.4.0. Where older notes or memory
 disagree with this file, this file wins.
 
 ## Where things are
@@ -36,7 +36,7 @@ disagree with this file, this file wins.
   only touchable on the wheel itself; corner minimap still sets a course on tap (the big chart is the same map,
   bigger and zoomable); v0.3.0: more random sea events (maelstrom, serpent ambush, raider fleet, treasure ship,
   Frost Sea aurora buff), Dead City-style save codes, and sinking leaves a wreck you can salvage (Sean chose "cargo
-  only": upgrades are never lost).
+  only": upgrades are never lost); v0.4.0: monster redesigns from Sean's roster notes (see Monsters below).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
@@ -56,9 +56,16 @@ disagree with this file, this file wins.
   plates, ram, ballista (twin at 3), fire pots, lanterns (stern / bow + mast / iron braziers). Invisible gunwale
   "water mask" drawn before the sea so no water shows inside the hull. Raider palettes + ghost ship. `anim(dt,
   { speed, time, night, sail })`.
-- src/monsters.js: `makeMonster(type, variant, scale)`. Shark (5 incl. Megalodon), serpent (7 incl. winged Sea
-  Dragon), eel (3, lightning arcs), octopus (4), kraken (3), crab (3), angler (2), jelly (3), whale (3), elder (3,
-  Cthulhu-like), jormungandr (2). SpineTube bodies follow the head's trail and arch out of the sea.
+- src/monsters.js: `makeMonster(type, variant, scale)`. Shark (4, Jaws-style head: snout over an underslung jaw of
+  triangular teeth, jaw thrusts on a bite), megalodon (5 types: Ancient, Crested, Ravening, Shadow, Phantom; shark(P,S,true)
+  with double jagged teeth, brow, barnacles/crest), serpent (7 incl. winged Sea Dragon), eel (3, lightning arcs), octopus
+  (4), kraken (3), crab (3), angler (2, real anglerfish: upturned underbite mouth, inward needle fangs, rod + esca), jelly
+  (3), leviathan (3, three-headed limbless dragon: serpentBody with noHead + three neck SpineTubes, each a serpentHead),
+  porpoise (3, friendly; the old whale model), elder (3, arms are single SpineTubes from a shoulder yoke, clawed hands),
+  jormungandr (2). serpentHead v2 (scowl, sunken glowing eyes, fangs, frills) sits on a neck ball joint (no gap).
+  serpentBody options: noHead, neckRise, after(dt, st, pts, tube, ph, surf). The lair Kraken spawns at scale 17.5 (giant:
+  eye ~ a Snekkja long; m.giant / mon.giant): battle gap and camera are special-cased (camera behind your ship on one eye).
+  Porpoise pods live in main.js (`pods`, `updatePods`), not in `mons`: 3-5 swim alongside, leap, +10% speed with 2+.
 - src/geom.js: material cache, part/grp/rod, taperTube, SpineTube, glowVC (vertex-colour glow via `aGlow`), shapes.
 - src/world.js: 1200 x 1200 sea, fixed seed. `regionAt`, `regionWeights`. Five waters:
   Home (centre, green pines), Frost N (tall snow peaks, snow pines, icebergs, bobbing ice floes), Storm E (black
@@ -97,7 +104,7 @@ disagree with this file, this file wins.
 - Upgrades (UPG in main.js, costs timber/iron/gold, each capped at ship tier + 1): shields, armor, ballista, fire
   pots, ram, sail, oars, lights (Lanterns 3), compass (2: lodestone heading, sunstone harbour pointer), nets.
   Ship sizes in TIER_COST.
-- Monsters: levels in MLV; spawn table centred on ship tier (weaker, and up to +1.7 stronger); region type bias
+- Monsters: levels in MLV (megalodon 3.4-5, rare: weight x0.35, Phantom night only; leviathans always hostile); spawn table centred on ship tier (weaker, and up to +1.7 stronger); region type bias
   (REGION_BIAS) and variant bias (VBIAS: Frost Wyrm north, Lava Crab east, Obsidian Horror + ghost ships west,
   Golden Naga south); anglers at night; ghost ships at night or in the Mist Sea. hp 45 x 1.65^lv, dmg 9 x 1.5^lv.
   Tag colour = danger. Strong monsters chase at 0.86 x your top speed and give up after 24 s.
