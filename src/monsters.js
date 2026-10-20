@@ -187,7 +187,7 @@ function leviathan(P, S) {
 function jormungandr(P, S) { const m = serpentBody(P, S, { R: 2.1, N: 80, seg: 1.35, humps: 3.4, lambda: 22, spikes: 44, finH: 0.6, big: true, radial: 16, freq: 120, headK: 0.9 }); m.size = 2.1 * S * 5; return m; }
 
 // ---------- octopus / kraken ----------
-function tentacle(P, R, n, len, mat, glowFn) { return new SpineTube(n, { radial: 9, mat, r: (s) => R * Math.pow(1 - s * 0.94, 1.15) + R * 0.03, color: (s, a, c) => { c.setHex(P.top); if (P.pattern === 'rings' && Math.abs(Math.sin(s * 30)) > 0.85) c.setHex(P.accent); const under = smooth(0.35, 0.95, -Math.cos(a)); c.multiplyScalar(0.8 + 0.25 * Math.max(0, Math.cos(a))); if (under > 0) { c.lerp(tmpC.setHex(P.belly), under * 0.55); if (Math.abs(Math.sin(s * len * 3.2)) > 0.7 && under > 0.5) c.lerp(tmpC.setHex(P.sucker || 0xf2d8d0), 0.7); } }, glow: glowFn }); }
+export function tentacle(P, R, n, len, mat, glowFn) { return new SpineTube(n, { radial: 9, mat, r: (s) => R * Math.pow(1 - s * 0.94, 1.15) + R * 0.03, color: (s, a, c) => { c.setHex(P.top); if (P.pattern === 'rings' && Math.abs(Math.sin(s * 30)) > 0.85) c.setHex(P.accent); const under = smooth(0.35, 0.95, -Math.cos(a)); c.multiplyScalar(0.8 + 0.25 * Math.max(0, Math.cos(a))); if (under > 0) { c.lerp(tmpC.setHex(P.belly), under * 0.55); if (Math.abs(Math.sin(s * len * 3.2)) > 0.7 && under > 0.5) c.lerp(tmpC.setHex(P.sucker || 0xf2d8d0), 0.7); } }, glow: glowFn }); }
 function cephalopod(P, S, kraken) {
   const g = new THREE.Group(), body = grp(g), R = (kraken ? 1.3 : 0.75) * S, mat = glowVC(), arms = [], nA = kraken ? 10 : 8;
   const sk = M(P.top), dk = M(P.dark || lerpHex(P.top, 0, 0.4)), eye = M(P.eye, 'glow'), black = M(0x060606), bel = M(P.belly);
@@ -205,7 +205,7 @@ function cephalopod(P, S, kraken) {
     const club = long ? (() => { const cg = grp(body); part(cg, SPH(), M(P.top), R * 0.7, R * 0.45, R * 1.7, 0, 0, R * 0.5); for (let k = 0; k < 6; k++) for (const sd of [-1, 1]) part(cg, CON(), M(0xf0e0c8), R * 0.1, R * 0.22, R * 0.1, sd * R * 0.2, -R * 0.18, k * R * 0.26, Math.PI); mergeParts(cg); return cg; })() : null; arms.push({ tb, a0: (i / Math.min(8, nA)) * TAU + (long ? 0.3 : 0) + (i % 2) * 0.1, ph: Math.random() * TAU, long, club, pts: Array.from({ length: long ? 30 : 22 }, () => new THREE.Vector3()) }); }
   let t = 0; const dir = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), side = new THREE.Vector3();
   function anim(dt, st) { t += dt * (1 + st.speed); const surf = 1 - st.dive;
-    for (const A of arms) { const n = A.pts.length, segL = (kraken ? (A.long ? 0.42 : 0.3) : (A.long ? 0.9 : 0.62)) * R; const rise = (A.long ? 0.7 : 1) * ((kraken ? 0.75 : 0.5) + (kraken ? 0.35 : 0.5) * Math.sin(t * 0.9 + A.ph)) * surf + st.attack * 1.2;
+    for (const A of arms) { const n = A.pts.length, segL = (kraken ? (A.long ? 0.42 : 0.3) : (A.long ? 0.9 : 0.62)) * R * (st.reach ?? 1); const rise = (A.long ? 0.7 : 1) * ((kraken ? 0.75 : 0.5) + (kraken ? 0.35 : 0.5) * Math.sin(t * 0.9 + A.ph)) * surf + st.attack * 1.2;
       const az = A.a0 + Math.sin(t * 0.5 + A.ph) * 0.25; dir.set(Math.sin(az), 0, Math.cos(az)); side.crossVectors(up, dir);
       const p = A.pts[0].set(dir.x * R * 0.9, R * 0.1, dir.z * R * 0.9 + R * 0.4); let ang = -0.35, yaw = 0;
       for (let k = 1; k < n; k++) { const s = k / (n - 1); ang += (rise * 3.6 / n) * (0.35 + s * 1.5) * (1 + Math.sin(t * 2 + A.ph + s * 4) * 0.3) + Math.sin(t * 1.7 + A.ph + s * 7) * 0.07; yaw = Math.sin(t * 1.3 + A.ph + s * 3) * 0.35 * s;

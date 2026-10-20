@@ -258,6 +258,29 @@ disagree with this file, this file wins.
   (3.5 / 0.7 / 1.1), lv = tier + 1.2 (capped below the legend), not a boss, hunts you; killing it pays x1.5 gold, does not
   count as a legend, and rests the lair 150 s. The approach message now says it takes an X to face the legend.
 
+## v0.7.0: legend fights, part 1: the Kraken's tentacle siege, its grab, lair waves (Sean: boss battles more engaging and tough, a different style per boss, special moves, zoom out for big bosses, keep spawning in the boss zone)
+- main.js section "LEGEND FIGHTS" (before fishing spots). startBattle: a non-naval foe whose type is in LEGEND_KIND (only
+  kraken so far) goes to startLegend(mon) when BROAD.on (the pause switch, now labelled BATTLES: ACTION / CLASSIC).
+  battle.legend = L; updateBattle -> updateLegend; tapSea -> legendTap in a legend fight; canvas taps allowed there;
+  sink() -> clearLegend(); viewOff 'broad' framing.
+- Kraken siege: the Kraken is placed ahead (giant: 0.55 size + 0.6 L away), your ship held (no sailing), its own arms
+  kept close (stState.reach 0.35, used by cephalopod anim in monsters.js). Tentacles (exported tentacle() SpineTube, 18
+  points, poseTentacle(grow, lean, curl, sway)) rise around you but never on the camera side: warn (red ring) 0.8 s, rise
+  0.7, coil 1.6 s (enraged 1.15, young 2.1), slam (0.6 x dmg x (1 - def)), sink. Up to 3 at once (4 enraged; young 1/2).
+  Hits: 3 per tentacle (young 1); each hit 0.12 attack to the Kraken and pushes the coil back 0.7 s, severing 0.35.
+  Eye: opens every 8-11 s for 2.2 s (gold ring); a hit does 2.4 attack and every rearing tentacle flinches away.
+  Grab (instead of a slam, 28%, enraged 40%, young 15%): hit the gripping tentacle 5 times (young 3) within 3.5 s (reload
+  0.2 s while grabbed) to break free (0.5 attack to it); else dragged under (boat.dunk, 1.4 x dmg) and thrown with the
+  tornado flight (startAir with a pretend spout). Reload 0.8 s spears / 0.6 ballista. FIRE / Space targets the grab,
+  then the open eye, then the tentacle closest to striking; a tap shoots what is under the finger. Legend bosses get 1.5x
+  hull in the action fight (once, legendHp). Camera: behind your ship toward the eye, wide enough for the whole Kraken.
+- Tested: a Snekkja (ballista, shields) pressing Space ~4 a second won in 37 s with 18 of 306 hull left (3 grabs, 3 eyes).
+- Lair waves (updateLairs rewritten, lairSpawn): stay within 95 of a lair and after each kill (or a papa leaving) another
+  rises after 60-110 s (lairCool), young levels tier + 1 + 0.4 per wave, papa chance 0.2 + 0.07 per wave (max 0.6);
+  leaving (130+) resets the waves. A slain legend's young keep rising there.
+- Next: Jormungandr (the hunt: dodge the strike, shoot the head; coil round the ship and electrocute) and the Elder One
+  (rune ward; ghost lights; lift and slam / throw, a perfect eye shot drops you). Octopus and serpent specials later.
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster
