@@ -7,14 +7,14 @@ export const LOOKS_MID = {
   day: P({ sky: 0x3a8ad4, horizon: 0xb2d6ec, fog: 0xa6cade, sunDir: [0.45, 0.55, -0.7], sunCol: 0xfff0d0, sunK: 1, ambient: 0.56, deep: 0x05304c, mid: 0x1b7c96, shallow: 0x34c2b2, hemiSky: 0xdcefff, hemiGround: 0x2a4a5a, hemiK: 1.45, sunL: 1.25, near: 120, far: 330, foam: 0xf4fbff, moon: 0 }),
   dawn: P({ sky: 0x5a78b8, horizon: 0xf6c890, fog: 0xe0bfa0, sunDir: [-0.7, 0.18, -0.6], sunCol: 0xffc890, sunK: 0.95, ambient: 0.48, deep: 0x0a2c48, mid: 0x2a7090, shallow: 0x40b8a8, hemiSky: 0xffe0c8, hemiGround: 0x3a4050, hemiK: 1.25, sunL: 1.1, near: 110, far: 300, foam: 0xfff4ea, moon: 0 }),
   dusk: P({ sky: 0x2e3c78, horizon: 0xf09858, fog: 0xc88a70, sunDir: [0.75, 0.1, -0.6], sunCol: 0xff9a48, sunK: 0.95, ambient: 0.4, deep: 0x0a2240, mid: 0x355f86, shallow: 0x3a9a98, hemiSky: 0xffc0a0, hemiGround: 0x2a3048, hemiK: 1.1, sunL: 1.0, near: 100, far: 280, foam: 0xffe6d8, moon: 0 }),
-  night: P({ sky: 0x0a1428, horizon: 0x1e3050, fog: 0x14223a, sunDir: [-0.35, 0.5, -0.8], sunCol: 0xb8ccff, sunK: 0.55, ambient: 0.32, deep: 0x041226, mid: 0x14405e, shallow: 0x1e6a70, hemiSky: 0x8aa0d8, hemiGround: 0x142036, hemiK: 1.05, sunL: 0.6, near: 70, far: 210, foam: 0xb8c8e8, moon: 1 }),
+  night: P({ sky: 0x0a1428, horizon: 0x1e3050, fog: 0x14223a, sunDir: [-0.35, 0.5, -0.8], sunCol: 0xb8ccff, sunK: 0.72, ambient: 0.44, deep: 0x061a34, mid: 0x1a4c6c, shallow: 0x267a80, hemiSky: 0x9ab0e8, hemiGround: 0x1c2c48, hemiK: 1.3, sunL: 0.8, near: 70, far: 210, foam: 0xb8c8e8, moon: 1 }),
 };
 // Helheim (v0.8.0): an ember-red day under a burning sky, violet dusk, and a purple night under the swirling abyss
 export const LOOKS_HEL = {
   day: P({ sky: 0x8a1a08, horizon: 0xc8501a, fog: 0x7a2a14, sunDir: [0.3, 0.5, -0.8], sunCol: 0xff8a4a, sunK: 0.7, ambient: 0.48, deep: 0x140404, mid: 0x4a1408, shallow: 0x8a3a1a, hemiSky: 0xffa070, hemiGround: 0x3a1008, hemiK: 1.3, sunL: 1.05, near: 90, far: 300, foam: 0xffd0b0, moon: 0 }),
   dawn: P({ sky: 0x5a1030, horizon: 0xd85a2a, fog: 0x6a2a2a, sunDir: [-0.7, 0.18, -0.6], sunCol: 0xff7040, sunK: 0.6, ambient: 0.44, deep: 0x100410, mid: 0x3a1420, shallow: 0x6a2a3a, hemiSky: 0xff9080, hemiGround: 0x2a0a14, hemiK: 1.2, sunL: 0.9, near: 85, far: 280, foam: 0xf0c0c0, moon: 0.2 }),
   dusk: P({ sky: 0x3a0a3a, horizon: 0xa83a5a, fog: 0x4a1a3a, sunDir: [0.75, 0.1, -0.6], sunCol: 0xff5a6a, sunK: 0.55, ambient: 0.4, deep: 0x0c0414, mid: 0x2a1440, shallow: 0x4a2a6a, hemiSky: 0xd08ab8, hemiGround: 0x1a0a20, hemiK: 1.1, sunL: 0.8, near: 80, far: 260, foam: 0xe0c0f0, moon: 0.5 }),
-  night: P({ sky: 0x1a0630, horizon: 0x3a1460, fog: 0x24103a, sunDir: [-0.35, 0.5, -0.8], sunCol: 0xc89aff, sunK: 0.5, ambient: 0.36, deep: 0x08020e, mid: 0x22104a, shallow: 0x3a1a6a, hemiSky: 0xa078e0, hemiGround: 0x140820, hemiK: 1.1, sunL: 0.7, near: 70, far: 230, foam: 0xd0b8ff, moon: 1 }),
+  night: P({ sky: 0x1a0630, horizon: 0x3a1460, fog: 0x24103a, sunDir: [-0.35, 0.5, -0.8], sunCol: 0xc89aff, sunK: 0.66, ambient: 0.48, deep: 0x0c0418, mid: 0x2c1860, shallow: 0x482480, hemiSky: 0xb08af0, hemiGround: 0x1c0e2c, hemiK: 1.35, sunL: 0.9, near: 70, far: 230, foam: 0xd0b8ff, moon: 1 }),
 };
 // Helheim's seas tint the water (and Niflhel, Muspelheim and Nastrond their haze); the sky stays Hel's own
 export const REGION_LOOKS_HEL = {

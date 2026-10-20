@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.1.1. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.1.2. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -612,6 +612,19 @@ disagree with this file, this file wins.
   (small: longer ring, 0.6x damage, a tighter hit radius, longer rests); calm() also keeps the weather calm (no spouts,
   tornadoes, storms or rogue waves while the tutorial runs or a Faering has under two kills); the telegraph is coloured
   by notch (BACK orange, STOP red, ROW/HALF yellow, FULL green; dull until on).
+- v1.1.2 (Sean's second round of play notes): the tutorial has 13 steps: after docking it has you REPAIR the hull, TAKE a
+  bounty, explains that bounty (bountyText + a hint per kind; a sea bounty is marked 📜 BOUNTY on the chart at that sea's
+  centre), then SET SAIL and open THE SAGA from the pause menu (tut.saga; updateTut now runs in play, harbour and paused;
+  #tut and #tutHand live outside the HUD so they show over those screens). The perfect shot in action beast fights: the
+  strike lands 0.5 s after the beast rises (mode 'strike'); a shot fired in that window parries it (L.parried: no damage,
+  PERFECT, 1.6x) and the beast is dazed (mode 'dazed', 2 s, 2.6 on small ships) for free shots; the learning shark rears
+  for 0.5 s before each bite the same way. The SPEARS button shows the timing: aimNo red, aimSoon yellow (last 0.6 s of
+  the ring), aimNow green (the rising window), aimFree blue-white (dazed / exposed / grab / tear). ACTION / CLASSIC can
+  be switched mid-fight from the pause menu: reFight() aborts and re-stages the same fight the other way with both hulls
+  carried over (ship fights broadside <-> classic too). Also: the status line names every bonus (porpoises +10% speed,
+  escape +35%, Bifröst, Thor x2 damage, tithe +25% souls); the helmsman eases to 3 (salvage speed) near a wreck ahead
+  (wreckNear) without stopping; the HELM camera is level with the horizon (it follows the ship's heading and a smoothed
+  height, not its pitch and roll); nights are brighter in both realms (env.js night ambient .44/.48, sunK .72/.66).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
