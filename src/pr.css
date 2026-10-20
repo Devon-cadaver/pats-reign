@@ -174,3 +174,12 @@ html.tabletHud #viewBtn { left: 64px; font-size: 14px; } html.tabletHud .act { w
 html.tabletHud .mgCue .mgPrompt { font-size: 40px; } html.tabletHud .mgSide { font-size: 96px; }
 /* during a battle, fishing or salvage: the sea map, its buttons and sailing messages step aside for the mini-game */
 body.busy #map, body.busy #chartBtn, body.busy #viewBtn, body.busy #msg { display: none; }
+/* tablets: the iPad status bar (time, battery) is drawn over the page and iPadOS reports no inset for it, so everything
+   pinned to the top edge leaves at least 28px clear */
+html.tabletHud { --padTop: max(env(safe-area-inset-top, 0px), 28px); }
+html.tabletHud #hud .top { padding-top: calc(6px + var(--padTop)); }
+html.tabletHud #compWrap { top: calc(52px + var(--padTop)); }
+html.tabletHud .screen { padding-top: calc(20px + var(--padTop)); }
+html.tabletHud #title { padding-top: calc(10vh + var(--padTop)); }
+html.tabletHud #harbor { padding-top: calc(16px + var(--padTop)); }
+html.tabletHud #saveBox { padding-top: calc(18px + var(--padTop)); }

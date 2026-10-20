@@ -1,6 +1,6 @@
 # Pats Reign: project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.4.3. Where older notes or memory
+READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.4.4. Where older notes or memory
 disagree with this file, this file wins.
 
 ## Where things are
@@ -101,7 +101,8 @@ disagree with this file, this file wins.
   small wheel (R = clamp(min(W*0.24, H*0.15), 64, 105)) bottom centre, the telegraph stacked up the left with FULL on top,
   the minimap bottom right with the action buttons above it, a bigger pause top right with the sea chart button and
   TOP/CHASE under it, and the compass on the left under the ship name. Tablets (html.tabletHud): big wheel centred,
-  telegraph above it, bigger map bottom left and buttons bottom right. helmLift shifts the camera view up
+  telegraph above it, bigger map bottom left and buttons bottom right. Tablets also keep 28px clear at the top (--padTop):
+  the iPad status bar is drawn over the page and iPadOS reports no safe-area inset for it (Sean saw the battery cover the HUD). helmLift shifts the camera view up
   (setViewOffset) by 0.9 x the wheel height so the ship clears the controls; battles use their own offset.
 - iPad full screen: Safari's own swipe-down exits element fullscreen and a page cannot stop it. The fix is the home-screen
   web app: public/manifest.webmanifest (display fullscreen) + icons (icon-180/192/512, a gold wheel with PR) +
