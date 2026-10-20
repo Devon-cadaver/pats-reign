@@ -29,10 +29,11 @@ for (const ev of ['pointerup', 'touchend', 'click']) addEventListener(ev, () => 
 export function soundToggle(...hosts) {
   const snd = [], mus = [];
   const draw = () => { for (const b of snd) b.textContent = muted ? '🔇 SOUND: OFF' : '🔊 SOUND: ON'; for (const b of mus) { b.textContent = musicOff ? '🎵 MUSIC: OFF' : '🎵 MUSIC: ON'; b.classList.toggle('off', musicOff || muted); } };
-  for (const h of hosts) { if (!h) continue; const row = document.createElement('div'); row.className = 'soundRow';
-    const b = document.createElement('button'); b.className = 'ghost soundBtn'; b.addEventListener('click', (e) => { e.stopPropagation(); unlockAudio(); setMuted(!muted); if (!muted) sfx.pickup(); draw(); });
-    const m = document.createElement('button'); m.className = 'ghost soundBtn'; m.addEventListener('click', (e) => { e.stopPropagation(); unlockAudio(); setMusicOff(!musicOff); draw(); });
-    row.append(b, m); h.insertBefore(row, h.querySelector('.howRow, .menuBtn')); snd.push(b); mus.push(m); }
+  // a host may already hold its row in the HTML (the title: no layout shift when the script lands); otherwise one is made
+  for (const h of hosts) { if (!h) continue; const have = h.querySelector('.soundRow'), row = have || document.createElement('div'); row.className = 'soundRow';
+    const b = have ? have.querySelectorAll('.soundBtn')[0] : document.createElement('button'); b.className = 'ghost soundBtn'; b.addEventListener('click', (e) => { e.stopPropagation(); unlockAudio(); setMuted(!muted); if (!muted) sfx.pickup(); draw(); });
+    const m = have ? have.querySelectorAll('.soundBtn')[1] : document.createElement('button'); m.className = 'ghost soundBtn'; m.addEventListener('click', (e) => { e.stopPropagation(); unlockAudio(); setMusicOff(!musicOff); draw(); });
+    if (!have) { row.append(b, m); h.insertBefore(row, h.querySelector('.howRow, .menuBtn')); } snd.push(b); mus.push(m); }
   draw();
 }
 function tone(freq, dur, type = 'square', vol = 0.08, slide = 0, dest = master, when = 0) {

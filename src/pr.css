@@ -18,7 +18,8 @@ button:disabled { opacity: .45; filter: grayscale(.6); }
 #title .emblem { width: min(150px, 34vw); height: auto; filter: drop-shadow(0 6px 10px #000c); margin-bottom: 2px; }
 #title .rune { letter-spacing: 8px; color: var(--gold); opacity: .8; font-size: 15px; }
 #title .sub { font-style: italic; color: #e8dcc0; text-shadow: 0 2px 6px #000; }
-#title .menu { display: flex; flex-direction: column; gap: 12px; align-items: center; margin-bottom: 4vh; }
+#title .menu { display: flex; flex-direction: column; gap: 12px; align-items: center; margin-bottom: 4vh; visibility: hidden; } /* shown once the script has settled it (CONTINUE or SET SAIL), so nothing moves under a tap */
+body.ready #title .menu { visibility: visible; }
 #title .menu button { min-width: 230px; }
 .howList { max-width: 400px; text-align: left; display: flex; flex-direction: column; gap: 9px; background: #1a120ad0; border: 1.5px solid var(--gold); border-radius: 12px; padding: 14px; font-size: 14px; }
 .howList p { max-width: none; }
@@ -179,7 +180,10 @@ button:disabled { opacity: .45; filter: grayscale(.6); }
 #helm { position: absolute; left: 0; bottom: 0; pointer-events: auto; touch-action: none; filter: drop-shadow(0 -2px 8px #000a); }
 #throttle { position: absolute; left: 50%; bottom: calc(var(--helmH) + 8px + env(safe-area-inset-bottom, 0)); transform: translateX(-50%); display: flex; gap: 3px; pointer-events: auto; touch-action: none; }
 #throttle button { font: 700 11px Georgia, serif; letter-spacing: 1px; min-width: 40px; padding: 7px 5px; border-radius: 8px; background: #2a1c12e0; color: var(--ink); border: 1.5px solid var(--gold); box-shadow: 0 2px 6px #000a; }
-#throttle button.on { background: linear-gradient(#f2d27a, #c8962a); color: #1a120a; border-color: #6a4a1a; }
+/* the telegraph by colour: BACK orange, STOP red, ROW and HALF yellow, FULL green; dull until chosen, bright when on */
+#throttle button { --tc: #c8962a; --tb: #f2d27a; border-color: var(--tc); color: color-mix(in srgb, var(--tb) 55%, #6a5a40); }
+#throttle button.on { background: linear-gradient(var(--tb), var(--tc)); color: #1a120a; border-color: #fff8; box-shadow: 0 0 10px var(--tb), 0 2px 6px #0008; }
+#throttle button[data-n="0"] { --tc: #b0502a; --tb: #ffa060; } #throttle button[data-n="1"] { --tc: #a8201a; --tb: #ff6a5a; } #throttle button[data-n="2"], #throttle button[data-n="3"] { --tc: #b89a1a; --tb: #ffe066; } #throttle button[data-n="4"] { --tc: #2a8a3a; --tb: #7dff6a; }
 /* phones (Sean's layout): small wheel bottom centre, the sail telegraph stacked up the left with FULL on top, the minimap
    bottom right with the action buttons above it, the sea chart button under a bigger pause at the top right, the
    compass on the left under the ship's name */
@@ -263,7 +267,7 @@ html.tabletHud #tutHand { font-size: 50px; width: 58px; height: 58px; line-heigh
 .howBtns { display: flex; gap: 12px; align-items: center; }
 .howNav { display: flex; gap: 10px; align-items: center; font-size: 14px; color: var(--gold); } .howNav button { min-width: 56px; padding: 6px 10px; }
 /* in a helm fight the tutorial card sits below the foe bar and its hints */
-body.legendOn #tut { top: calc(150px + env(safe-area-inset-top, 0px)); font-size: 13px; }
+#tut.strip { font-size: 12px; padding: 3px 10px 4px; opacity: .92; } #tut.strip .tutHead { display: none; } #tut.strip #tutTxt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tutChoice { display: flex; gap: 10px; margin-top: 8px; } .tutChoice button { flex: 1; padding: 8px 6px; font-size: 14px; }
 .soundRow { display: flex; gap: 8px; justify-content: center; width: min(300px, 92vw); } #title .menu .soundRow .soundBtn, .soundRow .soundBtn { flex: 1; min-width: 0; white-space: nowrap; padding: 8px 6px; font-size: 12px; letter-spacing: .5px; } .soundBtn.off { opacity: .7; }
 /* SAIL TO DOCK: under TOP on a phone, above the map on a tablet; gold while the crew sail you there */
@@ -325,7 +329,7 @@ html.leftHand #broad .bStrip span { right: auto; left: 4px; }
 html.leftHand #hud .row2 { justify-content: flex-end; } /* the ship and sea names move clear of the chart button */
 html:not(.tabletHud) #broad .bSide { max-width: 106px; } html:not(.tabletHud) #broad .bStrip { bottom: calc(170px + env(safe-area-inset-bottom, 0)); }
 /* BACK: a fifth notch under STOP (a slow reverse), in red; the action buttons and the battle strip move up to make room */
-#throttle button.back { color: #ffb8a0; } #throttle button.back.on { background: linear-gradient(#f0a070, #b0502a); color: #1a0a06; }
+
 html:not(.tabletHud) #acts { bottom: calc(208px + env(safe-area-inset-bottom, 0)); }
 html.tabletHud #acts { bottom: calc(260px + env(safe-area-inset-bottom, 0)); }
 html:not(.tabletHud) #broad .bStrip { bottom: calc(204px + env(safe-area-inset-bottom, 0)); }

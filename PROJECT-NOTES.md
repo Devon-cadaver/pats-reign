@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.1.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.1.1. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -602,6 +602,16 @@ disagree with this file, this file wins.
   bots (Skeid, upgrades 2, level 3.4 beasts): a dodging, shooting bot wins in 8-22 s losing 10-18% hull; a passive ship
   loses 11-16% in 25 s. The tutorial asks ACTION or CLASSIC (step 6 of 8, tut.choice); HOW TO PLAY is paged (howPager,
   two topics a page) and sits below the sound buttons on the title.
+- v1.1.1 (Sean's first play of v1.1.0): the title menu is laid out in the HTML (sound row included) and hidden until the
+  script has settled CONTINUE / SET SAIL (body.ready), so nothing moves under a tap; the tutorial card sits beside what
+  the hand points at (placeTut; a narrow left-hugging card in portrait) and collapses to a one-line strip at the top in a
+  fight (#tut.strip) with the hand on SPEARS; a STOP step before the view step (9 steps); the chart step needs a zoom-in
+  past 1.8 on the glowing mark before the tap counts (tut.zoomed, a tap earlier only says to zoom); the tutorial shark
+  fights a simple surface round in action mode (L.learn: it circles on the surface, bites every 4 s for half damage,
+  every spear hits) and the strip explains that bigger beasts dive; action fights on a Faering or Karvi are gentler
+  (small: longer ring, 0.6x damage, a tighter hit radius, longer rests); calm() also keeps the weather calm (no spouts,
+  tornadoes, storms or rogue waves while the tutorial runs or a Faering has under two kills); the telegraph is coloured
+  by notch (BACK orange, STOP red, ROW/HALF yellow, FULL green; dull until on).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
