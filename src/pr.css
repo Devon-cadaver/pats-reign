@@ -261,6 +261,8 @@ html.tabletHud #tutHand { font-size: 50px; width: 58px; height: 58px; line-heigh
 #how { justify-content: flex-start; } #how > :first-child { margin-top: auto; } #how > :last-child { margin-bottom: auto; }
 #how:not(.hidden) ~ .fsBtn { display: none !important; }
 .howBtns { display: flex; gap: 12px; align-items: center; }
+.howNav { display: flex; gap: 10px; align-items: center; font-size: 14px; color: var(--gold); } .howNav button { min-width: 56px; padding: 6px 10px; }
+.tutChoice { display: flex; gap: 10px; margin-top: 8px; } .tutChoice button { flex: 1; padding: 8px 6px; font-size: 14px; }
 .soundRow { display: flex; gap: 8px; justify-content: center; width: min(300px, 92vw); } #title .menu .soundRow .soundBtn, .soundRow .soundBtn { flex: 1; min-width: 0; white-space: nowrap; padding: 8px 6px; font-size: 12px; letter-spacing: .5px; } .soundBtn.off { opacity: .7; }
 /* SAIL TO DOCK: under TOP on a phone, above the map on a tablet; gold while the crew sail you there */
 #dockBtn { position: absolute; left: 8px; bottom: calc(160px + env(safe-area-inset-bottom, 0)); pointer-events: auto; padding: 3px 8px; display: flex; flex-direction: column; align-items: center; line-height: 1.05; }
