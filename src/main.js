@@ -966,7 +966,7 @@ function updateSeas(dt) {
   if (best !== curSea && bw > 0.62) { curSea = best; if (state === 'play') seaBanner(best); }
   setMusicSea(curSea); // each sea has its own song (it changes on the next bar line)
   // snow in the Frost Sea, ash in the Storm Sea
-  const sn = rw.frost || 0, as = rw.storm || 0, k = Math.max(sn, as); fall.p.visible = k > 0.04; if (fall.p.visible) { const ashy = as / (sn + as + 1e-6); fall.m.color.copy(snowC).lerp(ashC, ashy); fall.m.size = 0.55 - ashy * 0.25; fall.m.opacity = 0.85 * k;
+  const sn = rw.frost || 0, as = rw.storm || 0, k = Math.max(sn, as); fall.p.visible = k > 0.04; if (fall.p.visible) { const ashy = as / (sn + as + 1e-6); fall.m.color.copy(snowC).lerp(ashC, ashy); fall.m.size = 0.55 - ashy * 0.25; fall.m.opacity = 0.6 * k;
     const sp = 3.2 - ashy * 1.8; fall.p.position.set(camTgt.x, 0, camTgt.z); const P3 = fall.pos; for (let i = 0; i < fall.n; i++) { P3[i * 3 + 1] -= sp * fall.vel[i] * dt; P3[i * 3] += Math.sin(time * 0.8 + i) * dt * 0.6; if (P3[i * 3 + 1] < -1) { P3[i * 3 + 1] = 40; P3[i * 3] = rnd(-45, 45); P3[i * 3 + 2] = rnd(-45, 45); } } fall.g.attributes.position.needsUpdate = true; }
   // volcanoes smoke and spit embers
   for (const v of world.volcanoes) { if (Math.abs(v.x - boat.x) > 230 || Math.abs(v.z - boat.z) > 230) continue;
@@ -1012,7 +1012,11 @@ function tick(dt) { time += dt;
   for (const s of world.harbors) { const f = s.g.userData.fire; if (f) f.scale.set(0.9 + Math.sin(time * 9) * 0.15, 1.4 + Math.sin(time * 13) * 0.3, 0.9); const b = s.g.userData.banner; if (b) b.rotation.y = Math.sin(time * 2) * 0.3; }
   updateSeas(dt); world.update(dt, time, boat.x, boat.z, ocean.heightAt);
   // in a battle the fog thins around the fight (the look eases there, and back after), so you can see the ships
-  const wxLook = { type: LOOK[wx.type], k: wx.k * (battle && LOOK[wx.type] === 'fog' ? 0.4 : 1) }; env.apply(P.tod, wxLook, dt, flash * flash, 0, rw); updateAuroraFx(dt); updateWreck(); updateLanterns(); drawCompass();
+  const wxLook = { type: LOOK[wx.type], k: wx.k * (battle && LOOK[wx.type] === 'fog' ? 0.4 : 1) }; env.apply(P.tod, wxLook, dt, flash * flash, 0, rw);
+  // fog thickens with distance from the camera, so push it back by how far the camera sits from what it looks at: your ship
+  // (and a fight) stay clear however far out you zoom, and the haze still closes in beyond them
+  { const cd = camera.position.distanceTo(camTgt) * 0.85; scene.fog.near += cd; scene.fog.far += cd; }
+  updateAuroraFx(dt); updateWreck(); updateLanterns(); drawCompass();
   if (state === 'play') drawHelm(); setSea(state === 'play' ? 1 : 0.6, LOOK[wx.type] === 'storm' ? wx.k : 0);
   updateCamera(dt); updateHulls(); ocean.update(dt, camTgt, camera); foam.update(dt); foam.mat.uniforms.uLight.value = 0.35 + env.cur.ambient;
   if (state === 'play') { updateTags(dt); if ((mapFlip ^= 1)) drawMap(mapEl, mapCtx, false);

@@ -13,15 +13,15 @@ export const LOOKS = {
 export const WEATHER_LOOKS = {
   storm: { sky: 0x22282f, horizon: 0x4c555e, fog: 0x3e474f, sunK: 0.22, ambient: 0.36, deep: 0x081a24, mid: 0x24525e, hemiK: 0.85, sunL: 0.35, near: 40, far: 170, amp: 2.4 },
   rain: { sky: 0x48525c, horizon: 0x7a8690, fog: 0x6a7682, sunK: 0.4, ambient: 0.44, deep: 0x0a2632, mid: 0x2a6070, hemiK: 1.0, sunL: 0.6, near: 60, far: 210, amp: 1.5 },
-  fog: { sky: 0x9aa6ae, horizon: 0xb0bac0, fog: 0xa8b2b8, sunK: 0.35, ambient: 0.62, deep: 0x1a3a48, mid: 0x4a7a86, hemiK: 1.2, sunL: 0.45, near: 4, far: 46, amp: 0.55 },
+  fog: { sky: 0x9aa6ae, horizon: 0xb0bac0, fog: 0xa8b2b8, sunK: 0.35, ambient: 0.62, deep: 0x1a3a48, mid: 0x4a7a86, hemiK: 1.2, sunL: 0.45, near: 12, far: 85, amp: 0.55 }, // eased (was 4-46): fog you can still sail by
   calm: { amp: 0.45 },
 };
 
 // each sea's own water, sky, fog and light (daytime values; dimmed with the time of day), blended by where the ship is
 export const REGION_LOOKS = {
-  frost: { sky: 0x9cc8e8, fog: 0xd0e2ee, deep: 0x0e3a58, mid: 0x3a8aa8, shallow: 0xa8e8f2, foam: 0xffffff, sunCol: 0xeaf6ff, hemiSky: 0xeaf6ff, hemiGround: 0x8aa0b0, ambient: 0.62, near: 60, far: 260, amp: 0.9 },
+  frost: { sky: 0x9cc8e8, fog: 0xd0e2ee, deep: 0x0e3a58, mid: 0x3a8aa8, shallow: 0xa8e8f2, foam: 0xffffff, sunCol: 0xeaf6ff, hemiSky: 0xeaf6ff, hemiGround: 0x8aa0b0, ambient: 0.62, near: 90, far: 330, amp: 0.9 }, // a lighter haze (was 60-260)
   storm: { sky: 0x3e3e4a, fog: 0x544a4e, deep: 0x0e1a20, mid: 0x2e4650, shallow: 0x3e5656, foam: 0xd0d0d0, sunCol: 0xffa060, hemiSky: 0xd0b0a0, hemiGround: 0x2a2018, ambient: 0.5, hemiK: 1.1, near: 50, far: 230, amp: 1.5 },
-  mist: { sky: 0x748a7e, fog: 0x7e9286, deep: 0x0c2218, mid: 0x2a5244, shallow: 0x46705a, foam: 0xd8e8dc, sunCol: 0xd8ead0, hemiSky: 0xb8d0c0, hemiGround: 0x203028, ambient: 0.5, near: 18, far: 125, amp: 0.75 },
+  mist: { sky: 0x748a7e, fog: 0x7e9286, deep: 0x0c2218, mid: 0x2a5244, shallow: 0x46705a, foam: 0xd8e8dc, sunCol: 0xd8ead0, hemiSky: 0xb8d0c0, hemiGround: 0x203028, ambient: 0.5, near: 25, far: 155, amp: 0.75 }, // a little lighter (was 18-125)
   warm: { sky: 0x2a9ae8, fog: 0xb8e6f4, deep: 0x005a96, mid: 0x0ab0d0, shallow: 0x5af0e4, foam: 0xffffff, sunCol: 0xfff4d8, hemiSky: 0xe8faff, hemiGround: 0x3a7a6a, ambient: 0.62, near: 150, far: 380, amp: 0.75 },
 };
 const COLS = ['sky', 'horizon', 'fog', 'sunCol', 'deep', 'mid', 'shallow', 'hemiSky', 'hemiGround', 'foam'], NUMS = ['sunK', 'ambient', 'hemiK', 'sunL', 'near', 'far', 'moon'];

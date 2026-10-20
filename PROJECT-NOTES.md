@@ -243,6 +243,13 @@ disagree with this file, this file wins.
 - Note: a // comment appended to a one-line handler swallowed the rest of the line once more; scratchpad scan-comments.cjs
   flags lines where code follows a comment.
 
+## v0.6.8: lighter fog (Sean: fog and the snowy Frost Sea haze were too hard to see through)
+- The real cause: Three.js fog is measured from the camera, and the zoomed-out chase camera (v0.6.6) sits ~70 units back,
+  so your own ship was deep in the fog. main.js now adds 0.85 x the camera-to-target distance to scene.fog.near/far each
+  frame after env.apply: the ship and a fight stay clear at any zoom and the haze closes in beyond.
+- env.js: fog weather near/far 4-46 -> 12-85; Frost Sea 60-260 -> 90-330; Mist Sea 18-125 -> 25-155. Falling snow and
+  ash opacity 0.85 -> 0.6 (main.js fall.m.opacity).
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster
