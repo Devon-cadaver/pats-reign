@@ -135,7 +135,7 @@ thrEl.addEventListener('pointermove', (e) => { if (e.pointerId === thrId) thrPic
 for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) thrEl.addEventListener(ev, (e) => { if (e.pointerId === thrId) thrId = null; });
 canvas.addEventListener('wheel', (e) => { zoom = clamp(zoom * Math.exp(e.deltaY * 0.001), 0.3, 2.6); }, { passive: true });
 // W / S (or up / down): a tap moves the sail telegraph one notch (STOP, ROW, HALF, FULL); held, it steps on through them
-const thrKeyOk = () => state === 'play' && !fishing && (!battle || !!battle.broad);
+const thrKeyOk = () => state === 'play' && !fishing && (!battle || !!battle.broad || !!(battle.legend && battle.legend.sail));
 function thrKeyStep(dir) { if (!thrKeyOk()) return; const cur = boat.throttle || 0, next = dir > 0 ? THR_LV.find((l) => l > cur + 0.02) : [...THR_LV].reverse().find((l) => l < cur - 0.02); if (next != null) setThrottle(next); }
 let thrHold = 0;
 const keys = {}; addEventListener('keydown', (e) => { const k = e.key.toLowerCase(); keys[k] = true; if (e.key === ' ' && !/INPUT|TEXTAREA/.test(e.target.tagName || '')) { e.preventDefault(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); if (state === 'play') fire(true); }
@@ -396,7 +396,7 @@ $('pauseBtn').addEventListener('click', () => { const b = $('broadToggle'); if (
 // slam down on your deck: shoot them first (tap one, or FIRE / Space for the one about to strike); each one you cut down hurts
 // the Kraken. Now and then its great eye opens (a gold ring): hit it for heavy damage, and every rearing tentacle flinches
 // away. Below half its health it sends them faster and more at once. FLEE breaks its grip at a cost.
-const LEGEND_KIND = { kraken: 'kraken' };
+const LEGEND_KIND = { kraken: 'kraken', jormungandr: 'jorm' };
 const lgRingGeo = (() => { const g = new THREE.RingGeometry(0.8, 1, 36); g.rotateX(-Math.PI / 2); return g; })();
 function legendRing(color, geo = lgRingGeo) { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthTest: false, depthWrite: false, side: THREE.DoubleSide })); m.renderOrder = 7; scene.add(m); return m; }
 const eyeRingGeo = new THREE.TorusGeometry(1, 0.09, 6, 40);
@@ -405,17 +405,20 @@ function krakenEye(mon) { const Rk = mon.size / 6, sy = Math.sin(mon.yaw), cy = 
 function startLegend(mon) {
   const kind = LEGEND_KIND[mon.type]; if (!kind || !BROAD.on) return false;
   const t = T(), young = !!mon.young, L = { kind, young, reload: 0.6, tents: [], spawnT: 1.4, eyeT: rnd(6, 8), eyeOpen: 0, eyeMark: null };
-  // the Kraken rises ahead of the bow, facing you; your ship is held fast
-  const dist = mon.giant ? mon.size * 0.55 + t.L * 0.6 : mon.size * 0.55 + t.L * 0.6 + 4; let dir = boat.yaw;
-  for (const c of [0, 0.6, -0.6, 1.2, -1.2, Math.PI]) { const a = boat.yaw + c, x = boat.x + Math.sin(a) * dist, z = boat.z + Math.cos(a) * dist; if (!world.blockAt(x, z, mon.size * 0.3)) { dir = a; break; } }
-  mon.x = boat.x + Math.sin(dir) * dist; mon.z = boat.z + Math.cos(dir) * dist; mon.yaw = dir + Math.PI; mon.state = 'chase'; if (mon.boss && !mon.legendHp) { mon.legendHp = true; mon.maxHp *= 1.5; mon.hp *= 1.5; } (mon.stState || (mon.stState = { t: 0, speed: 0, attack: 0, dive: 0, hurt: 0, rise: 1 })).reach = 0.35;
-  battle = { mon, t: 0, legend: L }; boat.wp = null; helm.held = false; setThrottle(0, true); boat.v = 0; setBattle(true);
-  $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy', 'legendOn');
-  const ui = document.createElement('div'); ui.id = 'broad'; ui.className = 'legend';
-  ui.innerHTML = `<div class="bFoe"><b>${mon.name} <small>Lv ${Math.round(mon.lv) + 1}</small></b><div class="hp foe"><i id="bFoeHp"></i></div></div><div class="bHint" id="bHint">Tentacles rise where the red rings are: tap one (or FIRE) to cut it down before it slams your deck!</div>
-    <button class="bFire" id="bFire">FIRE<i id="bLoad"></i></button><div class="bSide"><button class="ghost" id="bFlee">FLEE</button></div>`;
-  $('hud').appendChild(ui); $('bFire').onpointerdown = (e) => { e.preventDefault(); e.stopPropagation(); legendFire(); }; $('bFlee').onclick = (e) => { e.stopPropagation(); endLegend('flee'); };
-  warn(young ? '⚠ THE HATCHLING ATTACKS! ⚠' : '⚠ THE KRAKEN SEIZES YOUR SHIP! ⚠', 3); sfx.horn(); sfx.thunder(); return true; }
+  mon.stState = mon.stState || { t: 0, speed: 0, attack: 0, dive: 0, hurt: 0, rise: 1 }; mon.state = 'chase'; if (mon.boss && !mon.legendHp) { mon.legendHp = true; mon.maxHp *= 1.5; mon.hp *= 1.5; }
+  if (kind === 'kraken') { // the Kraken rises ahead of the bow, facing you; your ship is held fast
+    const dist = mon.giant ? mon.size * 0.55 + t.L * 0.6 : mon.size * 0.55 + t.L * 0.6 + 4; let dir = boat.yaw;
+    for (const c of [0, 0.6, -0.6, 1.2, -1.2, Math.PI]) { const a = boat.yaw + c, x = boat.x + Math.sin(a) * dist, z = boat.z + Math.cos(a) * dist; if (!world.blockAt(x, z, mon.size * 0.3)) { dir = a; break; } }
+    mon.x = boat.x + Math.sin(dir) * dist; mon.z = boat.z + Math.cos(dir) * dist; mon.yaw = dir + Math.PI; mon.stState.reach = 0.35; helm.held = false; setThrottle(0, true); boat.v = 0; }
+  else if (kind === 'jorm') jormStart(L, mon);
+  battle = { mon, t: 0, legend: L }; boat.wp = null; setBattle(true);
+  const held = !L.sail; if (held) { $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy'); } document.body.classList.add('legendOn');
+  const ui = document.createElement('div'); ui.id = 'broad'; ui.className = 'legend' + (held ? '' : ' sail');
+  const hint = kind === 'kraken' ? 'Tentacles rise where the red rings are: tap one (or FIRE) to cut it down before it slams your deck!' : 'It hunts you under the water. When the red ring appears, turn or change speed to dodge its strike, then shoot its head!';
+  ui.innerHTML = `<div class="bFoe"><b>${mon.name} <small>Lv ${Math.round(mon.lv) + 1}</small></b><div class="hp foe"><i id="bFoeHp"></i></div></div><div class="bHint" id="bHint">${hint}</div>` +
+    (held ? '<button class="bFire" id="bFire">FIRE<i id="bLoad"></i></button>' : '') + '<div class="bSide"><button class="ghost" id="bFlee">FLEE</button></div>';
+  $('hud').appendChild(ui); if (held) $('bFire').onpointerdown = (e) => { e.preventDefault(); e.stopPropagation(); legendFire(); }; $('bFlee').onclick = (e) => { e.stopPropagation(); endLegend('flee'); };
+  warn(kind === 'kraken' ? (young ? '⚠ THE HATCHLING ATTACKS! ⚠' : '⚠ THE KRAKEN SEIZES YOUR SHIP! ⚠') : young ? '⚠ THE WHELP HUNTS YOU! ⚠' : '⚠ JORMUNGANDR HUNTS YOU! ⚠', 3); sfx.horn(); sfx.thunder(); return true; }
 const legendReload = () => (battle && battle.legend && battle.legend.grab ? 0.2 : P.up.ballista ? 0.6 : 0.8);
 function krakenTentacle(L) { const t = T(), mon = battle.mon, taken = L.tents.map((x) => x.a), behind = Math.atan2(boat.x - mon.x, boat.z - mon.z); let a = 0;
   for (let k = 0; k < 16; k++) { a = Math.random() * Math.PI * 2; if (Math.abs(angDiff(a, behind)) > 1.0 && taken.every((b) => Math.abs(angDiff(a, b)) > 0.7)) break; }
@@ -454,7 +457,7 @@ function updateKraken(dt) { const L = battle.legend, mon = battle.mon, t = T(), 
   if (mon.hp <= 0) { endLegend('win'); return; } }
 // what FIRE / Space shoots: the open eye first, else the tentacle that will strike soonest
 function krakenTarget(L) { if (L.grab && L.grab.K.phase === 'grab') return { K: L.grab.K }; if (L.eyeOpen) return { eye: true }; let best = null, bt = 1e9; for (const K of L.tents) { const left = K.phase === 'rise' ? 9 + (0.7 - K.t) : K.phase === 'coil' ? 0 + (9 - K.t) : 1e9; if (left < bt) { bt = left; best = K; } } return best ? { K: best } : null; }
-function legendFire(target) { const L = battle && battle.legend; if (!L || L.reload > 0) return; const tg = target || krakenTarget(L); if (!tg) return; L.reload = legendReload(); unlockAudio(); sfx.throw();
+function legendFire(target) { const L = battle && battle.legend; if (!L || L.reload > 0) return; if (L.kind === 'jorm') { jormFire(L, battle.mon); return; } const tg = target || krakenTarget(L); if (!tg) return; L.reload = legendReload(); unlockAudio(); sfx.throw();
   const mon = battle.mon, kind = P.up.ballista ? 'bolt' : 'spear', from = { x: boat.x, y: boat.y + 2.2, z: boat.z };
   if (tg.eye) { const [ex, ey, ez] = krakenEye(mon); launch(from, { x: ex, y: ey, z: ez }, kind, () => { const L2 = battle && battle.legend; if (L2 !== L || !L.eyeOpen) { pop(ex, ey + 1, ez, 'MISS', '#9ab8c8'); return; }
       const d = Math.round(attack() * 2.4 * (boat.thor > 0 ? 2 : 1) * rnd(0.9, 1.1)); mon.hp -= d; mon.stState.hurt = 1; pop(ex, ey + 2, ez, '👁 THE EYE! −' + d, '#ffd24a'); sfx.hit(); sfx.boom();
@@ -464,13 +467,58 @@ function legendFire(target) { const L = battle && battle.legend; if (!L || L.rel
     if (K.hp <= 0) { K.phase = 'cut'; K.t = 0; } else if (K.phase === 'coil') K.t = Math.max(0, K.t - 0.7); }); }
 // a tap in a legend fight shoots what is under your finger (the open eye or a tentacle), if anything
 function legendTap(x, y) { const L = battle.legend, mon = battle.mon; let best = null, bd = 80;
+  if (L.kind === 'jorm') { const [hx, hy, hz] = jormHead(mon), s0 = toScreen(hx, hy, hz); if (s0 && Math.hypot(s0[0] - x, s0[1] - y) < 110) legendFire(); return; }
   if (L.eyeOpen) { const [ex, ey, ez] = krakenEye(mon), s = toScreen(ex, ey, ez); if (s) { const d = Math.hypot(s[0] - x, s[1] - y); if (d < bd + 30) { bd = d; best = { eye: true }; } } }
   for (const K of L.tents) { if (K.phase !== 'rise' && K.phase !== 'coil' && K.phase !== 'grab') continue; for (const i of [6, 10, 14]) { const p = K.pts[i], s = toScreen(p.x, p.y, p.z); if (!s) continue; const d = Math.hypot(s[0] - x, s[1] - y); if (d < bd) { bd = d; best = { K }; } } }
   if (best) legendFire(best); }
-function updateLegend(dt) { const L = battle.legend, mon = battle.mon; battle.t += dt; L.reload = Math.max(0, L.reload - dt); boat.v = 0; boat.wp = null;
-  if (L.kind === 'kraken') updateKraken(dt); if (!battle) return;
-  L.hudT = (L.hudT || 0) - dt; if (L.hudT <= 0) { L.hudT = 0.1; $('bFoeHp').style.width = clamp(mon.hp / mon.maxHp, 0, 1) * 100 + '%'; $('bLoad').style.width = (1 - clamp(L.reload / legendReload(), 0, 1)) * 100 + '%'; $('bFire').classList.toggle('ready', L.reload <= 0); } }
-function clearLegend() { const L = battle && battle.legend; if (!L) return; boat.dunk = 0; L.grab = null; if (ship.mask && !boat.air) ship.mask.visible = true; for (const K of L.tents) dropTentacle(K); L.tents.length = 0; if (L.eyeMark) { scene.remove(L.eyeMark); L.eyeMark.material.dispose(); }
+// JORMUNGANDR, the hunt: you sail free (wheel, telegraph) while it stalks you under the water, a dark shadow with a bubble
+// trail. Then it locks on: a red ring where it reckons you will be (where you are heading) and it bursts up there a moment
+// later, so turn or change speed to dodge. After every strike its head rears up for a few seconds (a gold ring): shoot it
+// (SPEARS / Space or tap it); the first hit straight away is a PERFECT. Sometimes it wraps itself round your ship instead
+// and charges with lightning: hit its head three times to break the coil, or be electrocuted.
+const shadowGeo = (() => { const g = new THREE.CircleGeometry(1, 24); g.rotateX(-Math.PI / 2); return g; })();
+function jormStart(L, mon) { const t = T(), R = mon.size / 5;
+  Object.assign(L, { sail: true, R, mode: 'stalk', mt: 0, dur: rnd(3.5, 5), orbit: Math.random() * 6.28, strike: null, hits: 0, coil: null,
+    shadow: (() => { const m = new THREE.Mesh(shadowGeo, new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false })); m.renderOrder = 5; scene.add(m); return m; })(),
+    ring: legendRing(0xff3a2a), mark: legendRing(0xffd24a, eyeRingGeo) });
+  L.ring.visible = false; L.mark.visible = false; mon.stState.dive = 1; mon.stState.attack = 0; }
+// where its head is in the world (the neck rears higher with attack, and sinks with dive)
+function jormHead(mon) { const st = mon.stState, R = mon.size / 5; return [mon.x, mon.g.position.y + R * (4.6 + 3.5 * st.attack) * (1 - st.dive) - R * 4 * st.dive, mon.z]; }
+function jormHint(L, txt) { const h = $('bHint'); if (h) h.textContent = txt || 'It hunts you under the water. When the red ring appears, turn or change speed to dodge its strike, then shoot its head!'; }
+function updateJorm(dt) { const L = battle.legend, mon = battle.mon, st = mon.stState, t = T(), enraged = mon.hp < mon.maxHp * 0.5; L.mt += dt;
+  const ease = (k, to, r) => k + (to - k) * Math.min(1, dt * r);
+  if (L.mode === 'stalk' || L.mode === 'lock') { st.dive = ease(st.dive, 1, 3); st.attack = ease(st.attack, 0, 3);
+    let tx, tz; if (L.mode === 'stalk') { L.orbit += dt * (0.5 + (enraged ? 0.25 : 0)); const rr = 20 + t.L * 0.6; tx = boat.x + Math.sin(L.orbit) * rr; tz = boat.z + Math.cos(L.orbit) * rr; } else { tx = L.strike.x; tz = L.strike.z; }
+    const dx = tx - mon.x, dz = tz - mon.z, d = Math.hypot(dx, dz), sp = Math.min(d * 2.5, (L.mode === 'lock' ? 30 : Math.max(9, boat.v + 5)) * (L.young ? 0.8 : 1)); if (d > 0.1) { mon.x += (dx / d) * sp * dt; mon.z += (dz / d) * sp * dt; mon.yaw += angDiff(Math.atan2(dx, dz), mon.yaw) * Math.min(1, dt * 4); }
+    L.shadow.visible = true; L.shadow.position.set(mon.x, ocean.heightAt(mon.x, mon.z) + 0.15, mon.z); L.shadow.scale.set(L.R * 1.6, 1, L.R * 1.6); L.shadow.rotation.y = mon.yaw; if (Math.random() < dt * 18) foam.add(mon.x + rnd(-1, 1) * L.R, mon.z + rnd(-1, 1) * L.R, { s: 0.6, life: 1.2, a: 0.6 });
+    if (L.mode === 'stalk' && L.mt > L.dur) { const lead = L.young ? 0.8 : 1.1, sx = boat.x + Math.sin(boat.yaw) * boat.v * lead, sz = boat.z + Math.cos(boat.yaw) * boat.v * lead; L.strike = { x: sx, z: sz, r: t.L * 0.45 + 4 }; L.mode = 'lock'; L.mt = 0;
+      L.ring.visible = true; L.ring.position.set(sx, ocean.heightAt(sx, sz) + 0.3, sz); L.ring.scale.setScalar(L.strike.r); jormHint(L, '⚠ IT STRIKES! Turn or change speed to get out of the red ring!'); sfx.groan && sfx.groan(); }
+    if (L.mode === 'lock') { L.ring.material.opacity = 0.5 + 0.4 * Math.abs(Math.sin(L.mt * 12)); if (L.mt > (L.young ? 1.3 : enraged ? 0.85 : 1.0)) { L.mode = 'strike'; L.mt = 0; mon.x = L.strike.x; mon.z = L.strike.z; mon.yaw = Math.atan2(boat.x - mon.x, boat.z - mon.z); L.ring.visible = false; L.shadow.visible = false;
+      foam.splash(mon.x, mon.z, 3); sfx.boom(); const hitR = L.strike.r + t.L * 0.3; if (Math.hypot(boat.x - mon.x, boat.z - mon.z) < hitR) { boat.shake = 0.8; damage(mon.dmg * (L.young ? 0.8 : 1.1) * (1 - defense()), mon.name + ' strikes your ship!'); if (!battle) return; } else pop(boat.x, boat.y + 4, boat.z, 'DODGED!', '#7dff3a'); } } }
+  else if (L.mode === 'strike') { st.dive = ease(st.dive, 0, 9); st.attack = ease(st.attack, 1, 9); if (L.mt > 0.45) { L.mode = 'exposed'; L.mt = 0; L.perfect = true; jormHint(L, '🐍 Its head is up: SHOOT IT NOW!'); } }
+  else if (L.mode === 'exposed') { st.dive = ease(st.dive, 0, 6); st.attack = ease(st.attack, 0.6, 3); mon.yaw += angDiff(Math.atan2(boat.x - mon.x, boat.z - mon.z), mon.yaw) * Math.min(1, dt * 2); if (L.mt > 0.6) L.perfect = false;
+    const [hx, hy, hz] = jormHead(mon); L.mark.visible = true; L.mark.position.set(hx, hy, hz); L.mark.scale.setScalar(L.R * (1.3 + 0.15 * Math.sin(battle.t * 10))); L.mark.lookAt(camera.position);
+    if (L.mt > (L.young ? 3.8 : 3.2)) { L.mark.visible = false; const near = Math.hypot(boat.x - mon.x, boat.z - mon.z) < 30;
+      if (near && !boat.air && Math.random() < (L.young ? 0.2 : enraged ? 0.45 : 0.3)) { L.mode = 'coil'; L.mt = 0; L.coil = { a: Math.atan2(mon.x - boat.x, mon.z - boat.z), hits: 0, need: L.young ? 2 : 3, charge: 0 }; warn('🐍 IT COILS AROUND YOUR SHIP!', 2.5); sfx.creak(); }
+      else { L.mode = 'stalk'; L.mt = 0; L.dur = enraged ? rnd(2.5, 3.5) : rnd(3.5, 5); L.orbit = Math.atan2(mon.x - boat.x, mon.z - boat.z); jormHint(L); } } }
+  else if (L.mode === 'coil') { const C = L.coil; boat.v = 0; boat.wp = null; st.dive = ease(st.dive, 0, 6); st.attack = ease(st.attack, 0.35, 3);
+    C.a += dt * (C.charge ? 1.2 : 4.2); const rc = t.B * 0.6 + L.R * 1.2; mon.x = boat.x + Math.sin(C.a) * rc; mon.z = boat.z + Math.cos(C.a) * rc; mon.yaw = C.a + Math.PI / 2; boat.shake = Math.max(boat.shake, 0.2);
+    const [hx, hy, hz] = jormHead(mon); L.mark.visible = L.mt > 1.2; L.mark.position.set(hx, hy, hz); L.mark.scale.setScalar(L.R * 1.3); L.mark.lookAt(camera.position);
+    if (L.mt > 1.2 && !C.charge) { C.charge = 0.01; jormHint(L, '⚡ IT CHARGES WITH LIGHTNING! Hit its head ' + C.need + ' times to break the coil!'); sfx.zap(); }
+    if (C.charge) { C.charge += dt; if (Math.random() < dt * 30) foam.add(hx + rnd(-2, 2), hz + rnd(-2, 2), { spray: true, y: hy + rnd(-2, 2), vx: rnd(-3, 3), vz: rnd(-3, 3), vy: rnd(-1, 3), s: 0.5, life: 0.4, a: 1 });
+      if (C.hits >= C.need) { L.coil = null; L.mode = 'exposed'; L.mt = 1; mon.hp -= attack() * 0.6; mon.stState.hurt = 1; pop(boat.x, boat.y + 4, boat.z, 'BROKE THE COIL!', '#7dff3a'); sfx.hit(); jormHint(L, '🐍 It reels back: SHOOT ITS HEAD!'); }
+      else if (C.charge > 3) { L.coil = null; flash = 1; sfx.zap(); sfx.thunder(); boat.shake = 1; damage(mon.dmg * (L.young ? 1 : 1.5) * (1 - defense()), '⚡ ' + mon.name + ' electrocutes your ship!'); if (!battle) return; L.mode = 'stalk'; L.mt = 0; L.dur = rnd(3, 4.5); L.mark.visible = false; jormHint(L); } } }
+  if (mon.hp <= 0) { endLegend('win'); return; } }
+function jormFire(L, mon) { if (L.mode !== 'exposed' && !(L.mode === 'coil' && L.coil && L.coil.charge)) return false; L.reload = legendReload(); unlockAudio(); sfx.throw();
+  const [hx, hy, hz] = jormHead(mon), perfect = L.mode === 'exposed' && L.perfect; launch({ x: boat.x, y: boat.y + 2.2, z: boat.z }, { x: hx, y: hy, z: hz }, P.up.ballista ? 'bolt' : 'spear', () => { const L2 = battle && battle.legend; if (L2 !== L) return;
+    if (L.mode === 'coil' && L.coil) { L.coil.hits++; mon.hp -= attack() * 0.15; sfx.hit(); pop(hx, hy + 2, hz, 'HACK! ' + L.coil.hits + ' / ' + L.coil.need, '#ffffff'); return; }
+    if (L.mode !== 'exposed') { pop(hx, hy + 2, hz, 'MISS', '#9ab8c8'); return; } const d = Math.round(attack() * 0.9 * (perfect ? 1.6 : 1) * (boat.thor > 0 ? 2 : 1) * rnd(0.9, 1.1)); mon.hp -= d; mon.stState.hurt = 1; sfx.hit(); pop(hx, hy + 2, hz, (perfect ? 'PERFECT! ' : '') + '−' + d, perfect ? '#ffd24a' : '#ffffff'); });
+  return true; }
+
+function updateLegend(dt) { const L = battle.legend, mon = battle.mon; battle.t += dt; L.reload = Math.max(0, L.reload - dt); if (!L.sail) { boat.v = 0; boat.wp = null; }
+  if (L.kind === 'kraken') updateKraken(dt); else if (L.kind === 'jorm') updateJorm(dt); if (!battle) return;
+  L.hudT = (L.hudT || 0) - dt; if (L.hudT <= 0) { L.hudT = 0.1; $('bFoeHp').style.width = clamp(mon.hp / mon.maxHp, 0, 1) * 100 + '%'; if ($('bFire')) { $('bLoad').style.width = (1 - clamp(L.reload / legendReload(), 0, 1)) * 100 + '%'; $('bFire').classList.toggle('ready', L.reload <= 0); } } }
+function clearLegend() { const L = battle && battle.legend; if (!L) return; for (const k of ['shadow', 'ring', 'mark']) if (L[k]) { scene.remove(L[k]); L[k].material.dispose(); } boat.dunk = 0; L.grab = null; if (ship.mask && !boat.air) ship.mask.visible = true; for (const K of L.tents) dropTentacle(K); L.tents.length = 0; if (L.eyeMark) { scene.remove(L.eyeMark); L.eyeMark.material.dispose(); }
   const ui = $('broad'); if (ui) ui.remove(); document.body.classList.remove('busy', 'legendOn'); $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); if (battle.mon.stState) { battle.mon.stState.attack = 0; battle.mon.stState.reach = 1; } }
 function endLegend(result) { const L = battle && battle.legend; if (!L) return; const mon = battle.mon; clearLegend(); battle = null; setBattle(false); boat.lastHit = time; boat.grace = 4; hud();
   if (result === 'win') { killMon(mon); setThrottle(0, true); }
@@ -873,7 +921,7 @@ $('chartClose').onclick = closeChart;
 
 
 // ---------- tags and pops ---------- (an enemy in a broadside has her bar at the top instead)
-function updateTags(dt) { for (const mon of mons) { const t = mon.tag; if (mon.dead || state === 'title' || (battle && battle.broad && battle.broad.foes.includes(mon))) { t.style.display = 'none'; continue; } const d = Math.hypot(mon.x - boat.x, mon.z - boat.z); const sp = d < 90 && mon.rise > 0.5 ? toScreen(mon.x, mon.g.position.y + mon.top + 1.2, mon.z) : null; if (!sp || (wx.type === 'fog' && wx.k > 0.5 && d > 40)) { t.style.display = 'none'; continue; }
+function updateTags(dt) { for (const mon of mons) { const t = mon.tag; if (mon.dead || state === 'title' || (battle && (battle.broad ? battle.broad.foes.includes(mon) : !!battle.legend && battle.mon === mon))) { t.style.display = 'none'; continue; } const d = Math.hypot(mon.x - boat.x, mon.z - boat.z); const sp = d < 90 && mon.rise > 0.5 ? toScreen(mon.x, mon.g.position.y + mon.top + 1.2, mon.z) : null; if (!sp || (wx.type === 'fog' && wx.k > 0.5 && d > 40)) { t.style.display = 'none'; continue; }
     t.style.display = 'block'; t.style.left = sp[0] + 'px'; t.style.top = sp[1] + 'px'; const html = '<span style="color:' + (mon.naval ? '#ffb03a' : danger(mon.lv)) + '">' + mon.name + ' · ' + (mon.lv - P.tier > 1.6 ? '💀 Lv ' + (Math.round(mon.lv) + 1) : 'Lv ' + (Math.round(mon.lv) + 1)) + '</span>' + (mon.hp < mon.maxHp ? '<i><b style="width:' + clamp(mon.hp / mon.maxHp, 0, 1) * 100 + '%"></b></i>' : ''); if (t._h !== html) { t.innerHTML = html; t._h = html; } }
   for (let i = pops.length - 1; i >= 0; i--) { const p = pops[i]; p.t += dt; const sp = toScreen(p.x, p.y + p.t * 2.5, p.z); if (!sp || p.t > p.life) { p.el.remove(); pops.splice(i, 1); continue; } p.el.style.left = sp[0] + 'px'; p.el.style.top = sp[1] + 'px'; p.el.style.opacity = Math.min(1, (p.life - p.t) * 2); } }
 
@@ -887,7 +935,7 @@ function updateBoat(dt) {
   const t = T(); let thr = boat.throttle || 0, want = null;
   const kTurn = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0), kThr = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0);
   if (kThr && thrKeyOk()) { thrHold += dt; if (thrHold > 0.4) { thrHold -= 0.22; thrKeyStep(kThr); } } else thrHold = 0; // held: the next notch every 0.22 s after 0.4 s
-  if (state === 'play' && !battle && !fishing) { if (kTurn) helm.angle = clamp(helm.angle + kTurn * dt * 2.2, -HMAX, HMAX);
+  if (state === 'play' && (!battle || (battle.legend && battle.legend.sail && !battle.legend.coil)) && !fishing) { if (kTurn) helm.angle = clamp(helm.angle + kTurn * dt * 2.2, -HMAX, HMAX);
     if (boat.wp) { const dx = boat.wp.x - boat.x, dz = boat.wp.z - boat.z, d = Math.hypot(dx, dz);
       if (d < 4 + t.L * 0.3) { const au = autoOn() && boat.auto.h; boat.wp = null; boat.auto = null; courseMark.visible = false; setThrottle(0, true); if (au) openHarbor(au); else say('Arrived. Sails furled.'); }
       else { courseMark.position.set(boat.wp.x, ocean.heightAt(boat.wp.x, boat.wp.z) + 0.2, boat.wp.z); courseMark.rotation.z += dt; thr = Math.min(thr, clamp(d / 18, 0.25, 1));
@@ -936,6 +984,7 @@ function updateCamera(dt) { const t = T(); let tgt, dist, pitch; if (!!battle !=
   else if (battle && battle.broad) { // the battle line side-on: the camera slides along the line and never turns
     const B = battle.broad, ni = nearFoe(B), f = B.foes[ni] || battle.mon, sep = clamp((B.foes.length ? foeAt(B, ni) : B.sp) - B.sp, -16, 16), [fx, fz] = lanePos(B, B.sp + sep / 2, (B.yC + B.eC) / 2), hfov = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect, W = Math.max(18, Math.abs(sep) + tierOf(f).L + 6, t.L * 2.2);
     tgt = V(fx, 1.2, fz); dist = Math.max(5, clamp(W / (2 * hfov), 16, 60) * zoom); pitch = 0.28; camYaw += angDiff(B.camYaw, camYaw) * Math.min(1, dt * 2.5); }
+  else if (battle && battle.legend && battle.legend.kind === 'jorm') { const mon = battle.mon, sep = Math.min(60, Math.hypot(mon.x - boat.x, mon.z - boat.z)); tgt = V(lerp(boat.x, mon.x, 0.25), 1, lerp(boat.z, mon.z, 0.25)); dist = Math.max(10, (40 + t.L * 1.6 + sep * 0.7 + mon.size * 0.6) * zoom); pitch = 0.82; camYaw += angDiff(boat.yaw, camYaw) * Math.min(1, dt * 1.5); }
   else if (battle && battle.legend) { const mon = battle.mon, [ex, , ez] = krakenEye(mon), d = Math.hypot(ex - boat.x, ez - boat.z); tgt = V(lerp(boat.x, ex, 0.5), 1, lerp(boat.z, ez, 0.5)); dist = Math.max(8, (d * 0.8 + mon.size * 0.55 + t.L * 1.6 + 18) * zoom); pitch = 0.62; camYaw += angDiff(Math.atan2(ex - boat.x, ez - boat.z), camYaw) * Math.min(1, dt * 2); }
   else if (battle && battle.mon.giant) { // frame your ship against one of the giant's eyes (the kraken's eye is about a ship long)
     const mon = battle.mon, Rk = mon.size / 6, sy = Math.sin(mon.yaw), cy = Math.cos(mon.yaw), lx = 0.9 * Rk, lz = 1.15 * Rk, ex = mon.x + lx * cy + lz * sy, ez = mon.z + lz * cy - lx * sy, de = Math.hypot(ex - boat.x, ez - boat.z);

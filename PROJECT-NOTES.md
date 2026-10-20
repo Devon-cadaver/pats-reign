@@ -281,6 +281,18 @@ disagree with this file, this file wins.
 - Next: Jormungandr (the hunt: dodge the strike, shoot the head; coil round the ship and electrocute) and the Elder One
   (rune ward; ghost lights; lift and slam / throw, a perfect eye shot drops you). Octopus and serpent specials later.
 
+## v0.7.1: legend fights, part 2: Jormungandr hunts you
+- LEGEND_KIND jormungandr -> 'jorm' (jorm.txt section): you sail free (L.sail; the helm, telegraph and W/S work, SPEARS /
+  Space fire; no FIRE button, no busy class). Modes: stalk (3.5-5 s, enraged 2.5-3.5; under water: dive 1, a dark shadow
+  and bubbles, orbiting you), lock (1.0 s, enraged 0.85, young 1.3; a red ring where you will be in ~1.1 s at your speed),
+  strike (bursts up there: 1.1 x dmg if you are inside ring + 0.3 L, else DODGED!), exposed (3.2 s, young 3.8; head up
+  with a gold ring; 0.9 x attack a hit, PERFECT x1.6 in the first 0.6 s), then back to stalk or (30%, enraged 45%, young
+  20%, if within 30) coil: it circles your ship (the trailing body wraps it), you are held; after 1.2 s it charges:
+  hit the head 3 times (young 2) in 3 s to break it (0.6 attack, back to exposed) or be electrocuted (1.5 x dmg, flash).
+  jormHead(mon) gives the head position. Camera: high behind your ship (pitch 0.82), pulled back by the separation and
+  the serpent size. Legends in a fight have no floating name tag (their bar is at the top).
+- Tested: a Skeid that never dodged beat the 1,205-hull Jormungandr in ~40 s with 91 of 536 left.
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster
