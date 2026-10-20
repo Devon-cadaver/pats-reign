@@ -110,6 +110,16 @@ disagree with this file, this file wins.
   minute), only while sailing (state play), out of battle, not during Bifröst, and 8 s after the last hit (damage() and a
   battle's end set boat.lastHit). The HUD buff line shows "🔨 Crew mending".
 
+## v0.5.3: MUSIC switch separate from SOUND (Sean: turn the music off to listen to his own, keep the game sounds)
+- Title and pause screens show 🔊 SOUND and 🎵 MUSIC side by side (soundToggle(...hosts) in audio.js builds a .soundRow on
+  each host, all kept in step). SOUND still mutes everything (master); MUSIC mutes only the saga music: it plays through
+  its own gain (musicOut, audioNodes().music), and while off music.js schedules nothing at all (late = ... || isMusicOff()),
+  which also saves the iPad's audio thread. Saved per device in localStorage pr_music ('0' = off); not in save codes.
+- With MUSIC off the iOS audio session is 'ambient' (mixes with other apps, so Spotify or Apple Music keep playing; the
+  iPhone silent switch then mutes the game too); with it on, 'playback' (plays through the silent switch, pauses other
+  apps). session() in audio.js sets it before the context starts and on each toggle. navigator.audioSession is
+  Safari-only, so this part cannot be tested in Chrome.
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster

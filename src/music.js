@@ -4,7 +4,7 @@
 //   wordless choir "ooh" on the bigger moments.
 // BATTLE: a war song at 138 bpm. Pounding war drums with fills, a driving low ostinato, horn calls, "HU!" war cries
 //   and the full choir. setBattle() switches at the next bar so the change lands on the beat.
-import { audioNodes } from './audio.js';
+import { audioNodes, isMusicOff } from './audio.js';
 
 const D = 146.83; // D3
 const st = (n) => D * Math.pow(2, n / 12); // semitones from D3
@@ -26,7 +26,7 @@ let M = null; // { ctx, out, ... }
 let late = false; // the game stalled and this note's time has passed: skip it, never play a pile of late notes at once (that crackles)
 export function startSaga() {
   const n = audioNodes(); if (!n.ctx) return; if (M) return; const ctx = n.ctx;
-  const out = ctx.createGain(); out.gain.value = 0.0; out.connect(n.master); out.gain.setTargetAtTime(0.55, ctx.currentTime, 2);
+  const out = ctx.createGain(); out.gain.value = 0.0; out.connect(n.music || n.master); out.gain.setTargetAtTime(0.55, ctx.currentTime, 2);
   const verb = ctx.createConvolver(); verb.buffer = impulse(ctx, 1.8); const wet = ctx.createGain(); wet.gain.value = 0.32; verb.connect(wet).connect(out);
   const bus = ctx.createGain(); bus.connect(out); bus.connect(verb);
   // drone: detuned saws on D2 and A2 through a breathing lowpass (hurdy-gurdy / tagelharpa)
@@ -66,7 +66,7 @@ function cry(t, vol = 0.16) { if (late) return; const { ctx, bus, noise } = M; c
 function schedule() {
   const { ctx } = M; if (ctx.state !== 'running') { M.next = Math.max(M.next, ctx.currentTime + 0.1); return; }
   while (M.next < ctx.currentTime + 0.5) { // half a second ahead, so a hitch in the game does not starve the music
-    const t = M.next; late = t < ctx.currentTime;
+    const t = M.next; late = t < ctx.currentTime || isMusicOff(); // music off: keep time, play nothing
     if (!M.battle) { // ---------- ballad: 6/8, 66 bpm dotted-quarter (eighth = 0.303 s) ----------
       const E = 60 / 66 / 3, s = M.step % 6;
       if (s === 0) { if (M.want) { M.battle = true; M.step = 0; M.bar = 0; M.dl.frequency.setTargetAtTime(900, t, 1); M.dg.gain.setTargetAtTime(0.05, t, 1); continue; }

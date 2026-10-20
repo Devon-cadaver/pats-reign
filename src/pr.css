@@ -218,3 +218,4 @@ html.tabletHud #tutHand { font-size: 50px; width: 58px; height: 58px; line-heigh
 #how { justify-content: flex-start; } #how > :first-child { margin-top: auto; } #how > :last-child { margin-bottom: auto; }
 #how:not(.hidden) ~ .fsBtn { display: none !important; }
 .howBtns { display: flex; gap: 12px; align-items: center; }
+.soundRow { display: flex; gap: 8px; justify-content: center; width: min(300px, 92vw); } #title .menu .soundRow .soundBtn, .soundRow .soundBtn { flex: 1; min-width: 0; white-space: nowrap; padding: 8px 6px; font-size: 12px; letter-spacing: .5px; } .soundBtn.off { opacity: .7; }

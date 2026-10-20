@@ -728,7 +728,7 @@ const codes = initSaveCodes(); $('codeBtn').onclick = () => codes.open(); $('pau
 $('playBtn').onclick = () => begin(false); $('contBtn').onclick = () => begin(true);
 function toTitle() { state = 'title'; $('hud').classList.add('hidden'); $('title').classList.remove('hidden'); $('contBtn').classList.toggle('hidden', !localStorage.getItem(SAVE)); }
 const fsCtl = initFullscreen(() => state === 'play');
-soundToggle($('title').querySelector('.menu')); $('ver').textContent = 'v' + VERSION;
+soundToggle($('title').querySelector('.menu'), $('paused')); $('ver').textContent = 'v' + VERSION;
 
 
 // ---------- the first-voyage tutorial: five steps, each one waits until you do it; SKIP ends it, HOW TO PLAY replays it ----------

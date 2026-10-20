@@ -1,18 +1,23 @@
 // Tiny synthesized audio via WebAudio: sound effects and a looping music track. No audio files.
-let ctx = null, master = null, musicGain = null, noiseBuf = null, muted = false;
+let ctx = null, master = null, musicGain = null, musicOut = null, noiseBuf = null, muted = false, musicOff = false;
 export function setMuted(v) { muted = v; if (master) master.gain.value = muted ? 0 : 0.9; try { localStorage.setItem("oo_mute", muted ? "1" : "0"); } catch { /* ignore */ } }
 export function isMuted() { return muted; }
 export function audioState() { return ctx ? ctx.state : "none"; }
-try { muted = localStorage.getItem("oo_mute") === "1"; } catch { /* ignore */ }
+try { muted = localStorage.getItem("oo_mute") === "1"; musicOff = localStorage.getItem("pr_music") === "0"; } catch { /* ignore */ }
+// iPad/iPhone: with the music on, play as a game ('playback': it sounds even with the silent setting, and pauses other apps' music);
+// with the music off, mix in ('ambient') so your own music keeps playing under the game's sounds
+function session() { try { const want = musicOff ? 'ambient' : 'playback'; if (navigator.audioSession && navigator.audioSession.type !== want) navigator.audioSession.type = want; } catch { /* ignore */ } }
+// MUSIC: ON / OFF, separate from SOUND: the songs go quiet (and stop being played at all), the game's sounds stay
+export function setMusicOff(v) { musicOff = !!v; if (musicOut) musicOut.gain.setTargetAtTime(musicOff ? 0 : 1, ctx.currentTime, 0.15); session(); try { localStorage.setItem('pr_music', musicOff ? '0' : '1'); } catch { /* ignore */ } }
+export function isMusicOff() { return musicOff; }
 export function unlockAudio() {
-  // iPad/iPhone: play as a game ('playback'), not as page sound that the silent setting mutes. Set it once, before the sound starts:
-  // switching the audio session under a running context can make iOS crackle
-  try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch { /* ignore */ }
+  session(); // set before the sound starts: switching the audio session under a running context can make iOS crackle
   if (!ctx) {
     // latencyHint 'playback' asks for a bigger output buffer, so the audio thread has time to spare while the game draws (no crackling)
     try { const AC = window.AudioContext || window.webkitAudioContext; try { ctx = new AC({ latencyHint: 'playback' }); } catch { ctx = new AC(); } } catch { ctx = null; return; }
     master = ctx.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(ctx.destination);
     musicGain = ctx.createGain(); musicGain.gain.value = 0.35; musicGain.connect(master);
+    musicOut = ctx.createGain(); musicOut.gain.value = musicOff ? 0 : 1; musicOut.connect(master); // the saga music goes through here
     const len = ctx.sampleRate * 0.5; noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
   }
@@ -20,13 +25,14 @@ export function unlockAudio() {
 }
 // Safari can pause the sound mid-game ('suspended' or 'interrupted', e.g. around full screen changes); any tap wakes it
 for (const ev of ['pointerup', 'touchend', 'click']) addEventListener(ev, () => { if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {}); }, true);
-// 🔊 / 🔇 button on the given screens (placed above their tutorial / menu buttons), all kept in step
+// 🔊 SOUND and 🎵 MUSIC buttons side by side on the given screens, all kept in step
 export function soundToggle(...hosts) {
-  const btns = [];
-  const draw = () => { for (const b of btns) b.textContent = muted ? '🔇 SOUND: OFF' : '🔊 SOUND: ON'; };
-  for (const h of hosts) { if (!h) continue; const b = document.createElement('button'); b.className = 'ghost soundBtn';
-    b.addEventListener('click', (e) => { e.stopPropagation(); unlockAudio(); setMuted(!muted); if (!muted) sfx.pickup(); draw(); });
-    h.insertBefore(b, h.querySelector('.howRow, .menuBtn')); btns.push(b); }
+  const snd = [], mus = [];
+  const draw = () => { for (const b of snd) b.textContent = muted ? '🔇 SOUND: OFF' : '🔊 SOUND: ON'; for (const b of mus) { b.textContent = musicOff ? '🎵 MUSIC: OFF' : '🎵 MUSIC: ON'; b.classList.toggle('off', musicOff || muted); } };
+  for (const h of hosts) { if (!h) continue; const row = document.createElement('div'); row.className = 'soundRow';
+    const b = document.createElement('button'); b.className = 'ghost soundBtn'; b.addEventListener('click', (e) => { e.stopPropagation(); unlockAudio(); setMuted(!muted); if (!muted) sfx.pickup(); draw(); });
+    const m = document.createElement('button'); m.className = 'ghost soundBtn'; m.addEventListener('click', (e) => { e.stopPropagation(); unlockAudio(); setMusicOff(!musicOff); draw(); });
+    row.append(b, m); h.insertBefore(row, h.querySelector('.howRow, .menuBtn')); snd.push(b); mus.push(m); }
   draw();
 }
 function tone(freq, dur, type = 'square', vol = 0.08, slide = 0, dest = master, when = 0) {
@@ -188,4 +194,4 @@ export function setSea(level, storm = 0) { if (!ctx || !noiseBuf) return;
   const key = level.toFixed(2) + '|' + storm.toFixed(2); if (key === seaKey) return; seaKey = key; // called every frame: only send a change, not 60 automation events a second
   sea.g.gain.setTargetAtTime(level * 0.05, ctx.currentTime, 0.6); sea.f.frequency.setTargetAtTime(380 + storm * 900, ctx.currentTime, 0.6); }
 // for the saga music engine (music.js): the shared context, master volume and noise buffer
-export function audioNodes() { return { ctx, master, noiseBuf }; }
+export function audioNodes() { return { ctx, master, noiseBuf, music: musicOut }; }
