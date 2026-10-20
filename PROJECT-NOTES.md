@@ -1,6 +1,6 @@
 # Pats Reign: project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.4.4. Where older notes or memory
+READ THIS FIRST after a context compaction. Current as of 2026-10-19, version 0.4.5. Where older notes or memory
 disagree with this file, this file wins.
 
 ## Where things are
@@ -124,7 +124,7 @@ disagree with this file, this file wins.
   (REGION_BIAS) and variant bias (VBIAS: Frost Wyrm north, Lava Crab east, Obsidian Horror + ghost ships west,
   Golden Naga south); anglers at night; ghost ships at night or in the Mist Sea. hp 45 x 1.65^lv, dmg 9 x 1.5^lv.
   Tag colour = danger. Strong monsters chase at 0.86 x your top speed and give up after 24 s.
-- Contact starts a battle (foe strikes first); FIGHT button lets you strike first; ram hits at speed; jellies sting.
+- Contact starts a battle (foe strikes first); FIGHT button lets you strike first; winning furls the sails (STOP); ram hits at speed; jellies sting.
   3.5 s grace after a battle. Win = gold/iron (ships also timber). Flee = hull hit, foe stunned, lever to FULL.
 - Fishing spots (fish / crates / treasure), floating barrels, wrecks to salvage (8 min respawn). Harbours sell fish,
   repair, upgrade, save.
@@ -143,7 +143,13 @@ disagree with this file, this file wins.
     `boat.bifrost` 30 s: +25% top speed, 2% hull/s, green sail glow; a new pillar 60 s later.
 - Weather (region-biased): calm, rain, storm, fog, waterspouts, sea tornado, rogue waves. Storms drop blue rings; a
   bolt on your ship = Thor's Fury 22 s (x2 damage, +0.3 defence). Rogue wave: bow into it = bonus, side-on = heavy
-  damage + spin. Spouts spin and damage, and rain fish. The Storm Sea flickers and rumbles all the time.
+  damage + spin. Spouts and tornadoes (v0.4.5, Sean): each has a size vs (vortexSize(): 60% x1-1.35, 30% x1.35-2.1, 10% huge x2.3-3.1;
+  a huge tornado gets a warning). Within 1.7 R they drag you round and in; inside 0.8 R you are lifted (boat.air /
+  mon.air from startAir, flyStep): up the funnel spinning, then flung along the spin to crash down in open water.
+  liftK(size, vs) = clamp((10.5 vs - size) / (7 vs), 0, 1) scales lift height, throw and crash damage (size = L/2 for
+  ships, mon.size for monsters), so a Drakkar shrugs off normal ones but not a huge one; GIANTS (megalodon, kraken,
+  elder, jormungandr, leviathan) and bosses are never lifted. Water masks and hull blending switch off while airborne;
+  5 s re-catch cooldown; the camera rises with you. Spouts still rain fish. The Storm Sea flickers and rumbles all the time.
 - Each sea: own water/sky/fog/light, minimap colour, entry banner, particles (snow north, ash east), props.
 - Night: day cycle 420 s; lanterns light the ship and sea and push the night fog back.
 - Legends: Kraken (needs Snekkja), Jormungandr (Skeid), Elder One (Drakkar). All three = "PAT'S REIGN" ending.

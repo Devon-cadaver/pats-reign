@@ -182,6 +182,9 @@ function updateMons(dt) {
     const st = mon.stState || (mon.stState = { t: 0, speed: 0, attack: 0, dive: 0, hurt: 0, rise: 1 }); st.t += dt;
     if (mon.dead) { mon.dead += dt; st.dive = Math.min(1, mon.dead / 2); mon.g.position.y -= dt * (mon.naval ? 1.2 : 0.6); if (mon.naval) { mon.g.rotation.z = Math.min(1.2, mon.dead * 0.5); } mon.m.anim(dt, st); if (mon.dead > 3.5) removeMon(mon); continue; }
     if (battle && battle.mon === mon) { animMon(mon, dt, st); continue; }
+    if (mon.air) { const A = mon.air; flyStep(A, mon, dt); st.speed = 0; st.dive = 0; mon.g.position.set(mon.x, ocean.heightAt(mon.x, mon.z) + A.h, mon.z); mon.g.rotation.y = mon.yaw;
+      if (mon.naval) { mon.m.ship.body.rotation.x = -A.pitch; mon.m.ship.body.rotation.z = A.roll; } else { mon.g.rotation.x = A.pitch * 0.6; mon.g.rotation.z = A.roll * 0.6; }
+      mon.m.anim(dt, st); if (A.done) { mon.g.rotation.x = mon.g.rotation.z = 0; landMon(mon, A); } continue; }
     const dx = boat.x - mon.x, dz = boat.z - mon.z, d = Math.hypot(dx, dz); mon.t += dt; mon.stun = Math.max(0, mon.stun - dt); if (mon.hunt) mon.hunt = Math.max(0, mon.hunt - dt);
     let want = mon.yaw, spd = 0.35;
     if (mon.state === 'rise') { mon.rise = Math.min(1, mon.rise + dt * (mon.riseK || 0.35)); mon.dive = 1 - mon.rise; if (mon.rise >= 1) { mon.state = 'chase'; } spd = 0; }
@@ -200,7 +203,7 @@ function updateMons(dt) {
     let nx = mon.x + Math.sin(mon.yaw) * sp * dt, nz = mon.z + Math.cos(mon.yaw) * sp * dt; const bl = world.blockAt(nx, nz, mon.size * 0.4); if (bl) { nx = mon.x + bl.nx * dt * 3; nz = mon.z + bl.nz * dt * 3; mon.yaw += dt * 2; } mon.x = nx; mon.z = nz;
     st.speed = spd; animMon(mon, dt, st);
     // contact
-    if (state === 'play' && !battle && !fishing && boat.grace <= 0 && mon.stun <= 0 && mon.rise >= 1 && d < mon.size * 0.7 + T().L * 0.42) contact(mon);
+    if (state === 'play' && !battle && !fishing && !boat.air && boat.grace <= 0 && mon.stun <= 0 && mon.rise >= 1 && d < mon.size * 0.7 + T().L * 0.42) contact(mon);
   }
 }
 function animMon(mon, dt, st) { if (mon.attT >= 0) { mon.attT += dt; st.attack = Math.sin(Math.min(1, mon.attT / 0.9) * Math.PI); if (mon.attT > 0.9) { mon.attT = -1; st.attack = 0; } } else st.attack = Math.max(0, st.attack - dt * 2);
@@ -244,7 +247,7 @@ function startBattle(mon, firstStrike) {
   battle.foe = foe; battle.you = you;
   minis.battle({ foe, you, youName: T().name, firstStrike, intro: mon.boss ? mon.name.toUpperCase() + '!' : mon.treasure ? 'BOARD HER!' : mon.ambush ? 'AMBUSH!' : mon.fleet ? 'FLEET BATTLE!' : undefined }, (res) => {
     P.hp = Math.max(0, you.hp); mon.hp = foe.hp; setBattle(false); boat.grace = 3.5; $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); const b = battle; battle = null; hud();
-    if (res.result === 'win') { killMon(mon); }
+    if (res.result === 'win') { killMon(mon); setThrottle(0, true); } // stop after a win so the kill is right beside you
     else if (res.result === 'flee') { mon.stun = 7; boat.boost = 3.5; boat.v = topSpeed(); setThrottle(1, true); say('You row hard and break away!'); }
     if (res.result === 'sunk' || P.hp <= 0) { sink(); return; } void b; });
 }
@@ -302,8 +305,27 @@ const LOOK = { clear: null, calm: 'calm', rain: 'rain', storm: 'storm', fog: 'fo
 function pickWeather() { const reg = world.regionAt(boat.x, boat.z), opts = { home: ['calm', 'rain', 'fog', 'storm', 'spout'], frost: ['fog', 'storm', 'rogue', 'calm', 'rain'], storm: ['storm', 'storm', 'tornado', 'rogue', 'spout', 'rain'], mist: ['fog', 'fog', 'rain', 'storm', 'spout'], warm: ['calm', 'spout', 'storm', 'rain', 'tornado'] }[reg]; return opts[(Math.random() * opts.length) | 0]; }
 function setWeather(type) { if (type === 'clear') { if (wx.type !== 'clear') wx.fading = true; return; } wx.type = type; wx.k = 0; wx.fading = false; wx.t = rnd(40, 70); boltT = 3;
   const tip = { storm: 'A storm! Sail into a blue ring to catch the lightning.', tornado: 'A sea tornado is coming! Keep away from it.', spout: 'Waterspouts! Steer clear of the spinning columns.', rogue: 'Rogue wave weather. Turn your bow into the big waves!', fog: 'Fog rolls in. Monsters lurk close.', rain: 'Rain.', calm: 'The sea goes calm.' }[type]; say(tip, 3.5); sfx.whoosh();
-  if (type === 'spout') for (let k = 0; k < 2; k++) spawnSpout('waterspout', 2.0); if (type === 'tornado') spawnSpout('seastorm', 2.7); if (type === 'rogue') rogueT = 6; }
-function spawnSpout(skin, sc) { const a = Math.random() * 6.28, d = rnd(60, 100), x = boat.x + Math.sin(a) * d, z = boat.z + Math.cos(a) * d; const g = twisters.make(true, [], skin); g.scale.setScalar(0.01); g.position.set(x, 0, z); scene.add(g); spouts.push({ g, x, z, sc, r: sc * 3.4, dir: Math.atan2(boat.x - x, boat.z - z) + rnd(-0.6, 0.6), life: wx.t, age: 0, tornado: skin === 'seastorm' }); }
+  if (type === 'spout') for (let k = 0; k < 2; k++) spawnSpout('waterspout', 2.0 * vortexSize()); if (type === 'tornado') { const vs = vortexSize(); spawnSpout('seastorm', 2.7 * vs); if (vs > 2) warn('🌪 A HUGE SEA TORNADO! It can lift even a Drakkar. Keep away!', 5); } if (type === 'rogue') rogueT = 6; }
+// vortex size relative to the old fixed size: 60% about the same, 30% bigger, 10% huge
+function vortexSize() { const r = Math.random(); return r < 0.6 ? rnd(1, 1.35) : r < 0.9 ? rnd(1.35, 2.1) : rnd(2.3, 3.1); }
+function spawnSpout(skin, sc) { const a = Math.random() * 6.28, d = rnd(60, 100), x = boat.x + Math.sin(a) * d, z = boat.z + Math.cos(a) * d; const g = twisters.make(true, [], skin); g.scale.setScalar(0.01); g.position.set(x, 0, z); scene.add(g); spouts.push({ g, x, z, sc, vs: sc / (skin === 'seastorm' ? 2.7 : 2.0), r: sc * 3.4, dir: Math.atan2(boat.x - x, boat.z - z) + rnd(-0.6, 0.6), life: wx.t, age: 0, tornado: skin === 'seastorm' }); }
+// ---------- caught by a vortex: lifted spinning up the funnel, then flung out to crash down far away ----------
+// k: 1 for small things, falling to 0 at about a Drakkar's size; giants are never lifted
+const GIANTS = new Set(['megalodon', 'kraken', 'elder', 'jormungandr', 'leviathan']);
+const liftK = (size, vs = 1) => clamp((10.5 * vs - size) / (7 * vs), 0, 1);
+function startAir(e, s, k, str) { return { s, k, str, ph: 'lift', t: 0, dur: 1 + 1.3 * str, ang: Math.atan2(e.x - s.x, e.z - s.z), r0: Math.max(1, Math.hypot(e.x - s.x, e.z - s.z)), H: (8 + 26 * k) * str, h: 0, pitch: 0, roll: 0, spin: 1 }; }
+function flyStep(A, e, dt) { A.t += dt;
+  if (A.ph === 'lift') { const u = Math.min(1, A.t / A.dur), q = u * u * (3 - 2 * u); A.ang += dt * (2.2 + 5 * u); const r = A.r0 + (A.s.r * 0.3 - A.r0) * q;
+    e.x = A.s.x + Math.sin(A.ang) * r; e.z = A.s.z + Math.cos(A.ang) * r; A.h = A.H * q; e.yaw += dt * (3 + 7 * u); A.pitch = Math.sin(A.t * 6) * 0.45 * u; A.roll = Math.cos(A.t * 4.5) * 0.7 * u;
+    if (u >= 1) { // spit out along the spin and a little outward, shortened until it lands in open water
+      let dx = Math.cos(A.ang) + Math.sin(A.ang) * 0.6, dz = -Math.sin(A.ang) + Math.cos(A.ang) * 0.6; const dl = Math.hypot(dx, dz); dx /= dl; dz /= dl;
+      let D = (30 + 42 * A.k) * A.str; for (let i = 0; i < 8; i++) { const x = e.x + dx * D, z = e.z + dz * D; if (!world.blockAt(x, z, 4) && Math.abs(x) < HALF - 20 && Math.abs(z) < HALF - 20) break; D *= 0.72; }
+      Object.assign(A, { ph: 'fly', t: 0, fd: 1 + 0.6 * A.str, x0: e.x, z0: e.z, x1: e.x + dx * D, z1: e.z + dz * D, h0: A.h }); } }
+  else { const u = Math.min(1, A.t / A.fd); e.x = A.x0 + (A.x1 - A.x0) * u; e.z = A.z0 + (A.z1 - A.z0) * u; A.h = A.h0 * (1 - u) * (1 - u * 0.3) + Math.sin(u * Math.PI) * A.H * 0.3; e.yaw += dt * 9 * (1 - u * 0.75);
+    A.pitch = Math.sin(A.t * 5) * 0.4 * (1 - u); A.roll = Math.cos(A.t * 4) * 0.6 * (1 - u); if (u >= 1) A.done = true; } }
+function landBoat(A) { boat.air = null; boat.airCd = 5; if (ship.mask) ship.mask.visible = true; boat.y = ocean.heightAt(boat.x, boat.z); boat.v *= 0.3; boat.spin = (Math.random() < 0.5 ? -1 : 1) * 1.6; boat.shake = 0.9; boat.grace = 2.5; boat.wp = null; courseMark.visible = false;
+  foam.splash(boat.x, boat.z, 2.6); foam.splash(boat.x + rnd(-2, 2), boat.z + rnd(-2, 2), 1.6); sfx.splash(); sfx.boom(); damage(maxHp() * (A.s.tornado ? 0.16 : 0.07) * A.k * Math.min(1.6, Math.sqrt(A.s.vs || 1)) * (1 - defense() * 0.5), A.s.tornado ? 'The sea tornado spits you out and you crash down!' : 'The waterspout throws you clear!'); }
+function landMon(mon, A) { mon.air = null; mon.airCd = time + 5; if (mon.naval && mon.m.ship.mask) mon.m.ship.mask.visible = true; mon.stun = 4; foam.splash(mon.x, mon.z, 2); mon.hp -= mon.maxHp * (A.s.tornado ? 0.3 : 0.15) * A.k * Math.min(1.6, Math.sqrt(A.s.vs || 1)); if (mon.hp <= 0) killMon(mon); }
 const ringGeo = new THREE.RingGeometry(0.85, 1, 40), boltMat = new THREE.LineBasicMaterial({ color: 0xffffff }), boltGlow = new THREE.LineBasicMaterial({ color: 0x8ad0ff, transparent: true, opacity: 0.6 });
 function warnRing() { const ahead = Math.random() < 0.6, a = ahead ? boat.yaw + rnd(-0.5, 0.5) : Math.random() * 6.28, d = ahead ? rnd(14, 30) + boat.v * 1.5 : rnd(10, 45); const x = boat.x + Math.sin(a) * d, z = boat.z + Math.cos(a) * d; const R = 4 + T().B * 0.6;
   const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x5ab8ff, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide })); m.rotation.x = -Math.PI / 2; m.scale.setScalar(R); scene.add(m); const inner = new THREE.Mesh(new THREE.CircleGeometry(1, 32), new THREE.MeshBasicMaterial({ color: 0x5ab8ff, transparent: true, opacity: 0.18, depthWrite: false })); inner.rotation.x = -Math.PI / 2; inner.scale.setScalar(R); scene.add(inner);
@@ -328,12 +350,17 @@ function updateWeather(dt) {
   if (wx.type === 'rogue' && !wx.fading && rogueT >= 0) { rogueT -= dt; if (rogueT <= 0 && R.k === 0 && state === 'play') { const a = Math.random() * 6.28; R.dx = Math.sin(a); R.dz = Math.cos(a); R.x = boat.x - R.dx * 150; R.z = boat.z - R.dz * 150; R.H = 6 + P.tier * 0.7; R.w = 8 + P.tier; R.Lc = 90; R.k = 0.01; rogueHit = false;
       const comp = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'][Math.round(((Math.atan2(-R.dx, R.dz) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)) % 8]; warn('🌊 ROGUE WAVE from the ' + comp + '! Turn your bow into it!', 6); sfx.horn(); } }
   if (R.k > 0) { R.x += R.dx * 15 * dt; R.z += R.dz * 15 * dt; const al = (boat.x - R.x) * R.dx + (boat.z - R.z) * R.dz; R.k = Math.min(1, R.k + dt * 0.6); if (al < -170) { R.k = 0; rogueT = rnd(14, 24); }
-    if (!rogueHit && Math.abs(al) < R.w * 0.5 && state === 'play' && !battle) { rogueHit = true; const into = Math.sin(boat.yaw) * -R.dx + Math.cos(boat.yaw) * -R.dz; if (into > 0.6) { say('You crest the rogue wave! Skål!', 3); reward({ g: 10 + P.tier * 10 }, boat.x, 4, boat.z); } else { damage(maxHp() * (0.34 - 0.24 * Math.max(0, into)) * (1 - P.up.armor * 0.1), 'The rogue wave smashes into you!'); boat.spin = 2.5 * (Math.random() < 0.5 ? -1 : 1); } } }
+    if (!rogueHit && Math.abs(al) < R.w * 0.5 && state === 'play' && !battle && !boat.air) { rogueHit = true; const into = Math.sin(boat.yaw) * -R.dx + Math.cos(boat.yaw) * -R.dz; if (into > 0.6) { say('You crest the rogue wave! Skål!', 3); reward({ g: 10 + P.tier * 10 }, boat.x, 4, boat.z); } else { damage(maxHp() * (0.34 - 0.24 * Math.max(0, into)) * (1 - P.up.armor * 0.1), 'The rogue wave smashes into you!'); boat.spin = 2.5 * (Math.random() < 0.5 ? -1 : 1); } } }
   // waterspouts / tornadoes
   for (let i = spouts.length - 1; i >= 0; i--) { const s = spouts[i]; s.age += dt; s.life -= dt; const grow = clamp(Math.min(s.age / 4, s.life / 4), 0, 1); s.g.scale.setScalar(s.sc * Math.max(0.01, grow));
-    s.dir += rnd(-0.4, 0.4) * dt + angDiff(Math.atan2(boat.x - s.x, boat.z - s.z), s.dir) * dt * 0.08; const sp = s.tornado ? 5 : 4; s.x += Math.sin(s.dir) * sp * dt; s.z += Math.cos(s.dir) * sp * dt; s.g.position.set(s.x, 0, s.z); if (Math.random() < dt * 8) foam.add(s.x + rnd(-s.r, s.r), s.z + rnd(-s.r, s.r), { spray: true, y: 0.5, vx: rnd(-3, 3), vz: rnd(-3, 3), vy: rnd(4, 9), s: 1, life: 1.2, a: 0.7 });
-    const d = Math.hypot(boat.x - s.x, boat.z - s.z), R2 = s.r * grow * 1.4; if (d < R2 && state === 'play' && !battle) { boat.spin = Math.max(boat.spin, 1.6); const tx = -(boat.z - s.z) / (d || 1), tz = (boat.x - s.x) / (d || 1); boat.x += tx * dt * 9 + (boat.x - s.x) / (d || 1) * dt * 3; boat.z += tz * dt * 9 + (boat.z - s.z) / (d || 1) * dt * 3; boat.hitCd -= dt; if (boat.hitCd <= 0) { boat.hitCd = 0.6; damage(maxHp() * (s.tornado ? 0.06 : 0.035) * (1 - defense() * 0.5), s.tornado ? 'Caught in the sea tornado!' : 'Caught in a waterspout!'); } }
-    for (const mon of mons) if (!mon.dead && Math.hypot(mon.x - s.x, mon.z - s.z) < R2) { mon.hp -= mon.maxHp * 0.08 * dt; mon.yaw += dt * 3; if (mon.hp <= 0) killMon(mon); }
+    s.dir += rnd(-0.4, 0.4) * dt + angDiff(Math.atan2(boat.x - s.x, boat.z - s.z), s.dir) * dt * 0.08; const sp = (s.tornado ? 5 : 4) / Math.sqrt(s.vs || 1); s.x += Math.sin(s.dir) * sp * dt; s.z += Math.cos(s.dir) * sp * dt; s.g.position.set(s.x, 0, s.z); if (Math.random() < dt * 8) foam.add(s.x + rnd(-s.r, s.r), s.z + rnd(-s.r, s.r), { spray: true, y: 0.5, vx: rnd(-3, 3), vz: rnd(-3, 3), vy: rnd(4, 9), s: 1, life: 1.2, a: 0.7 });
+    const vs = s.vs || 1, d = Math.hypot(boat.x - s.x, boat.z - s.z), R2 = s.r * grow * 1.4, str = (s.tornado ? 1 : 0.55) * Math.sqrt(vs), kb = liftK(T().L * 0.5, vs);
+    // your ship: dragged round and in, then lifted up the funnel (a bigger ship feels it less; a Drakkar not at all)
+    if (d < R2 * 1.7 && kb > 0 && state === 'play' && !battle && !boat.air && !(boat.airCd > 0) && grow > 0.6) { const ux = (boat.x - s.x) / (d || 1), uz = (boat.z - s.z) / (d || 1), pull = kb * str * (d < R2 ? 7 : 3.5);
+      boat.x += (-uz * 6 * kb * str - ux * pull) * dt; boat.z += (ux * 6 * kb * str - uz * pull) * dt; boat.spin = Math.max(boat.spin, 1.2 * kb);
+      if (d < R2 * 0.8) { boat.air = startAir(boat, s, kb, str); if (ship.mask) ship.mask.visible = false; say(s.tornado ? 'The sea tornado lifts you into the sky!' : 'The waterspout lifts you off the sea!', 2.5); sfx.whoosh(); } }
+    for (const mon of mons) { if (mon.dead || mon.air || mon.boss || GIANTS.has(mon.type) || mon.airCd > time || (battle && battle.mon === mon)) continue; const dm = Math.hypot(mon.x - s.x, mon.z - s.z), km = liftK(mon.size, vs); if (km <= 0 || dm > R2) continue;
+      if (dm < R2 * 0.8) { mon.air = startAir(mon, s, km, str); if (mon.naval && mon.m.ship.mask) mon.m.ship.mask.visible = false; } else { mon.x += ((mon.x - s.x) / dm) * -4 * dt; mon.z += ((mon.z - s.z) / dm) * -4 * dt; mon.yaw += dt * 3; } }
     for (let j = spots.length - 1; j >= 0; j--) { const sp2 = spots[j]; if (sp2.kind === 'fish' && Math.hypot(sp2.x - s.x, sp2.z - s.z) < R2) { removeSpot(sp2); for (let k = 0; k < 6; k++) spawnFloat(boat.x + rnd(-25, 25), boat.z + rnd(-25, 25), 'f', 1); say('It\'s raining fish! 🐟', 2.5); } }
     if (s.life <= 0) { twisters.remove(s.g); spouts.splice(i, 1); } }
   twisters.update(dt);
@@ -372,11 +399,11 @@ function swirlAt(x, z, E, k) { const qx = x - E.x, qz = z - E.z, d = Math.hypot(
   const tan = k * edge * (2 + 8 * e), inn = k * edge * (1 + 5.5 * Math.exp(-r * r * 1.5)); return { vx: (qz / d) * tan - (qx / d) * inn, vz: (-qx / d) * tan - (qz / d) * inn, tx: (qz / d) * tan, tz: (-qx / d) * tan, r, e }; }
 function updateWhirl(dt) { const E = EV.whirl, W = ocean.whirl; if (!E) return; E.age += dt; const k = clamp(Math.min(E.age / 6, (E.life - E.age) / 5), 0, 1); W.k = k;
   if (E.age >= E.life) { W.k = 0; EV.whirl = null; for (let i = 0; i < 6; i++) { const r = Math.random(); spawnFloat(E.x + rnd(-7, 7), E.z + rnd(-7, 7), r < 0.4 ? 'g' : r < 0.7 ? 'i' : 'w', 0); } foam.splash(E.x, E.z, 3); if (Math.hypot(boat.x - E.x, boat.z - E.z) < 160) say('The maelstrom closes and spits up wreckage! 🪙', 3.5); return; }
-  if (state === 'play' && !battle) { const s = swirlAt(boat.x, boat.z, E, k); if (s) { const nx = boat.x + s.vx * dt, nz = boat.z + s.vz * dt; if (!world.blockAt(nx, nz, T().B * 0.5 + 1)) { boat.x = nx; boat.z = nz; } boat.yaw += k * 0.55 * s.e * dt;
+  if (state === 'play' && !battle && !boat.air) { const s = swirlAt(boat.x, boat.z, E, k); if (s) { const nx = boat.x + s.vx * dt, nz = boat.z + s.vz * dt; if (!world.blockAt(nx, nz, T().B * 0.5 + 1)) { boat.x = nx; boat.z = nz; } boat.yaw += k * 0.55 * s.e * dt;
       if (!E.warned && s.r < 1.15) { E.warned = true; say('The maelstrom has you! Full sail and steer out of the spin.', 3); }
       E.sndT -= dt; if (E.sndT <= 0) { E.sndT = 2.2; sfx.whoosh(); }
       if (s.r < 0.32) { E.hitT -= dt; if (E.hitT <= 0) { E.hitT = 0.8; damage(maxHp() * 0.045 * (1 - defense() * 0.5), 'The maelstrom grinds your hull!'); sfx.creak(); } } } }
-  for (const mon of mons) { if (mon.dead || mon.boss || (battle && battle.mon === mon)) continue; const s = swirlAt(mon.x, mon.z, E, k); if (!s) continue; mon.x += s.vx * dt * 0.8; mon.z += s.vz * dt * 0.8; mon.yaw += k * s.e * dt; if (s.r < 0.3) { mon.hp -= mon.maxHp * 0.06 * dt; if (mon.hp <= 0) killMon(mon); } }
+  for (const mon of mons) { if (mon.dead || mon.air || mon.boss || (battle && battle.mon === mon)) continue; const s = swirlAt(mon.x, mon.z, E, k); if (!s) continue; mon.x += s.vx * dt * 0.8; mon.z += s.vz * dt * 0.8; mon.yaw += k * s.e * dt; if (s.r < 0.3) { mon.hp -= mon.maxHp * 0.06 * dt; if (mon.hp <= 0) killMon(mon); } }
   for (const f of floats) { const s = swirlAt(f.x, f.z, E, k); if (!s) continue; f.x += (s.tx + (s.vx - s.tx) * 0.12) * dt * 0.8; f.z += (s.tz + (s.vz - s.tz) * 0.12) * dt * 0.8; }
   // foam streaks circling down into the eye, spray thrown up from it
   E.fxT -= dt; while (E.fxT <= 0) { E.fxT += 0.035; const a = Math.random() * 6.28, rr = E.R * rnd(0.2, 1.5), px = E.x + Math.sin(a) * rr, pz = E.z + Math.cos(a) * rr, s = swirlAt(px, pz, E, k); if (s) foam.add(px, pz, { vx: s.vx * 1.3, vz: s.vz * 1.3, s: rnd(0.8, 1.8), grow: 0.3, life: 2.2, a: 0.5 * k }); }
@@ -494,7 +521,7 @@ function updateLairs() { for (const L of world.lairs) { if (L.beaten || P.legend
     if (d < 40 && P.tier >= LAIR_NEED[L.key] && !mons.some((m) => m.boss && m.lair === L.key)) { const lv = MLV[L.monster][0], mon = spawnMon({ type: L.monster, v: L.key === 'jorm' ? 0 : 0, lv }, L.x, L.z, { boss: true, lair: L.key, scale: L.monster === 'kraken' ? 17.5 : L.monster === 'elder' ? 1.5 : 1 }); mon.name = LAIR_NAMES[L.key]; warn('⚠ ' + LAIR_NAMES[L.key].toUpperCase() + ' RISES! ⚠', 4); sfx.horn(); sfx.thunder(); flash = 1; } } }
 
 // ---------- sinking, saving ----------
-function sink() { if (state !== 'play') return; state = 'sunk'; battle = null; fishing = null; minis.close(); const lost = {}; for (const k of ['w', 'i', 'g', 'f']) { lost[k] = Math.floor(P.res[k] / 2); P.res[k] -= lost[k]; }
+function sink() { if (state !== 'play') return; state = 'sunk'; if (boat.air) { boat.air = null; if (ship.mask) ship.mask.visible = true; } battle = null; fishing = null; minis.close(); const lost = {}; for (const k of ['w', 'i', 'g', 'f']) { lost[k] = Math.floor(P.res[k] / 2); P.res[k] -= lost[k]; }
   const old = P.wreck, any = lost.w + lost.i + lost.g + lost.f > 0; EV.ambush = null; if (any) { P.wreck = { x: boat.x, z: boat.z, res: lost }; placeWreck(); }
   $('sunkText').innerHTML = 'Your ship goes down beneath the waves. The gods send you back to ' + homeHarbor().name + ' with a new hull. ' + (any ? 'Half your cargo went down with the wreck: ' + wreckSum(lost) + '.<br><br>Sail back to the ☠ on the map and SALVAGE it to get it all back, or hire a salvage crew at any harbour.' + (old ? ' Your older wreck is lost to the deep.' : '') : 'Your hold was empty, so nothing was lost.'); $('hud').classList.add('hidden'); $('sunk').classList.remove('hidden'); sfx.over(); setBattle(false); }
 $('sunkBtn').onclick = () => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); const h = homeHarbor(); P.hp = maxHp(); setThrottle(0, true); helm.angle = 0; boat.x = h.dock.x + Math.cos(h.dir) * 10; boat.z = h.dock.z + Math.sin(h.dir) * 10; boat.v = 0; boat.wp = null; for (const m of [...mons]) removeMon(m); $('sunk').classList.add('hidden'); $('hud').classList.remove('hidden'); state = 'play'; hud(); save(); };
@@ -549,6 +576,11 @@ function updateTags(dt) { for (const mon of mons) { const t = mon.tag; if (mon.d
 
 // ---------- ship movement ----------
 function updateBoat(dt) {
+  if (boat.air) { const A = boat.air; flyStep(A, boat, dt); boat.y = ocean.heightAt(boat.x, boat.z) + A.h; boat.pitch = A.pitch; boat.roll = A.roll; boat.v *= 1 - dt * 0.5;
+    ship.g.position.set(boat.x, boat.y, boat.z); ship.g.rotation.y = boat.yaw; ship.body.rotation.x = -boat.pitch; ship.body.rotation.z = boat.roll; ship.anim(dt, { speed: 0, time, night: isNight(), sail: boat.sailK ?? 0 });
+    if (Math.random() < dt * 14) foam.add(boat.x + rnd(-2, 2), boat.z + rnd(-2, 2), { spray: true, y: boat.y - 0.5, vx: rnd(-3, 3), vz: rnd(-3, 3), vy: rnd(-2, 1), s: 0.8, life: 0.8, a: 0.7 });
+    if (A.done) landBoat(A); return; }
+  if (boat.airCd > 0) boat.airCd -= dt;
   const t = T(); let thr = boat.throttle || 0, want = null;
   const kTurn = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0), kThr = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0);
   if (state === 'play' && !battle && !fishing) { if (kTurn) helm.angle = clamp(helm.angle + kTurn * dt * 2.2, -HMAX, HMAX); if (kThr) setThrottle((boat.throttle || 0) + kThr * dt * 0.7);
@@ -583,7 +615,7 @@ function steerAround(want, look) { const t = T(), pad = t.B * 0.6 + 2; const cle
   if (clear(want)) return want; for (const k of [0.35, -0.35, 0.7, -0.7, 1.1, -1.1, 1.6, -1.6, 2.2, -2.2]) { const a = want + (boat.side || 1) * k; if (clear(a)) { boat.side = Math.sign(k) * (boat.side || 1); return a; } } return want + Math.PI / 2; }
 // the sea hugs the hulls of your ship and nearby raiders
 function updateHulls() { const list = []; const push = (s, x, z, yaw) => { s.g.updateMatrixWorld(true); const e = s.body.matrixWorld.elements; list.push({ x, z, yaw, hl: s.len * 0.5, hb: s.beam * 0.5, y0: s.g.position.y, ps: e[9] / Math.hypot(e[8], e[10]), rs: e[1] / Math.hypot(e[0], e[2]), foam: clamp(boat.v / 8, 0.15, 0.8) }); };
-  if (ship) push(ship, boat.x, boat.z, boat.yaw); for (const mon of mons) if (mon.naval && !mon.dead && list.length < 6 && Math.hypot(mon.x - boat.x, mon.z - boat.z) < 150) push(mon.m.ship, mon.x, mon.z, mon.yaw); ocean.setHulls(list); }
+  if (ship && !boat.air) push(ship, boat.x, boat.z, boat.yaw); for (const mon of mons) if (mon.naval && !mon.dead && !mon.air && list.length < 6 && Math.hypot(mon.x - boat.x, mon.z - boat.z) < 150) push(mon.m.ship, mon.x, mon.z, mon.yaw); ocean.setHulls(list); }
 
 // ---------- camera ----------
 $('viewBtn').onclick = () => { viewMode = viewMode === 'top' ? 'chase' : 'top'; $('viewBtn').textContent = viewMode === 'top' ? 'TOP' : 'CHASE'; };
@@ -593,7 +625,7 @@ function updateCamera(dt) { const t = T(); let tgt, dist, pitch;
     const mon = battle.mon, Rk = mon.size / 6, sy = Math.sin(mon.yaw), cy = Math.cos(mon.yaw), lx = 0.9 * Rk, lz = 1.15 * Rk, ex = mon.x + lx * cy + lz * sy, ez = mon.z + lz * cy - lx * sy, de = Math.hypot(ex - boat.x, ez - boat.z);
     tgt = V((boat.x + ex) / 2, Rk * 0.3, (boat.z + ez) / 2); dist = de * 0.5 + t.L * 1.8 + 12; pitch = 0.16; const want = Math.atan2(ex - boat.x, ez - boat.z); camYaw += angDiff(want, camYaw) * Math.min(1, dt * 1.5); }
   else if (battle) { const mon = battle.mon; tgt = V((boat.x + mon.x) / 2, 1.5, (boat.z + mon.z) / 2); const hfov = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect, needW = Math.hypot(mon.x - boat.x, mon.z - boat.z) + t.L * 0.7 + mon.size + 6; dist = Math.max(needW / (2 * hfov * 0.9), mon.top * 2.2 + 10); pitch = 0.4; const want = Math.atan2(mon.x - boat.x, mon.z - boat.z) + Math.PI / 2; camYaw += angDiff(want - Math.PI, camYaw) * Math.min(1, dt * 1.5); }
-  else { tgt = V(boat.x + Math.sin(boat.yaw) * boat.v * 0.6, 0, boat.z + Math.cos(boat.yaw) * boat.v * 0.6); const W = (34 + t.L * 1.6) * (viewMode === 'top' ? 1 : 0.7); dist = (W / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * Math.min(camera.aspect, 1))) * 0.62 * zoom; pitch = viewMode === 'top' ? 0.98 : 0.42; const wantYaw = viewMode === 'top' ? Math.PI : boat.yaw; camYaw += angDiff(wantYaw, camYaw) * Math.min(1, dt * (viewMode === 'top' ? 3 : 1.5)); }
+  else { tgt = V(boat.x + Math.sin(boat.yaw) * boat.v * 0.6, boat.air ? boat.air.h * 0.85 : 0, boat.z + Math.cos(boat.yaw) * boat.v * 0.6); const W = (34 + t.L * 1.6) * (viewMode === 'top' ? 1 : 0.7); dist = (W / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * Math.min(camera.aspect, 1))) * 0.62 * zoom * (boat.air ? 1 + boat.air.h / 20 : 1); pitch = viewMode === 'top' ? 0.98 : 0.42; const wantYaw = viewMode === 'top' ? Math.PI : boat.yaw; camYaw += angDiff(wantYaw, camYaw) * Math.min(1, dt * (viewMode === 'top' ? 3 : 1.5)); }
   const off = !!(battle || fishing); if (off !== viewOff) { viewOff = off; applyView(); }
   if (fishing && !battle) { const s = fishing.s; tgt = V((boat.x + s.x) / 2, 0, (boat.z + s.z) / 2); dist = 26 + t.L * 1.4; pitch = 0.75; }
   camTgt.lerp(tgt, Math.min(1, dt * 4)); const lx = Math.sin(camYaw), lz = Math.cos(camYaw); const want = V(camTgt.x - lx * Math.cos(pitch) * dist, Math.sin(pitch) * dist + 2, camTgt.z - lz * Math.cos(pitch) * dist); camPos.lerp(want, Math.min(1, dt * 3)); camera.position.copy(camPos); camera.lookAt(camTgt); }
@@ -685,4 +717,4 @@ function tick(dt) { time += dt;
 { const h = world.harbors[0]; boat.x = h.dock.x + Math.cos(h.dir) * 12; boat.z = h.dock.z + Math.sin(h.dir) * 12; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); }
 const hadSave = load(); if (!hadSave) P.hp = maxHp(); rebuildShip(); placeWreck(); toTitle(); env.snap(P.tod, null, world.regionWeights(boat.x, boat.z, {})); camTgt.set(boat.x, 0, boat.z);
 requestAnimationFrame(frame);
-window.__pr = { pods, spawnPod, EV, startEvent, aur, get wreck() { return P.wreck; }, sink, get chartView() { return chartView; }, step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); }, helm, setThrottle, set timeScale(v) { timeScale = v; }, dmgLog, P, boat, mons, spots, floats, world, ocean, wx, setWeather, spawnMon, startBattle, startFishing, openHarbor, fire, get state() { return state; }, set state(v) { state = v; }, get battle() { return battle; }, minis, MLV, killMon, landBolt, warnRing, spawnSpout, rebuildShip, save, load, camera, renderer, scene, get ship() { return ship; }, setCourse };
+window.__pr = { spouts, startAir, liftK, pods, spawnPod, EV, startEvent, aur, get wreck() { return P.wreck; }, sink, get chartView() { return chartView; }, step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); }, helm, setThrottle, set timeScale(v) { timeScale = v; }, dmgLog, P, boat, mons, spots, floats, world, ocean, wx, setWeather, spawnMon, startBattle, startFishing, openHarbor, fire, get state() { return state; }, set state(v) { state = v; }, get battle() { return battle; }, minis, MLV, killMon, landBolt, warnRing, spawnSpout, rebuildShip, save, load, camera, renderer, scene, get ship() { return ship; }, setCourse };

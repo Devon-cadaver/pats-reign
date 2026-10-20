@@ -244,10 +244,11 @@ export function buildShip(tier = 0, up = {}, pal = PLAYER_PAL, seed = 1) {
   if (lv >= 3 && !ghost) for (const sd of [-1, 1]) { const q = Ln.sec(0.78, Ln.vAt(0.78, deckY + 0.2)), bx = sd * Math.max(0.3, q.x - 0.45), bz = t.L * 0.28; for (const a of [0, 2.1, 4.2]) rod(st, iron, V(bx + Math.cos(a) * 0.3, deckY, bz + Math.sin(a) * 0.3), V(bx, deckY + 0.9, bz), 0.04); const bowl = part(st, CYL(), iron, 0.75, 0.3, 0.75, bx, deckY + 1.0, bz); void bowl; part(st, TOR(), M(0x3a3a3e), 0.8, 0.8, 1.4, bx, deckY + 1.15, bz, Math.PI / 2); const fl = part(body, CON(), M(0xff8a2a, 'glow'), 0.55, 0.9, 0.55, bx, deckY + 1.55, bz); const fl2 = part(body, CON(), M(0xffe27a, 'glow'), 0.3, 0.6, 0.3, bx, deckY + 1.45, bz); fl.visible = fl2.visible = false; braziers.push(fl, fl2); }
   // merge the static parts: flatten nested groups first so each material becomes one mesh
   flatten(st); mergeParts(st);
+  let mask = null;
   // water mask: an invisible lid at the gunwale drawn after the ship and before the sea, so waves never show inside the hull
   { const nU = 30, mp = [], mi = []; for (let i = 0; i <= nU; i++) { const u = i / nU, q = Ln.sec(u, 1), x = Math.max(0.01, q.x - 0.03); mp.push(-x, q.y - 0.02, Ln.z(u), x, q.y - 0.02, Ln.z(u)); }
     for (let i = 0; i < nU; i++) { const a = i * 2; mi.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); } const mg = new THREE.BufferGeometry(); mg.setAttribute('position', new THREE.Float32BufferAttribute(mp, 3)); mg.setIndex(mi);
-    const mask = new THREE.Mesh(mg, new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide })); body.add(mask);
+    mask = new THREE.Mesh(mg, new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide })); body.add(mask);
     root.traverse((o) => { if (o.isMesh || o.isLine || o.isLineSegments) o.renderOrder = -10; }); mask.renderOrder = -9; }
   root.userData.tier = tier;
   const mtx = new THREE.Matrix4(), q4 = new THREE.Quaternion(), e = new THREE.Euler(), one = V(1, 1, 1); let ph = 0, billow = 0;
@@ -259,7 +260,7 @@ export function buildShip(tier = 0, up = {}, pal = PLAYER_PAL, seed = 1) {
     const fp = flag.geometry.attributes.position; for (let i = 0; i < fp.count; i++) { const x = fp.getX(i); fp.setZ(i, Math.sin(time * 6 + x * 5) * 0.08 * (-x / t.B) * 2); } fp.needsUpdate = true;
     for (const l of lamps) l.visible = ghost || night; braziers.forEach((b, i) => { b.visible = night; b.scale.y = (i % 2 ? 0.6 : 0.9) * (0.85 + Math.sin(time * 11 + i * 2) * 0.15); }); for (const gl of potGlow) gl.scale.setScalar(0.1 * (0.85 + Math.sin(time * 9 + gl.position.x * 7) * 0.15));
   }
-  return { g: root, body, t, tier, anim, len: t.L, beam: t.B, mastTop, deckY, sail, ballista, bowZ: half * 1.06, sailMat, hull };
+  return { g: root, body, t, tier, anim, len: t.L, beam: t.B, mastTop, deckY, sail, ballista, bowZ: half * 1.06, sailMat, hull, mask };
 }
 
 function flatten(st) { st.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(st.matrixWorld).invert(); const list = []; st.traverse((o) => { if (o.isMesh && o.parent !== st) list.push(o); });
