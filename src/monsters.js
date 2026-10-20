@@ -40,7 +40,7 @@ function uTeeth(parent, mat, n, w, z0, z1, y, size, down = true, jag = 0) { for 
   part(parent, CON(), mat, sz * 0.42, sz, sz * 0.16, x, y, z, down ? Math.PI : 0, t * 0.9, 0); } }
 function shark(P, S, mega = false) {
   const g = new THREE.Group(), body = grp(g), L = 4.6 * S, R = 0.5 * S, N = 18, mat = glowVC();
-  const prof = (s) => (s < 0.25 ? 0.86 + 0.14 * Math.sin((s / 0.25) * Math.PI / 2) : 0.09 + 0.91 * Math.pow(1 - (s - 0.25) / 0.75, 1.3));
+  const prof = (s) => (s < 0.25 ? 0.86 + 0.14 * Math.sin((s / 0.25) * Math.PI / 2) : 0.09 + 0.91 * Math.pow(Math.max(0, 1 - (s - 0.25) / 0.75), 1.3));
   const tube = new SpineTube(N, { radial: 14, flat: 1.15, mat, r: (s) => R * prof(s) * (mega ? 1.12 : 1), glow: (s, a) => glowAt(P, s, a, 40),
     color: (s, a, c) => { skin(P, s, a, c, 40); const down = -Math.cos(a), edge = 0.05 + Math.sin(s * 41 + a * 3) * 0.12; if (down > edge) c.setHex(P.belly); if (mega && P.barnacles && down < -0.3 && hash2(Math.floor(s * 40), Math.floor(a * 4)) > 0.9) c.setHex(0x8a8a7a); } });
   body.add(tube.mesh);
@@ -129,7 +129,7 @@ function wing(P, R, sd) { const w = new THREE.Group(), mem = M(P.wing || P.fin, 
 // arching out of the sea in humps
 function serpentBody(P, S, o = {}) {
   const g = new THREE.Group(), R = (o.R || 0.55) * S, N = o.N || 46, seg = (o.seg || 0.62) * S, mat = glowVC(), freq = o.freq || 70;
-  const tube = new SpineTube(N, { radial: o.radial || 12, mat, r: (s) => R * (s < 0.05 ? 0.92 + (s / 0.05) * 0.08 : 0.06 + 0.94 * Math.pow(1 - (s - 0.05) / 0.95, 0.75)), color: (s, a, c) => skin(P, s, a, c, freq), glow: (s, a) => glowAt(P, s, a, freq),
+  const tube = new SpineTube(N, { radial: o.radial || 12, mat, r: (s) => R * (s < 0.05 ? 0.92 + (s / 0.05) * 0.08 : 0.06 + 0.94 * Math.pow(Math.max(0, 1 - (s - 0.05) / 0.95), 0.75)), color: (s, a, c) => skin(P, s, a, c, freq), glow: (s, a) => glowAt(P, s, a, freq),
     fin: o.fin === false ? null : (s) => (s < 0.04 || s > 0.96 ? 0 : R * (o.finH || 0.75) * (0.55 + 0.45 * Math.abs(Math.sin(s * Math.PI * (o.spikes || 26)))) * (1 - s * 0.6)), finMat: M(P.fin || P.accent, 'fin') });
   g.add(tube.mesh); if (tube.finMesh) g.add(tube.finMesh);
   const hd = o.noHead ? null : serpentHead(R * (o.headK || 1), P, o.big), head = hd && hd.h, jaw = hd && hd.jaw, tongue = hd && hd.tongue; if (head) g.add(head);
@@ -298,7 +298,7 @@ function jelly(P, S) {
 // ---------- porpoise (friendly: pods swim with your ship and ride its bow wave) ----------
 function porpoise(P, S) {
   const g = new THREE.Group(), body = grp(g), R = 1.9 * S, L = 18 * S, N = 24, mat = glowVC();
-  const prof = (s) => (s < 0.18 ? 0.55 + 0.45 * Math.sin((s / 0.18) * Math.PI / 2) : 0.08 + 0.92 * Math.pow(1 - (s - 0.18) / 0.82, 1.4));
+  const prof = (s) => (s < 0.18 ? 0.55 + 0.45 * Math.sin((s / 0.18) * Math.PI / 2) : 0.08 + 0.92 * Math.pow(Math.max(0, 1 - (s - 0.18) / 0.82), 1.4));
   const tube = new SpineTube(N, { radial: 14, flat: 0.9, mat, r: (s) => R * prof(s), color: (s, a, c) => { skin(P, s, a, c, 30); const down = -Math.cos(a); if (down > 0.2 && Math.sin(a * 22) > 0.3) c.multiplyScalar(0.8); if (hash2(Math.floor(s * 70), Math.floor(a * 5)) > 0.93 && down < 0.3) c.setHex(0xd8d4c8); } });
   body.add(tube.mesh);
   const head = grp(body); part(head, SPH(), M(P.top), R * 1.1, R * 1.0, R * 1.0, 0, 0, R * 0.2); part(head, BOX(), M(lerpHex(P.top, 0, 0.5)), R * 1.05, R * 0.05, R * 1.2, 0, -R * 0.35, -R * 0.3);

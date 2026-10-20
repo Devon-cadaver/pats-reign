@@ -12,7 +12,7 @@ import { createMinis } from './minigames.js';
 import { createTwisters } from './tornado.js';
 import { createAurora } from './aurora.js';
 import { sfx, unlockAudio, soundToggle, setSea } from './audio.js';
-import { startSaga, setBattle } from './music.js';
+import { startSaga, setBattle, setMusicSea } from './music.js';
 import { initFullscreen } from './fullscreen.js';
 import { VERSION } from './version.js';
 import { initSaveCodes } from './savecode.js';
@@ -239,6 +239,7 @@ function fire() { if (state !== 'play' || battle || fishing || boat.fireCd > 0) 
 
 // ---------- battle ----------
 function startBattle(mon, firstStrike) {
+  if (autoOn()) { autoFlee(mon); return; } // SAIL TO DOCK: flee every fight
   if (battle) return; battle = { mon, t: 0 }; boat.wp = null; helm.held = false; setBattle(true);
   // place the foe beside the ship, facing it
   const gap = mon.giant ? mon.size * 0.36 + T().L * 0.3 : T().L * 0.25 + mon.size * 0.75 + 4; let side = boat.yaw + Math.PI / 2; const toFoe = Math.atan2(mon.x - boat.x, mon.z - boat.z);
@@ -292,7 +293,7 @@ function actionContext() { if (battle || fishing) return null; const v = boat.v;
   for (const s of spots) if (Math.hypot(s.x - boat.x, s.z - boat.z) < 9 + T().L * 0.35) return v < 3.5 ? { kind: 'fish', s, icon: s.kind === 'treasure' ? '💰' : s.kind === 'flotsam' ? '📦' : '🎣', label: 'FISH' } : { kind: 'slow', icon: '🎣', label: 'SLOW' };
   return null; }
 let ctx = null;
-function doAction() { if (!ctx || state !== 'play') return; if (ctx.kind === 'dock') openHarbor(ctx.h); else if (ctx.kind === 'fight') startBattle(ctx.mon, true); else if (ctx.kind === 'fish') startFishing(ctx.s); else if (ctx.kind === 'salvage') startSalvage(ctx.w); else if (ctx.kind === 'land') startDig(ctx.m); else if (ctx.kind === 'slow') say('Tap STOP or ROW to slow down first.'); }
+function doAction() { if (!ctx || state !== 'play') return; if (autoOn() && ctx.kind !== 'dock') autoDock(false); if (ctx.kind === 'dock') openHarbor(ctx.h); else if (ctx.kind === 'fight') startBattle(ctx.mon, true); else if (ctx.kind === 'fish') startFishing(ctx.s); else if (ctx.kind === 'salvage') startSalvage(ctx.w); else if (ctx.kind === 'land') startDig(ctx.m); else if (ctx.kind === 'slow') say('Tap STOP or ROW to slow down first.'); }
 const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(0, 0, 0), V(0, 0, 0)]), new THREE.LineBasicMaterial({ color: 0xf2e6c8 })); line.visible = false; scene.add(line);
 function startFishing(s) { fishing = { s }; boat.wp = null; $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy'); line.visible = true;
   minis.fish({ kind: s.kind, nets: P.up.nets, tier: P.tier, biteChance: 0.07 }, (res) => { $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); document.body.classList.remove('busy'); line.visible = false; fishing = null; boat.grace = 2.5;
@@ -636,7 +637,7 @@ function closeChart() { $('chart').classList.add('hidden'); state = 'play'; cptr
 function mapTap(cv, e) { const r = cv.getBoundingClientRect(); const x = ((e.clientX - r.left) / r.width) * WORLD - HALF, z = ((e.clientY - r.top) / r.height) * WORLD - HALF; setCourse(x, z); say('Course set. Turn the wheel any time; let go and the helmsman steers back to the mark.'); }
 let mapTapT = 0; mapEl.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); if (state === 'play' && !battle && !fishing) { mapTapT = performance.now(); mapTap(mapEl, e); } });
 mapEl.addEventListener('touchend', (e) => { if (performance.now() - mapTapT < 600 || state !== 'play' || battle || fishing) return; const t = e.changedTouches[0]; if (t) { e.preventDefault(); mapTap(mapEl, { clientX: t.clientX, clientY: t.clientY }); } }, { passive: false });
-$('chartBtn').onclick = () => { if (state !== 'play' || battle || fishing) return; state = 'chart'; chartView.zoom = 1; chartView.cx = 0; chartView.cz = 0; cptr.clear(); $('chart').classList.remove('hidden'); drawMap(chartEl, chartCtx, true); };
+$('chartBtn').onclick = () => { if (state !== 'play' || battle || fishing) return; if (tut) tut.chart = true; state = 'chart'; chartView.zoom = 1; chartView.cx = 0; chartView.cz = 0; cptr.clear(); $('chart').classList.remove('hidden'); drawMap(chartEl, chartCtx, true); };
 chartEl.addEventListener('pointerdown', (e) => { e.preventDefault(); try { chartEl.setPointerCapture(e.pointerId); } catch { /* ignore */ } cptr.set(e.pointerId, [e.clientX, e.clientY]); if (cptr.size === 1) { cDown = { x: e.clientX, y: e.clientY, t: performance.now() }; cDrag = false; } else { cDrag = true; const [a, b] = [...cptr.values()]; cPinch = Math.hypot(a[0] - b[0], a[1] - b[1]); } });
 chartEl.addEventListener('pointermove', (e) => { if (!cptr.has(e.pointerId)) return; const prev = cptr.get(e.pointerId); cptr.set(e.pointerId, [e.clientX, e.clientY]); const r = chartEl.getBoundingClientRect();
   if (cptr.size >= 2) { const [a, b] = [...cptr.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2; if (cPinch > 0 && d > 0) { const [wx, wz] = chartWorld(mx, my); chartView.zoom *= d / cPinch; chartClamp(); const k2 = (r.width / WORLD) * chartView.zoom; chartView.cx = wx - (mx - r.left - r.width / 2) / k2; chartView.cz = wz - (my - r.top - r.height / 2) / k2; chartClamp(); } cPinch = d; drawMap(chartEl, chartCtx, true); return; }
@@ -663,7 +664,7 @@ function updateBoat(dt) {
   const kTurn = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0), kThr = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0);
   if (state === 'play' && !battle && !fishing) { if (kTurn) helm.angle = clamp(helm.angle + kTurn * dt * 2.2, -HMAX, HMAX); if (kThr) setThrottle((boat.throttle || 0) + kThr * dt * 0.7);
     if (boat.wp) { const dx = boat.wp.x - boat.x, dz = boat.wp.z - boat.z, d = Math.hypot(dx, dz);
-      if (d < 4 + t.L * 0.3) { boat.wp = null; courseMark.visible = false; setThrottle(0, true); say('Arrived. Sails furled.'); }
+      if (d < 4 + t.L * 0.3) { const au = autoOn() && boat.auto.h; boat.wp = null; boat.auto = null; courseMark.visible = false; setThrottle(0, true); if (au) openHarbor(au); else say('Arrived. Sails furled.'); }
       else { courseMark.position.set(boat.wp.x, ocean.heightAt(boat.wp.x, boat.wp.z) + 0.2, boat.wp.z); courseMark.rotation.z += dt; thr = Math.min(thr, clamp(d / 18, 0.25, 1));
         // hands off the wheel: the helmsman turns it back toward the mark (and around land)
         if (!helm.held && !kTurn) { want = steerAround(Math.atan2(dx, dz), Math.min(d, 26 + t.L)); const target = -clamp(angDiff(want, boat.yaw) * 1.8, -1, 1) * HMAX; helm.angle += clamp(target - helm.angle, -dt * 3.5, dt * 3.5); } } } }
@@ -677,7 +678,7 @@ function updateBoat(dt) {
   if (boat.bifrost > 0) { boat.bifrost = Math.max(0, boat.bifrost - dt); if (!battle && P.hp < maxHp()) { P.hp = Math.min(maxHp(), P.hp + maxHp() * 0.02 * dt); boat.hudT = (boat.hudT || 0) - dt; if (boat.hudT <= 0) { boat.hudT = 0.25; hud(); } } } boat.grace = Math.max(0, boat.grace - dt);
   let nx = boat.x + Math.sin(boat.yaw) * boat.v * dt, nz = boat.z + Math.cos(boat.yaw) * boat.v * dt;
   const bl = world.blockAt(nx, nz, t.B * 0.5 + t.L * 0.18) || world.blockAt(nx + Math.sin(boat.yaw) * t.L * 0.4, nz + Math.cos(boat.yaw) * t.L * 0.4, t.B * 0.3);
-  if (bl) { nx = boat.x + bl.nx * dt * 4; nz = boat.z + bl.nz * dt * 4; if (boat.v > 5 && boat.hitCd <= 0) { boat.hitCd = 1.5; damage((boat.v - 4.5) * 1.6 * Math.pow(1.4, P.tier) * (1 - defense()) * (bl.kind === 'berg' ? 1.6 : 1), bl.kind === 'berg' ? 'You hit an iceberg!' : 'Ran aground!'); foam.splash(nx, nz, 1.2); sfx.creak(); } boat.v *= 0.35; boat.wp = null; }
+  if (bl) { nx = boat.x + bl.nx * dt * 4; nz = boat.z + bl.nz * dt * 4; if (boat.v > 5 && boat.hitCd <= 0) { boat.hitCd = 1.5; damage((boat.v - 4.5) * 1.6 * Math.pow(1.4, P.tier) * (1 - defense()) * (bl.kind === 'berg' ? 1.6 : 1), bl.kind === 'berg' ? 'You hit an iceberg!' : 'Ran aground!'); foam.splash(nx, nz, 1.2); sfx.creak(); } boat.v *= 0.35; if (autoOn()) autoReplan(); else boat.wp = null; }
   boat.hitCd = Math.max(0, boat.hitCd - dt);
   if (Math.abs(nx) > HALF - 15 || Math.abs(nz) > HALF - 15) { nx = clamp(nx, -HALF + 15, HALF - 15); nz = clamp(nz, -HALF + 15, HALF - 15); if (msgT <= 0) say('The edge of the world. Only mist and falling water beyond.'); }
   boat.x = nx; boat.z = nz;
@@ -700,7 +701,7 @@ function updateHulls() { const list = []; const push = (s, x, z, yaw) => { s.g.u
 
 // ---------- camera ----------
 // views: TOP (high), CHASE (behind), HELM (the captain's eye at the steering place on the stern; the sail goes see-through)
-$('viewBtn').onclick = () => { viewMode = viewMode === 'top' ? 'chase' : viewMode === 'chase' ? 'helm' : 'top'; $('viewBtn').textContent = viewMode.toUpperCase(); };
+$('viewBtn').onclick = () => { viewMode = viewMode === 'top' ? 'chase' : viewMode === 'chase' ? 'helm' : 'top'; $('viewBtn').textContent = viewMode.toUpperCase(); if (tut) tut.views.add(viewMode); };
 function updateCamera(dt) { const t = T(); let tgt, dist, pitch;
   if (state === 'title') { const a = time * 0.06; tgt = V(boat.x, 2, boat.z); dist = t.L * 2.2 + 14; pitch = 0.28; camYaw = a; }
   else if (battle && battle.mon.giant) { // frame your ship against one of the giant's eyes (the kraken's eye is about a ship long)
@@ -731,19 +732,68 @@ const fsCtl = initFullscreen(() => state === 'play');
 soundToggle($('title').querySelector('.menu'), $('paused')); $('ver').textContent = 'v' + VERSION;
 
 
+// ---------- SAIL TO DOCK: the crew sail you to the nearest harbour, around land, fleeing every fight, until you take the helm ----------
+// it lasts while the course it set is still the course: STOP, a new course or tapping ⚓ again ends it; arriving docks you
+function nearestHarbor() { let best = null, bd = 1e9; for (const h of world.harbors) { const d = Math.hypot(h.dock.x - boat.x, h.dock.z - boat.z); if (d < bd) { bd = d; best = h; } } return best; }
+const autoOn = () => !!boat.auto && !!boat.wp && boat.wp === boat.auto.wp;
+function autoDock(on) {
+  if (!on) { if (autoOn()) { boat.wp = null; courseMark.visible = false; say('You take the helm.', 2); } boat.auto = null; return; }
+  if (state !== 'play' || battle || fishing) return; if (ctx && ctx.kind === 'dock') { openHarbor(ctx.h); return; }
+  const h = nearestHarbor(); if (!h) return;
+  boat.auto = { h, path: null, i: 0, wp: null, replanT: 0 }; autoPlan(); setThrottle(1, true);
+  say('⚓ Sailing for ' + h.name + '. The crew steer around land and flee every fight. Tap STOP or ⚓ to take the helm.', 4.5); }
+// plan (or plan again) from where the ship is now to just off the harbour's dock, then sail it leg by leg
+function autoPlan() { const A = boat.auto, h = A.h, gx = h.dock.x + Math.cos(h.dir) * 10, gz = h.dock.z + Math.sin(h.dir) * 10;
+  A.path = planRoute(boat.x, boat.z, gx, gz) || [[gx, gz]]; A.i = 0; autoLeg(); }
+function autoLeg() { const A = boat.auto, p = A.path[A.i]; boat.wp = { x: p[0], z: p[1] }; courseMark.visible = true; A.wp = boat.wp; }
+// each frame: on to the next leg when close to this one's end
+function updateAuto(dt) { if (!autoOn()) return; const A = boat.auto, p = A.path[A.i]; A.replanT -= dt;
+  if (A.i < A.path.length - 1 && Math.hypot(p[0] - boat.x, p[1] - boat.z) < 12 + T().L * 0.3) { A.i++; autoLeg(); } }
+// shoved onto land (a wave, a whirlpool, a fleeing turn): plan again from here instead of giving up
+function autoReplan() { const A = boat.auto; if (A.replanT > 0) return; A.replanT = 1.5; autoPlan(); }
+// the route: A* over a 6-unit grid of open water kept a hull's width off every coast, then the corners pulled straight
+// wherever the line between two points is clear
+function planRoute(x0, z0, x1, z1) {
+  const C = 6, N = Math.floor(WORLD / C), E = HALF - 25, pad = T().B * 0.6 + 2.5, cellOf = (v) => clamp(Math.floor((v + HALF) / C), 0, N - 1), mid = (i) => -HALF + (i + 0.5) * C;
+  const memo = new Int8Array(N * N); // 0 not looked at yet, 1 water, 2 land or the edge of the world
+  const free = (i, j) => { const k = j * N + i; if (!memo[k]) { const x = mid(i), z = mid(j); memo[k] = Math.abs(x) > E || Math.abs(z) > E || world.blockAt(x, z, pad) ? 2 : 1; } return memo[k] === 1; };
+  const near = (i, j) => { if (free(i, j)) return [i, j]; for (let r = 1; r < 8; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) { const a = i + di, b = j + dj; if (Math.max(Math.abs(di), Math.abs(dj)) === r && a >= 0 && b >= 0 && a < N && b < N && free(a, b)) return [a, b]; } return null; };
+  const s = near(cellOf(x0), cellOf(z0)), g = near(cellOf(x1), cellOf(z1)); if (!s || !g) return null;
+  const S = s[1] * N + s[0], G = g[1] * N + g[0], cost = new Float32Array(N * N).fill(Infinity), from = new Int32Array(N * N).fill(-1), done = new Uint8Array(N * N);
+  const hx = (k) => { const dx = Math.abs((k % N) - g[0]), dz = Math.abs(((k / N) | 0) - g[1]); return Math.max(dx, dz) + 0.414 * Math.min(dx, dz); };
+  const heap = [], push = (k, f) => { heap.push([f, k]); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+  cost[S] = 0; push(S, hx(S)); let found = false, guard = 0;
+  while (heap.length && guard++ < 80000) { const k = pop()[1]; if (done[k]) continue; done[k] = 1; if (k === G) { found = true; break; } const i = k % N, j = (k / N) | 0;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { if (!di && !dj) continue; const a = i + di, b = j + dj; if (a < 0 || b < 0 || a >= N || b >= N || !free(a, b)) continue;
+      if (di && dj && (!free(i + di, j) || !free(i, j + dj))) continue; // never cut a corner of land
+      const nk = b * N + a, nc = cost[k] + (di && dj ? 1.414 : 1); if (nc < cost[nk]) { cost[nk] = nc; from[nk] = k; push(nk, nc + hx(nk)); } } }
+  if (!found) return null;
+  const pts = []; for (let k = G; k !== -1; k = from[k]) pts.push([mid(k % N), mid((k / N) | 0)]); pts.reverse(); pts.push([x1, z1]);
+  const clearLine = (a, b) => { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 3); for (let q = 1; q < n; q++) { const f = q / n; if (world.blockAt(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, pad)) return false; } return true; };
+  const out = []; let from0 = [x0, z0], at = 0; while (at < pts.length - 1) { let k = Math.min(pts.length - 1, at + 30); while (k > at + 1 && !clearLine(from0, pts[k])) k--; out.push(pts[k]); from0 = pts[k]; at = k; }
+  return out; }
+// fleeing instead of fighting: a parting bite (half a hit, like FLEE in a battle), the foe stunned behind you, the oars pulling hard
+function autoFlee(mon) { mon.stun = 7; boat.boost = 3.5; boat.grace = 3; boat.v = Math.max(boat.v, topSpeed()); damage(mon.dmg * 0.5 * (1 - defense()), mon.name + ' lunges as you flee!'); }
+$('dockBtn').onclick = (e) => { e.stopPropagation(); unlockAudio(); if (tut) tut.dockTap = true; autoDock(!autoOn()); };
+let dockShown = null; function drawDockBtn() { const on = autoOn(); if (on !== dockShown) { dockShown = on; $('dockBtn').classList.toggle('on', on); } }
+
 // ---------- the first-voyage tutorial: five steps, each one waits until you do it; SKIP ends it, HOW TO PLAY replays it ----------
 const TUT_KEY = 'pr_tut', keyPad = matchMedia('(pointer: fine)').matches; let tut = null, tutForce = false;
 const tutSeen = () => { try { return !!localStorage.getItem(TUT_KEY); } catch (e) { return true; } };
 const TUT = [
   { txt: '⛵ <b>Raise the sail.</b> Tap HALF or FULL. STOP furls it again.', keys: 'W and S', at: () => thrEl.querySelector('[data-n="2"]'), done: () => (boat.throttle || 0) > 0.4 },
   { txt: '☸ <b>Steer.</b> Swipe along the wheel to turn. It stays where you leave it; double-tap to centre it.', keys: 'A and D', at: () => 'wheel', done: () => tut.turn > 1.1 },
-  { txt: '🗺 <b>Set a course.</b> Tap the sea or the little map, and the helmsman steers you there.', at: () => $('map'), done: () => !!boat.wp },
+  { txt: '👁 <b>Change the view.</b> Tap TOP to switch the camera: TOP looks down from above, CHASE follows the ship, HELM puts you at the wheel. Try all three.', at: () => $('viewBtn'), done: () => tut.views.size >= 3 },
+  { txt: '🔍 <b>Zoom.</b> Pinch the sea with two fingers to zoom in and out.', keys: 'the mouse wheel', at: () => 'pinch', done: () => Math.abs(zoom - tut.zoom0) > 0.15 },
+  { txt: '🧭 <b>The little map</b> shows what is near: ⚓ harbours, monsters as coloured dots, ✕ treasure. Tap it (or the sea) to set a course, and the helmsman steers you there.', at: () => $('map'), done: () => !!boat.wp && boat.wp !== tut.wp0 },
+  { txt: '🗺 <b>The sea chart</b> shows the whole world. Tap 🗺 to open it: pinch and drag to look around, tap anywhere to set a course, CLOSE to come back.', at: () => $('chartBtn'), done: () => tut.chart },
   { txt: '🦈 <b>A shark!</b> A white name is a fair fight, green is weaker, red and purple are stronger. Throw SPEARS, then win the fight: hit the weak spot and dodge.', at: () => $('fireBtn'), enter: () => tutShark(), done: () => tut.mon && tut.mon.dead },
-  { txt: '⚓ <b>Head home.</b> Sail back to the ⚓ on the map, slow down and tap DOCK to sell your loot, repair and upgrade.', at: () => (ctx && ctx.kind === 'dock' ? $('actBtn') : null), done: () => false },
+  { txt: '⚓ <b>Head home.</b> Tap ⚓ DOCK and the crew sail you to the nearest harbour, fleeing any fight (STOP takes the helm back). Or sail there yourself and tap DOCK.', at: () => (ctx && ctx.kind === 'dock' ? $('actBtn') : autoOn() ? null : $('dockBtn')), done: () => false },
 ];
-function tutStart() { tut = { i: -1, turn: 0, yaw: boat.yaw, mon: null, wait: 0 }; document.body.classList.add('tutOn'); $('tut').classList.remove('hidden'); tutNext(); }
-function tutNext() { tut.i++; const st = TUT[tut.i]; tut.yaw = boat.yaw; tut.turn = 0;
-  $('tutN').textContent = 'TUTORIAL · ' + (tut.i + 1) + ' / ' + TUT.length; $('tutTxt').innerHTML = st.txt + (keyPad && st.keys ? ' <i>Keys: ' + st.keys + '.</i>' : '');
+function tutStart() { tut = { i: -1, turn: 0, yaw: boat.yaw, mon: null, wait: 0, views: new Set([viewMode]), zoom0: zoom, wp0: null, chart: false }; document.body.classList.add('tutOn'); $('tut').classList.remove('hidden'); tutNext(); }
+function tutNext() { tut.i++; const st = TUT[tut.i]; tut.yaw = boat.yaw; tut.turn = 0; tut.zoom0 = zoom; tut.wp0 = boat.wp;
+  $('tutN').textContent = 'TUTORIAL · ' + (tut.i + 1) + ' / ' + TUT.length; $('tutTxt').innerHTML = st.txt + (keyPad && st.keys ? ' <i>On a computer: ' + st.keys + '.</i>' : '');
   const el = $('tut'); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); if (tut.i) sfx.coins(); if (st.enter) st.enter(); }
 function tutEnd(msg) { try { localStorage.setItem(TUT_KEY, '1'); } catch (e) {} tut = null; document.body.classList.remove('tutOn'); $('tut').classList.add('hidden'); $('tutHand').classList.add('hidden'); if (msg) say(msg, 4); }
 function tutShark() { const want = P.tier - 0.3, vi = MLV.shark.reduce((bi, l, i) => (Math.abs(l - want) < Math.abs(MLV.shark[bi] - want) ? i : bi), 0);
@@ -758,9 +808,10 @@ function updateTut(dt) { if (!tut) return; const st = TUT[tut.i];
   const hand = $('tutHand'), at = st.at(); if (!at || battle || fishing) { hand.classList.add('hidden'); return; }
   let x, y, cls;
   if (at === 'wheel') { const [cx, cy] = helmHub(); x = cx; y = cy - helmBox.R * 0.7; cls = 'swipe'; }
+  else if (at === 'pinch') { x = innerWidth / 2 + 40; y = innerHeight * 0.42; cls = 'pinch'; }
   else { const r = at.getBoundingClientRect(); if (!r.width) { hand.classList.add('hidden'); return; } if (at.closest('#throttle') && thrEl.offsetWidth > thrEl.offsetHeight) { x = r.left + r.width / 2; y = r.top - 26; cls = 'D'; } // the tablet telegraph is a row: point down onto it
     else { const right = r.left + r.width / 2 > innerWidth / 2; x = right ? r.left - 24 : r.right + 24; y = r.top + r.height / 2; cls = right ? 'R' : 'L'; } }
-  if (hand._c !== cls) { hand.className = cls; hand._c = cls; hand.textContent = { swipe: '👆', R: '👉', L: '👈', D: '👇' }[cls]; }
+  if (hand._c !== cls) { hand.className = cls; hand._c = cls; hand.textContent = { swipe: '👆', R: '👉', L: '👈', D: '👇', pinch: '🤏' }[cls]; }
   hand.classList.remove('hidden'); hand.style.left = x + 'px'; hand.style.top = y + 'px'; }
 $('tutSkip').onclick = (e) => { e.stopPropagation(); tutEnd('Tutorial skipped. HOW TO PLAY can run it again.'); };
 $('howTut').onclick = () => { $('how').classList.add('hidden'); tutForce = true; begin(!!localStorage.getItem(SAVE)); };
@@ -776,6 +827,7 @@ const ashC = new THREE.Color(0x8a8480), snowC = new THREE.Color(0xffffff);
 function updateSeas(dt) {
   world.regionWeights(boat.x, boat.z, rw); let best = 'home', bw = rw.home; for (const k of ['frost', 'storm', 'mist', 'warm']) if (rw[k] > bw) { bw = rw[k]; best = k; }
   if (best !== curSea && bw > 0.62) { curSea = best; if (state === 'play') seaBanner(best); }
+  setMusicSea(curSea); // each sea has its own song (it changes on the next bar line)
   // snow in the Frost Sea, ash in the Storm Sea
   const sn = rw.frost || 0, as = rw.storm || 0, k = Math.max(sn, as); fall.p.visible = k > 0.04; if (fall.p.visible) { const ashy = as / (sn + as + 1e-6); fall.m.color.copy(snowC).lerp(ashC, ashy); fall.m.size = 0.55 - ashy * 0.25; fall.m.opacity = 0.85 * k;
     const sp = 3.2 - ashy * 1.8; fall.p.position.set(camTgt.x, 0, camTgt.z); const P3 = fall.pos; for (let i = 0; i < fall.n; i++) { P3[i * 3 + 1] -= sp * fall.vel[i] * dt; P3[i * 3] += Math.sin(time * 0.8 + i) * dt * 0.6; if (P3[i * 3 + 1] < -1) { P3[i * 3 + 1] = 40; P3[i * 3] = rnd(-45, 45); P3[i * 3 + 2] = rnd(-45, 45); } } fall.g.attributes.position.needsUpdate = true; }
@@ -816,7 +868,7 @@ function frame(now) { const dt = Math.min(0.05, (now - last) / 1000) * timeScale
 let mapFlip = 0;
 function tick(dt) { time += dt;
   if (state === 'play' || state === 'title' || state === 'harbor' || state === 'chart') {
-    if (state === 'play') { P.tod = (P.tod + dt / 420) % 1; updateWeather(dt); updateEvents(dt); updateSpawns(dt); updatePods(dt); updateLairs(); updateTut(dt); boat.fireCd = Math.max(0, boat.fireCd - dt); saveT += dt; if (saveT > 30) { saveT = 0; save(); } }
+    if (state === 'play') { P.tod = (P.tod + dt / 420) % 1; updateWeather(dt); updateEvents(dt); updateSpawns(dt); updatePods(dt); updateLairs(); updateTut(dt); updateAuto(dt); boat.fireCd = Math.max(0, boat.fireCd - dt); saveT += dt; if (saveT > 30) { saveT = 0; save(); } }
     if (state !== 'harbor') updateBoat(dt); updateMons(dt); if (battle) updateBattle(dt); updateSea(dt); updateProjs(dt); minis.update(dt);
     if (fishing) { const s = fishing.s, a = V(boat.x, boat.y + T().mast * 0.5, boat.z), b = V(s.x, ocean.heightAt(s.x, s.z), s.z); line.geometry.setFromPoints([a, b]); }
   }
@@ -826,7 +878,7 @@ function tick(dt) { time += dt;
   if (state === 'play') drawHelm(); setSea(state === 'play' ? 1 : 0.6, LOOK[wx.type] === 'storm' ? wx.k : 0);
   updateCamera(dt); updateHulls(); ocean.update(dt, camTgt, camera); foam.update(dt); foam.mat.uniforms.uLight.value = 0.35 + env.cur.ambient;
   if (state === 'play') { updateTags(dt); if ((mapFlip ^= 1)) drawMap(mapEl, mapCtx, false);
-    ctx = actionContext(); const key = ctx ? ctx.kind + ctx.label : ''; if (key !== ctxKey) { ctxKey = key; const b = $('actBtn'); if (ctx) { b.classList.remove('hidden'); b.innerHTML = '<em>' + ctx.icon + '</em><small>' + ctx.label + '</small>'; b.style.borderColor = ctx.kind === 'fight' ? '#ff5a3a' : ctx.kind === 'slow' ? '#c8c8c8' : '#7dff3a'; } else b.classList.add('hidden'); }
+    drawDockBtn(); ctx = actionContext(); const key = ctx ? ctx.kind + ctx.label : ''; if (key !== ctxKey) { ctxKey = key; const b = $('actBtn'); if (ctx) { b.classList.remove('hidden'); b.innerHTML = '<em>' + ctx.icon + '</em><small>' + ctx.label + '</small>'; b.style.borderColor = ctx.kind === 'fight' ? '#ff5a3a' : ctx.kind === 'slow' ? '#c8c8c8' : '#7dff3a'; } else b.classList.add('hidden'); }
     const wk = P.up.ballista ? 'b' : 's'; if (wk !== fireKey) { fireKey = wk; $('fireBtn').innerHTML = '<em>' + (P.up.ballista ? '🏹' : '🗡') + '</em><small>' + (P.up.ballista ? 'BALLISTA' : 'SPEARS') + '</small><i class="cd" id="fireCd"></i>'; } $('fireCd').style.height = (boat.fireCd > 0 ? clamp(boat.fireCd / (P.up.ballista ? 2 : 1.2), 0, 1) * 100 : 0) + '%';
     $('region').textContent = rname(world.regionAt(boat.x, boat.z)) + (isNight() ? ' · 🌙' : ''); $('wxTxt').textContent = wx.k > 0.3 ? WXNAME[wx.type] : ''; $('buff').textContent = [boat.thor > 0 ? '⚡ Thor ' + Math.ceil(boat.thor) + 's' : '', boat.bifrost > 0 ? '🌈 Bifröst ' + Math.ceil(boat.bifrost) + 's' : '', boat.curse > 0 ? '☠ Cursed ' + Math.ceil(boat.curse) + 's' : '', boat.mending ? '🔨 Crew mending' : ''].filter(Boolean).join(' · '); $('hurt').classList.toggle('thor', boat.thor > 0); }
   else for (const mon of mons) mon.tag.style.display = 'none';
@@ -836,4 +888,4 @@ function tick(dt) { time += dt;
 { const h = world.harbors[0]; boat.x = h.dock.x + Math.cos(h.dir) * 12; boat.z = h.dock.z + Math.sin(h.dir) * 12; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); }
 const hadSave = load(); if (!hadSave) P.hp = maxHp(); rebuildShip(); placeWreck(); toTitle(); env.snap(P.tod, null, world.regionWeights(boat.x, boat.z, {})); camTgt.set(boat.x, 0, boat.z);
 requestAnimationFrame(frame);
-window.__pr = { cleanSave, giveMap, prizeChoice, startDig, boardInfo, spouts, startAir, liftK, pods, spawnPod, EV, startEvent, aur, get wreck() { return P.wreck; }, sink, get chartView() { return chartView; }, step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); }, helm, setThrottle, set timeScale(v) { timeScale = v; }, dmgLog, P, boat, mons, spots, floats, world, ocean, wx, setWeather, spawnMon, startBattle, startFishing, openHarbor, fire, get state() { return state; }, set state(v) { state = v; }, get battle() { return battle; }, minis, MLV, killMon, landBolt, warnRing, spawnSpout, rebuildShip, save, load, camera, renderer, scene, get ship() { return ship; }, setCourse };
+window.__pr = { planRoute, autoDock, cleanSave, giveMap, prizeChoice, startDig, boardInfo, spouts, startAir, liftK, pods, spawnPod, EV, startEvent, aur, get wreck() { return P.wreck; }, sink, get chartView() { return chartView; }, step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); }, helm, setThrottle, set timeScale(v) { timeScale = v; }, dmgLog, P, boat, mons, spots, floats, world, ocean, wx, setWeather, spawnMon, startBattle, startFishing, openHarbor, fire, get state() { return state; }, set state(v) { state = v; }, get battle() { return battle; }, minis, MLV, killMon, landBolt, warnRing, spawnSpout, rebuildShip, save, load, camera, renderer, scene, get ship() { return ship; }, setCourse };

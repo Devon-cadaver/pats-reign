@@ -120,6 +120,32 @@ disagree with this file, this file wins.
   apps). session() in audio.js sets it before the context starts and on each toggle. navigator.audioSession is
   Safari-only, so this part cannot be tested in Chrome.
 
+## v0.5.4: a song for every sea, SAIL TO DOCK, a fuller tutorial, the porpoise NaN (Sean, 2026-10-19)
+- Sea songs (music.js THEMES): home = the old D Dorian ballad; frost = A minor 3/4 54 bpm, bells (bell()), cold high choir,
+  far drum, distant lur; storm = E Phrygian 104 bpm, war drums with fills, bass ostinato, E then F horn calls, rumble()
+  thunder every 8 bars; mist = 56 bpm, D/G# tritone drone, heartbeat drum, whole-tone ghost bells, D-G#-C choir; warm = G
+  Mixolydian 6/8 (E = 0.2 s), hand drums, shaker(), marimba pluck() tune, bass walking G F C G. Each theme: drone pitches,
+  filter cut, drone level, reverb wet (M.wet), step(t, s, E) and phrases/note()/play() for the melody. main.js
+  updateSeas calls setMusicSea(curSea) every frame; the song changes on the next bar line (toTheme glides the drone with
+  colour()). Battle music is unchanged and in D (the drone glides to D for it), and after a battle the sea's song returns.
+  Tested: all five switch; peaks 0.13-0.19; storm 26, warm 39, battle ~50 new nodes a second. sagaState() reports theme.
+  Sean wanted option 3 of: song file from the device, SoundCloud links, sea songs, volume sliders. YouTube needs a
+  visible 200x200 player by its terms; Spotify embeds only play 30 s previews in iOS Safari (no sign-in in iframes), so
+  for his own music: MUSIC off + the Spotify app.
+- SAIL TO DOCK (main.js, section before the tutorial): #dockBtn (⚓ DOCK; right column under TOP on a phone, above the
+  chart/view buttons on a tablet; gold .on while active). autoDock(true) picks nearestHarbor(), planRoute() (A* on a 6-unit
+  grid, land kept a hull's width away, corners pulled straight; about 15 ms) to the point 10 off the dock, and sails it leg
+  by leg (updateAuto); FULL sail. autoOn() = boat.auto and the current wp is its leg. startBattle while autoOn ->
+  autoFlee (half a hit, foe stunned 7 s, boost); doAction (any player action but DOCK) ends it; STOP / a new course / the
+  button ends it; running aground re-plans (autoReplan, 1.5 s cooldown) instead of cancelling; arriving opens the harbour.
+  Tested: a shark contact fled (6 hull, no battle); a 275-unit trip around an island to Mistmere arrived with no grounding.
+- Tutorial is now 8 steps: sail, steer, views (TOP/CHASE/HELM, all three), zoom (pinch or mouse wheel), the little map
+  (set a course), the sea chart (open it), the shark, head home (⚓ DOCK). Keyboard hints read "On a computer: ...".
+- Fixed: porpoise tail tip was NaN (Math.pow of a tiny negative at s = 1) -> computeBoundingSphere NaN errors in the
+  console since v0.5.0. All three SpineTube profiles now use Math.max(0, ...).
+- Next (Sean asked): an action ship battle (circle each other, broadside timing with a trajectory arrow, side camera,
+  they fire back) and visible ship damage (torn sails, holes, cracks, fire).
+
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
 - showcase.html + src/showcase.js + src/showcase-monsters.js: asset gallery (ships, raiders, ghost ship, every monster
