@@ -387,7 +387,7 @@ function broadFire() { const B = battle && battle.broad; if (!B || B.reload > 0 
   for (let i = 0; i < n; i++) { const s = (i / (n - 1) - 0.5) * t.L * 0.6, [fx, fz] = lanePos(B, B.sp + s, B.yC + dir * t.B * 0.5), [hx, hz] = lanePos(B, B.sp + s, B.eC);
     setTimeout(() => { if (battle && battle.broad === B) launch({ x: fx, y: boat.y + 1.8, z: fz }, { x: hx, y: 1, z: hz }, P.up.ballista ? 'bolt' : 'spear'); }, i * 50); }
   B.shots.push({ me: true, s: B.sp, t: broadFlight() + 0.05 }); }
-function broadFoeFire(B, f, i) { const L = tierOf(f).L, dir = Math.sign(B.yC - B.eC), se = foeAt(B, i);
+function broadFoeFire(B, f, i, sAt) { const L = tierOf(f).L, dir = Math.sign(B.yC - B.eC), se = sAt ?? foeAt(B, i);
   for (let k = 0; k < 4; k++) { const s = (k / 3 - 0.5) * L * 0.6, [fx, fz] = lanePos(B, se + s, B.eC + dir * tierOf(f).B * 0.5), [hx, hz] = lanePos(B, se + s, B.yC); setTimeout(() => { if (battle && battle.broad === B) launch({ x: fx, y: 2.5, z: fz }, { x: hx, y: 1, z: hz }, 'arrow'); }, k * 60); }
   B.shots.push({ me: false, f, s: se, t: broadFlight() + 0.05 }); sfx.throw(); }
 // her column: sail past you to the far end, sometimes stopping abeam to trade volleys; one-on-one, sometimes come about
@@ -416,9 +416,12 @@ function updateBroadside(dt) { const B = battle.broad, t = T(); battle.t += dt; 
     // her aim, ship by ship: a random error per pass (smaller for higher levels); she fires when her reckoning of where you
     // will be (at your current speed) when her volley lands crosses it; her arrow flashes as she aims; change speed to spoil it
     B.foes.forEach((f, i) => { const A = f.bx, se = foeAt(B, i); A.reload = Math.max(0, A.reload - dt * (f.stun > 0 ? 0.3 : 1));
-      if (B.k < 1 || f.treasure || A.reload > 0 || Math.abs(se - B.sp) > 14) { A.last = null; A.aimT = 0; return; }
+      if (B.k < 1 || f.treasure || A.reload > 0 || Math.abs(se - B.sp) > 14) { A.last = null; A.aimT = 0; A.lock = null; return; }
+      // she takes aim for 0.8 s at the spot she has reckoned, then fires there; change speed while SHE AIMS shows and two times in
+      // three her volley falls wide
+      if (A.lock) { A.lock.t -= dt; A.aimT = 1; if (A.lock.t <= 0) { let sAt = A.lock.s; if (Math.abs((boat.throttle || 0) - A.lock.thr) > 0.05 && Math.random() < 0.65) sAt += (Math.random() < 0.5 ? -1 : 1) * (hlY + 3); broadFoeFire(B, f, i, sAt); A.lock = null; A.reload = 3.2; A.last = null; A.aimT = 0; } return; }
       if (A.last == null) A.err = (Math.random() * 2 - 1) * hlY * clamp(2.6 - 0.3 * f.lv, 1, 2.6);
-      const diff = se - (B.sp + B.vp * tf) - A.err; A.aimT = Math.abs(diff) < 3 ? A.aimT + dt : 0; if (A.last != null && Math.sign(diff) !== Math.sign(A.last)) { broadFoeFire(B, f, i); A.reload = 3.2; A.last = null; A.aimT = 0; } else A.last = diff; }); }
+      const diff = se - (B.sp + B.vp * (tf + 0.8)) - A.err; A.aimT = Math.abs(diff) < 3 ? A.aimT + dt : 0; if (A.last != null && Math.sign(diff) !== Math.sign(A.last)) { A.lock = { s: se, t: 0.8, thr: boat.throttle || 0 }; A.last = null; } else A.last = diff; }); }
   // the arrows: yours from your hull across to her lane, each of theirs from her hull across to yours
   const dirE = Math.sign(B.eC - B.yC), yawE = Math.atan2(B.cx * dirE, B.cz * dirE), y0 = ocean.heightAt(boat.x, boat.z) + 0.4, show = !B.swap && B.k >= 1;
   const [ax0, az0] = lanePos(B, B.sp, B.yC + dirE * t.B * 0.6); B.my.position.set(ax0, y0, az0); B.my.rotation.y = yawE; B.my.scale.set(1.4, 1, B.gap + 4 - t.B * 0.6); B.my.visible = show;
