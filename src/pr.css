@@ -202,7 +202,7 @@ html.tabletHud #throttle { gap: 6px; } html.tabletHud #throttle button { font-si
 html.tabletHud #map { width: 150px; height: 150px; } html.tabletHud #chartBtn, html.tabletHud #viewBtn { bottom: calc(172px + env(safe-area-inset-bottom, 0)); font-size: 18px; }
 html.tabletHud #viewBtn { left: 64px; font-size: 14px; } html.tabletHud .act { width: 84px; height: 84px; } html.tabletHud #actBtn { width: 80px; height: 80px; }
 
-#chart { background: #050b10f2; }
+#chart { background: #050b10f2; } #chartHint.hot { color: #7dff3a; font-weight: 700; } /* v1.12.2: the tutorial's chart guidance */
 
 #map { touch-action: none; z-index: 2; }
 .fsBtn { left: auto; right: 10px; }
