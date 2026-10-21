@@ -6,7 +6,7 @@
 //   g faces +z and sits at the sea surface (the game sets g.position to the water height and g.rotation.y to the heading).
 //   st = { t, speed 0..1, attack 0..1 (lunge / slam), dive 0..1 (0 surfaced), hurt 0..1, rise 0..1 (bosses) }
 import * as THREE from 'three';
-import { M, part, grp, rod, V, SpineTube, taperTube, curvePts, orient, SPH, SPH_LO, HEMI, CAP, CON, CYL, BOX, RBX, TOR, glowVC, FAN, FINTRI, CRESCENT, WING, hash2, smooth } from './geom.js';
+import { M, part, grp, rod, V, SpineTube, taperTube, curvePts, orient, SPH, SPH_LO, HEMI, CAP, CON, CON4, CYL, BOX, RBX, TOR, glowVC, FAN, FINTRI, CRESCENT, WING, hash2, smooth } from './geom.js';
 import { mergeParts } from './perf.js';
 
 const TAU = Math.PI * 2, tmpC = new THREE.Color(), tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3();
@@ -220,19 +220,30 @@ const _up = new THREE.Vector3(0, 1, 0), _dummy = new THREE.Object3D(), _q = new 
 function kraken(P, S) {
   const g = new THREE.Group(), body = grp(g), R = 1.3 * S, mat = glowVC(), arms = [], nA = 8;
   const bone = M(P.top), plate = M(P.accent), dark = M(P.dark || lerpHex(P.top, 0, 0.45)), eye = M(P.eye, 'glow'), black = M(0x060606), suck = M(P.sucker || 0xe8d8d0);
-  // the head: a tall dome leaning back on a wide brow mass; bony plates ring the crown and three ridges of spines run over it
-  const head = grp(body, 0, R * 1.2, -R * 0.2); const C = V(0, 1.55 * R, -0.5 * R), RX = 1.5 * R, RY = 2.45 * R, RZ = 1.6 * R;
-  part(head, SPH(), bone, RX * 2, RY * 2, RZ * 2, C.x, C.y, C.z); part(head, SPH(), bone, 3.4 * R, 2.1 * R, 3.1 * R, 0, -0.15 * R, 0.1 * R);
-  part(head, SPH(), plate, 3.3 * R, 0.55 * R, 1.3 * R, 0, 0.62 * R, 1.05 * R); // the brow ridge
+  // the head (v1.2.1, Sean: taller, more skull): a tall tapered dome on a brow mass, mottled, with a crown spine, five
+  // meridians of spines, bony seams; the face is a skull: bony rims round deep sockets, a nasal hollow, cheekbones, a jaw of teeth
+  const head = grp(body, 0, R * 1.2, -R * 0.2), teeth = M(P.teeth || 0xf0ead8); const H = 4.6 * R, B0 = V(0, 0.2 * R, -0.35 * R), AX = V(0, 1, -0.12).normalize();
+  const dr = (t) => R * (0.06 + 1.5 * Math.sqrt(Math.max(0, 1 - ((t - 0.28) / 0.74) ** 2))); // the dome's radius along its height: widest low, a rounded point on top
+  const dc = (t) => V(B0.x + AX.x * H * t, B0.y + AX.y * H * t, B0.z + AX.z * H * t), dp = (t, ph) => { const c = dc(t), r = dr(t); return V(c.x + Math.sin(ph) * r, c.y, c.z + Math.cos(ph) * r); };
+  const pts = []; for (let i = 0; i <= 20; i++) pts.push(dc(i / 20)); head.add(new THREE.Mesh(taperTube(pts, { radial: 20, r: dr, color: (t, an, c) => skin(P, t, an, c, 28), ref: V(0, 0, 1) }), mat));
+  part(head, SPH(), bone, 3.5 * R, 2.0 * R, 3.2 * R, 0, -0.1 * R, 0.15 * R); // the brow mass the dome stands on
+  part(head, SPH(), plate, 3.6 * R, 0.6 * R, 1.4 * R, 0, 0.7 * R, 1.05 * R); part(head, SPH(), bone, 3.0 * R, 0.5 * R, 1.0 * R, 0, 0.45 * R, 1.35 * R); // the brow ridge and the bone under it
   const spike = (d, x, y, z, h, w, m) => { const o = new THREE.Mesh(CON(), m); o.scale.set(w, h, w); o.position.set(x, y, z); o.quaternion.setFromUnitVectors(_up, d.normalize()); o.position.addScaledVector(d, h * 0.45); head.add(o); };
-  const onDome = (ph, th) => { const d = V(Math.sin(ph) * Math.cos(th * 0.5), Math.cos(th) * Math.cos(ph), -Math.sin(th) * Math.cos(ph)); return [d, V(C.x + d.x * RX, C.y + d.y * RY, C.z + d.z * RZ)]; };
-  for (const ridge of [-1.0, -0.5, 0, 0.5, 1.0]) for (let k = 0; k < 6; k++) { const th = 0.15 + (k / 5) * 2.1, [d, p] = onDome(ridge, th), lean = V(d.x, d.y + 0.3, d.z - 0.6), big = ridge === 0 ? 1 : Math.abs(ridge) < 0.7 ? 0.8 : 0.6; spike(lean, p.x, p.y, p.z, (1.5 - k * 0.15) * R * big, 0.42 * R * big, k % 2 ? plate : bone); }
-  for (let m = 0; m < 10; m++) { const ph = -1.35 + (m / 9) * 2.7; for (let k = 0; k < 5; k++) { const th = 0.45 + k * 0.42, [d, p] = onDome(ph, th), tan = V(0, -Math.sin(th), -Math.cos(th)); const o = new THREE.Mesh(CAP(), plate); o.scale.set(0.17 * R, 0.8 * R, 0.17 * R); o.position.copy(p).addScaledVector(d, -0.04 * R); o.quaternion.setFromUnitVectors(_up, tan.normalize()); head.add(o); } } // ribs over the dome
-  for (const sd of [-1, 1]) { for (let k = 0; k < 4; k++) { const a = 0.9 + k * 0.5, p = V(C.x + Math.sin(a) * sd * RX * 0.98, C.y + Math.cos(a) * RY * 0.3 - 0.2 * R, C.z - 0.1 * R + k * 0.25 * R); spike(V(sd * 1, 0.1, -0.3), p.x, p.y, p.z, 0.5 * R, 0.22 * R, plate); } // side plates
-    spike(V(sd * 0.35, 1, 0.45), sd * 1.0 * R, 1.55 * R, 0.75 * R, 1.05 * R, 0.34 * R, plate); // the two horns over the brow
-    part(head, SPH(), black, 1.05 * R, 0.78 * R, 0.8 * R, sd * 0.98 * R, 0.08 * R, 1.25 * R); part(head, SPH(), eye, 0.62 * R, 0.46 * R, 0.46 * R, sd * 0.98 * R, 0.08 * R, 1.5 * R); const halo = new THREE.Mesh(SPH(), new THREE.MeshBasicMaterial({ color: P.eye, transparent: true, opacity: 0.28, depthWrite: false })); halo.scale.set(1.15 * R, 0.9 * R, 0.9 * R); halo.position.set(sd * 0.98 * R, 0.08 * R, 1.5 * R); head.add(halo);
-    part(head, CAP(), dark, 0.28 * R, 0.7 * R, 0.28 * R, sd * 1.5 * R, -0.75 * R, 0.6 * R, 0.3, 0, sd * 0.5); } // cheek folds
-  part(head, CON(), M(0x2a1a14), 0.55 * R, 0.6 * R, 0.55 * R, 0, -0.95 * R, 0.75 * R, Math.PI + 0.3); // the beak
+  const crown = dc(1.0); spike(V(0, 1, -0.15), crown.x, crown.y - 0.1 * R, crown.z, 1.9 * R, 0.5 * R, bone); // the crown spine
+  for (const ph of [-1.25, -0.65, 0, 0.65, 1.25]) for (let k = 0; k < 5; k++) { const t = 0.38 + k * 0.145, p = dp(t, ph), c = dc(t), out = V(p.x - c.x, 0, p.z - c.z).normalize(), lean = V(out.x, 0.55 + k * 0.12, out.z), big = ph === 0 ? 1 : Math.abs(ph) < 1 ? 0.82 : 0.66; spike(lean, p.x, p.y, p.z, (1.35 - k * 0.12) * R * big, 0.4 * R * big, k % 2 ? plate : bone); }
+  for (const ph of [-2.0, -1.6, -0.95, -0.32, 0.32, 0.95, 1.6, 2.0, Math.PI]) for (let k = 0; k < 4; k++) { const t0 = 0.14 + k * 0.2, p0 = dp(t0, ph), p1 = dp(t0 + 0.17, ph), o = new THREE.Mesh(CAP(), plate), d = V(p1.x - p0.x, p1.y - p0.y, p1.z - p0.z); o.scale.set(0.15 * R, d.length() * 0.9, 0.15 * R); o.position.set((p0.x + p1.x) / 2, (p0.y + p1.y) / 2, (p0.z + p1.z) / 2); const c = dc(t0 + 0.08); o.position.addScaledVector(V(o.position.x - c.x, 0, o.position.z - c.z).normalize(), 0.02 * R); o.quaternion.setFromUnitVectors(_up, d.normalize()); head.add(o); } // bony seams up the dome
+  for (const [ph, t] of [[-0.5, 0.5], [0.8, 0.62], [-1.1, 0.74], [0.3, 0.86]]) { const p = dp(t, ph), o = new THREE.Mesh(CAP(), dark); o.scale.set(0.06 * R, 0.6 * R, 0.06 * R); o.position.copy(p); o.quaternion.setFromUnitVectors(_up, V(0.3, 1, 0.1).normalize()); head.add(o); } // cracks
+  for (const sd of [-1, 1]) { for (let k = 0; k < 3; k++) spike(V(sd * 1, 0.15, -0.25), sd * 1.5 * R, 0.25 * R + k * 0.1 * R, -0.3 * R + k * 0.38 * R, 0.5 * R, 0.22 * R, plate); // side plates
+    spike(V(sd * 0.3, 1, 0.5), sd * 1.05 * R, 1.35 * R, 0.85 * R, 1.15 * R, 0.36 * R, plate); // the two horns over the brow
+    const ring = new THREE.Mesh(TOR(), bone); ring.scale.set(1.5 * R, 1.3 * R, 1.3 * R); ring.position.set(sd * 1.0 * R, 0.1 * R, 1.42 * R); ring.rotation.set(0.15, sd * 0.25, 0); head.add(ring); // the bony rim of the socket
+    part(head, SPH(), black, 1.15 * R, 0.85 * R, 0.9 * R, sd * 1.0 * R, 0.08 * R, 1.2 * R); part(head, SPH(), eye, 0.6 * R, 0.44 * R, 0.44 * R, sd * 1.0 * R, 0.06 * R, 1.48 * R); const halo = new THREE.Mesh(SPH(), new THREE.MeshBasicMaterial({ color: P.eye, transparent: true, opacity: 0.26, depthWrite: false })); halo.scale.set(1.15 * R, 0.9 * R, 0.9 * R); halo.position.set(sd * 1.0 * R, 0.06 * R, 1.48 * R); head.add(halo);
+    part(head, SPH(), bone, 1.0 * R, 0.55 * R, 0.8 * R, sd * 1.55 * R, -0.4 * R, 1.0 * R); // cheekbone
+    part(head, CAP(), dark, 0.28 * R, 0.7 * R, 0.28 * R, sd * 1.6 * R, -0.85 * R, 0.55 * R, 0.3, 0, sd * 0.5); // cheek folds
+    spike(V(0, -1, 0.15), sd * 0.78 * R, -0.95 * R, 1.25 * R, 0.55 * R, 0.2 * R, teeth); } // the two fangs
+  part(head, CON4(), black, 0.55 * R, 0.6 * R, 0.3 * R, 0, -0.45 * R, 1.5 * R); // the nasal hollow (point up)
+  part(head, SPH(), black, 2.1 * R, 0.5 * R, 0.9 * R, 0, -0.92 * R, 1.05 * R); // the dark of the mouth
+  for (let k = 0; k < 7; k++) { const x = (k - 3) * 0.26 * R; if (Math.abs(k - 3) === 3) continue; spike(V(0, -1, 0.12), x, -0.82 * R, 1.3 * R, 0.32 * R, 0.14 * R, teeth); } // the row of teeth
+  part(head, SPH(), bone, 2.4 * R, 0.45 * R, 1.0 * R, 0, -1.12 * R, 0.95 * R); // the jaw bone under the mouth
   mergeParts(head);
   // eight arms, thick at the root, with two rows of suckers underneath (one instanced mesh for all of them)
   const nSeg = 28, perArm = 10, suckers = new THREE.InstancedMesh(SPH_LO(), suck, nA * perArm * 2); suckers.frustumCulled = false; body.add(suckers);
@@ -247,8 +258,8 @@ function kraken(P, S) {
       A.tb.set(A.pts);
       for (let j = 0; j < perArm; j++) { const k = 3 + j * 2, s = k / (n - 1), rr = A.tb.r(s), fr = A.tb.frameAt(k); inner.set(0, A.pts[k].y * 0.35 + R * 2.2, 0).sub(A.pts[k]); inner.addScaledVector(fr.T, -inner.dot(fr.T)).normalize(); sideV.crossVectors(fr.T, inner).normalize(); for (const row of [-0.42, 0.42]) { off.copy(inner).multiplyScalar(Math.cos(row)).addScaledVector(sideV, Math.sin(row)); _dummy.position.copy(A.pts[k]).addScaledVector(off, rr * 0.92); _dummy.quaternion.setFromUnitVectors(_up, off); const d = rr * 0.9; _dummy.scale.set(d, d * 0.45, d); _dummy.updateMatrix(); suckers.setMatrixAt(si++, _dummy.matrix); } } }
     suckers.instanceMatrix.needsUpdate = true;
-    body.position.y = lerp(-R * 0.55, -R * 6.5, st.dive) + Math.sin(t * 0.8) * R * 0.08; head.rotation.x = Math.sin(t * 0.6) * 0.04 - st.attack * 0.18; }
-  return { g, size: R * 6, top: R * 4.2, anim, mats: [mat], giant: S > 6 };
+    body.position.y = lerp(-R * 0.15, -R * 6.5, st.dive) + Math.sin(t * 0.8) * R * 0.08; head.rotation.x = Math.sin(t * 0.6) * 0.04 - st.attack * 0.18; }
+  return { g, size: R * 6, top: R * 5.8, anim, mats: [mat], giant: S > 6 };
 }
 
 // ---------- giant crab ----------

@@ -62,7 +62,7 @@ const STACK_PAL_HEL = {
   mist: { stone: [0x3e3440, 0x342a36, 0x4a3e4c, 0x2e2430], top: 0x5a3a6a, wet: 0x1a121c, algae: 0x3a2a44 },
   warm: { stone: [0xd8d0bc, 0xc8c0aa, 0xe4dcc8, 0xbab098], top: 0x8a6aa8, wet: 0x6a6050, algae: 0x8a7a9a },
 };
-const LAIRS_MID = { kraken: { name: "Kraken's Maw", x: 420, z: -400, monster: 'kraken', need: 3, icon: '🦑' }, jorm: { name: "Serpent's Coil", x: -60, z: -520, monster: 'jormungandr', need: 4, icon: '🐍' }, rlyeh: { name: "R'lyeh", x: -440, z: 380, monster: 'elder', need: 4, icon: '👁' } };
+const LAIRS_MID = { squid: { name: 'Ink Deep', x: 500, z: 320, monster: 'squid', need: 2, icon: '🦑', late: true }, kraken: { name: "Kraken's Maw", x: 420, z: -400, monster: 'kraken', need: 3, icon: '🐙' }, jorm: { name: "Serpent's Coil", x: -60, z: -520, monster: 'jormungandr', need: 4, icon: '🐍' }, rlyeh: { name: "R'lyeh", x: -440, z: 380, monster: 'elder', need: 4, icon: '👁' } };
 
 export const LAIRS = LAIRS_MID;
 // island shape: radius at angle a (with lobes)
@@ -72,7 +72,7 @@ export function buildWorld(scene, seed = 20261019, realm = 'mid') {
   const hel = realm === 'hel', BIOME = hel ? BIOME_HEL : BIOME_MID, STACK_PAL = hel ? STACK_PAL_HEL : STACK_PAL_MID, LAIRS = hel ? LAIRS_HEL : LAIRS_MID, NAMES = hel ? HARBOR_NAMES_HEL : HARBOR_NAMES, REG = hel ? REGIONS_HEL : REGIONS;
   const r = rand(seed), group = new THREE.Group(); scene.add(group);
   const islands = [], harbors = [], wrecks = [], rocks = [], bergs = [], lairs = [], basalt = [], corals = [], stones = [], floes = [], wisps = [], volcanoes = [];
-  const clear = (x, z, rad) => { if (Math.hypot(x, z) < 40 + rad) return false; if (hel && Math.hypot(x - GATES.hel.x, z - GATES.hel.z) < 46 + rad) return false; for (const l of Object.values(LAIRS)) if (Math.hypot(x - l.x, z - l.z) < 70 + rad) return false; for (const i of islands) if (Math.hypot(x - i.x, z - i.z) < i.R * 1.25 + rad + 26) return false; return true; };
+  const clear = (x, z, rad) => { if (Math.hypot(x, z) < 40 + rad) return false; if (hel && Math.hypot(x - GATES.hel.x, z - GATES.hel.z) < 46 + rad) return false; for (const l of Object.values(LAIRS).filter((q) => !q.late)) if (Math.hypot(x - l.x, z - l.z) < 70 + rad) return false; for (const i of islands) if (Math.hypot(x - i.x, z - i.z) < i.R * 1.25 + rad + 26) return false; return true; };
   // home island just north of the start, then harbour islands in each sea, then the rest
   const place = (x, z, R, H, region, harbor = null) => { const shape = islandShape(r); const isl = { x, z, R, H, region, shape, harbor, rot: r() * 6.28 }; islands.push(isl); return isl; };
   place(0, -70, 34, 13, 'home', 0);
@@ -272,6 +272,8 @@ function lair(key, r, hel) { const g = new THREE.Group(), st = grp(g);
   if (key === 'rlyeh') { const st1 = M(0x24302a, 'flat'), glow = M(0x6aff9a, 'glow');
     for (let k = 0; k < 10; k++) { const a = (k / 10) * 6.28, x = Math.cos(a) * 46, z = Math.sin(a) * 46; const p = grp(st, x, -2, z); p.rotation.set((r() - 0.5) * 0.5, a, (r() - 0.5) * 0.6); part(p, BOX(), st1, 4, 18 + r() * 12, 4, 0, 8, 0); part(p, BOX(), glow, 0.3, 6, 4.1, 2.05, 9, 0); part(p, BOX(), glow, 4.1, 0.3, 0.3, 0, 13, 2.05); }
     for (let k = 0; k < 4; k++) { const a = r() * 6.28; const p = grp(st, Math.cos(a) * 22, -3, Math.sin(a) * 22); p.rotation.set(0.6, a, 0.3); part(p, BOX(), st1, 9, 14, 3, 0, 5, 0); } }
+  else if (key === 'squid') { const rock = M(0x2e3640, 'flat'), ink = M(0x6ab0ff, 'glow'), mast = M(0x4a3828); for (let k = 0; k < 10; k++) { const a = (k / 10) * 6.28; const p = grp(st, Math.cos(a) * 46, -1, Math.sin(a) * 46); p.rotation.set(0, -a, 0.3 + r() * 0.2); part(p, CON(), rock, 3.2, 20 + r() * 10, 3.2, 0, 9, 0, 0, 0, 0.2); part(p, SPH_LO(), ink, 1.0, 1.0, 1.0, 0, 2.5, 0); }
+    for (let k = 0; k < 5; k++) { const p = grp(st, (r() - 0.5) * 40, -2, (r() - 0.5) * 40); p.rotation.set(0.7 + r() * 0.3, r() * 6, 0.4); part(p, CON(), mast, 0.9, 16, 0.9, 0, 5, 0); } flattenInto(st); mergeParts(st); return g; } // Ink Deep: basalt spires tipped with ink-light round the masts of ships it has pulled under
   else if (key === 'kraken') { const bone = M(0xe0d8c4); for (let k = 0; k < 10; k++) { const a = (k / 10) * 6.28; const p = grp(st, Math.cos(a) * 46, -1, Math.sin(a) * 46); p.rotation.set(0, -a, 0.35); part(p, CON(), bone, 3, 22 + r() * 8, 3, 0, 10, 0, 0, 0, 0.25); } for (let k = 0; k < 5; k++) { const p = grp(st, (r() - 0.5) * 40, -1, (r() - 0.5) * 40); p.rotation.set(0.8, r() * 6, 0.6); part(p, CYL(), M(0x3a2414), 1, 12, 1, 0, 3, 0); } }
   else { const stone = M(0x4a5a52, 'flat'), rune = M(0x7affc8, 'glow'); for (let k = 0; k < 10; k++) { const a = (k / 10) * 6.28, x = Math.cos(a) * 46, z = Math.sin(a) * 46; const p = grp(st, x, -1, z); p.rotation.y = -a; part(p, RBX(), stone, 3.5, 16, 3.5, 0, 7, 0); part(p, BOX(), rune, 0.2, 9, 1.4, 1.8, 8, 0); } }
   flattenInto(st); mergeParts(st); return g; }

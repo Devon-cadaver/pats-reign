@@ -1,7 +1,7 @@
 // Valhalla's Tide: a Viking ship on a monster sea. Sail with the ship's wheel and the sail telegraph, a tap on the sea or the map; fish up
 // supplies, fight sea monsters and raiders in battle mini-games, upgrade at harbours, ride out storms (catch lightning
 // for Thor's Fury), rogue waves, waterspouts and sea tornadoes, maelstroms, ambushes, raider fleets and treasure ships,
-// and slay the three legends to reign.
+// and slay the four legends to reign.
 import * as THREE from 'three';
 import { createOcean, createFoam } from './ocean.js';
 import { createEnv } from './env.js';
@@ -108,14 +108,14 @@ const ATK = { shark: { L: 'lunges from the right', R: 'lunges from the left', U:
   octopus: { L: 'swings a tentacle from the right', R: 'swings a tentacle from the left', U: 'slams down its arms' }, kraken: { L: 'sweeps a tentacle from the right', R: 'sweeps a tentacle from the left', U: 'drags at the hull' }, squid: { L: 'lashes a tentacle from the right', R: 'lashes a tentacle from the left', U: 'drags at the hull' }, crab: { L: 'snaps a claw from the right', R: 'snaps a claw from the left', U: 'crushes with both claws' },
   angler: { L: 'snaps from the right', R: 'snaps from the left', U: 'lunges with its jaws' }, leviathan: { L: 'snaps three jaws from the right', R: 'snaps three jaws from the left', U: 'strikes with all three heads' }, megalodon: { L: 'rams from the right', R: 'rams from the left', U: 'surges up to swallow you whole' }, jelly: { L: 'stings from the right', R: 'stings from the left', U: 'pulses' },
   elder: { L: 'claws from the right', R: 'claws from the left', U: 'calls the crushing deep' }, jormungandr: { L: 'coils in from the right', R: 'coils in from the left', U: 'strikes with venom' } };
-const VBIAS = { frost: { 'serpent:5': 5, 'leviathan:1': 3, 'megalodon:0': 2, 'octopus:3': 2, 'jelly:1': 2 }, storm: { 'megalodon:2': 3, 'serpent:1': 3, 'serpent:6': 2, 'crab:2': 5, 'eel:0': 3, 'eel:2': 3 }, mist: { 'megalodon:3': 3, 'serpent:4': 5, 'octopus:3': 4, 'angler:0': 2, 'eel:1': 2, 'squid:1': 3 }, warm: { 'megalodon:1': 3, 'serpent:3': 5, 'crab:0': 3, 'shark:1': 2, 'shark:2': 2, 'jelly:0': 2, 'jelly:2': 2 } };
+const VBIAS = { frost: { 'serpent:5': 5, 'leviathan:1': 3, 'megalodon:0': 2, 'octopus:3': 2, 'jelly:1': 2 }, storm: { 'megalodon:2': 3, 'serpent:1': 3, 'serpent:6': 2, 'crab:2': 5, 'eel:0': 3, 'eel:2': 3 }, mist: { 'megalodon:3': 3, 'serpent:4': 5, 'octopus:3': 4, 'angler:0': 2, 'eel:1': 2 }, warm: { 'megalodon:1': 3, 'serpent:3': 5, 'crab:0': 3, 'shark:1': 2, 'shark:2': 2, 'jelly:0': 2, 'jelly:2': 2 } };
 // hunting grounds (v1.1.4, Sean): where each beast is most likely found; drawn on the chart, spawns there favour that beast
-const GROUNDS = [{ type: 'shark', name: 'Shark waters', x: 140, z: 120, r: 80 }, { type: 'shark', name: 'Shark waters', x: 120, z: 420, r: 80 }, { type: 'megalodon', name: 'Megalodon deep', x: 430, z: 150, r: 85 }, { type: 'megalodon', name: 'Megalodon deep', x: -470, z: -160, r: 85 }, { type: 'serpent', name: 'Serpent shoals', x: 140, z: -430, r: 80 }, { type: 'leviathan', name: 'Leviathan deep', x: -150, z: -400, r: 80 }, { type: 'eel', name: 'Eel reefs', x: 400, z: -150, r: 75 }, { type: 'octopus', name: 'Octopus holes', x: -400, z: 150, r: 75 }, { type: 'angler', name: 'Angler deeps', x: -430, z: -40, r: 75 }, { type: 'crab', name: 'Crab flats', x: -150, z: 400, r: 75 }, { type: 'squid', name: 'Squid deep', x: -430, z: -330, r: 80 }];
-const GICON = { shark: '🦈', megalodon: '🦷', serpent: '🐉', eel: '⚡', octopus: '🐙', crab: '🦀', angler: '🎣', leviathan: '🐲', squid: '🦑' };
+const GROUNDS = [{ type: 'shark', name: 'Shark waters', x: 140, z: 120, r: 80 }, { type: 'shark', name: 'Shark waters', x: 120, z: 420, r: 80 }, { type: 'megalodon', name: 'Megalodon deep', x: 430, z: 150, r: 85 }, { type: 'megalodon', name: 'Megalodon deep', x: -470, z: -160, r: 85 }, { type: 'serpent', name: 'Serpent shoals', x: 140, z: -430, r: 80 }, { type: 'leviathan', name: 'Leviathan deep', x: -150, z: -400, r: 80 }, { type: 'eel', name: 'Eel reefs', x: 400, z: -150, r: 75 }, { type: 'octopus', name: 'Octopus holes', x: -400, z: 150, r: 75 }, { type: 'angler', name: 'Angler deeps', x: -430, z: -40, r: 75 }, { type: 'crab', name: 'Crab flats', x: -150, z: 400, r: 75 }];
+const GICON = { shark: '🦈', megalodon: '🦷', serpent: '🐉', eel: '⚡', octopus: '🐙', crab: '🦀', angler: '🎣', leviathan: '🐲' };
 function grounds() { if (!world.grounds) { const out = [], far = (x, z, list, min) => list.every((o) => Math.hypot(o.x - x, o.z - z) >= min), docks = world.harbors.map((h) => h.dock); for (const g of GROUNDS) { let x = g.x, z = g.z; for (let k = 0; k < 240; k++) { const a = k * 2.4, d = k * 3.5, tx = g.x + Math.cos(a) * d, tz = g.z + Math.sin(a) * d; if (Math.abs(tx) < HALF - 70 || Math.abs(tz) < HALF - 70) { if (Math.abs(tx) < HALF - 70 && Math.abs(tz) < HALF - 70 && !world.blockAt(tx, tz, 36) && far(tx, tz, docks, 110) && far(tx, tz, world.lairs, 120) && far(tx, tz, out, 110)) { x = tx; z = tz; break; } } } out.push({ ...g, x, z }); } world.grounds = out; } return world.grounds; }
 function groundAt(x, z, pad = 0) { for (const g of grounds()) if (Math.hypot(x - g.x, z - g.z) < g.r + pad) return g; return null; }
 function groundOpen(g) { return spawnTable(world.regionAt(g.x, g.z), isNight()).some((e) => e.type === g.type); }
-const REGION_BIAS = { frost: { serpent: 2, leviathan: 2, crab: 0.5, squid: 1.5 }, storm: { eel: 3, jelly: 2, octopus: 1.5 }, mist: { angler: 3, octopus: 1.5, squid: 2, ghost: 3, raider: 1.5 }, warm: { shark: 2, crab: 3, jelly: 1.5 }, home: { shark: 1.5, jelly: 1.5 } };
+const REGION_BIAS = { frost: { serpent: 2, leviathan: 2, crab: 0.5 }, storm: { eel: 3, jelly: 2, octopus: 1.5 }, mist: { angler: 3, octopus: 1.5, ghost: 3, raider: 1.5 }, warm: { shark: 2, crab: 3, jelly: 1.5 }, home: { shark: 1.5, jelly: 1.5 } };
 
 // ---------- player ----------
 const P = { tier: 0, up: { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 0, oars: 0, nets: 0, lights: 0, compass: 0, hooks: 0 }, res: { w: 20, i: 5, g: 40, f: 0, s: 0 }, hp: 100, legends: {}, kills: 0, home: 0, won: false, tod: 0.16, wreck: null, prizes: [], maps: [], relics: {}, skin: 'pats', realm: 'mid', hull: 'oak', sailD: 'pats', owned: { h: ['oak'], s: ['pats'] }, helWon: false, reborn: {}, hall: 0, tithe: 0, trials: {}, st: { k: {}, d: {}, ships: 0, fish: 0, digs: 0, souls: 0 } };
@@ -234,7 +234,7 @@ const danger = (lv) => { const d = lv - P.tier; return d < -0.6 ? '#7dff3a' : d 
 const DELTA = [[-1, 0.2], [-0.5, 0.2], [0, 0.25], [0.5, 0.15], [1, 0.12], [1.5, 0.08]];
 function rollDelta() { let r = Math.random(); for (const [d, p] of DELTA) { r -= p; if (r <= 0) return d; } return 0; }
 function spawnTable(region, night) { const out = [], tier = P.tier, c = Math.min(tier, 4.6), bias = REGION_BIAS[region] || {};
-  for (const [type, lvs] of Object.entries(MLV)) { if (type === 'kraken' || type === 'elder' || type === 'jormungandr') continue; lvs.forEach((lv, v) => { if (lv > tier + 1.7) return; let w = (bias[type] || 1) * Math.exp(-((lv - c) ** 2) / 4.5) * (lv > tier + 0.8 ? 0.45 : 1); if (type === 'angler') w *= night ? 3 : 0.3; if (type === 'serpent' && tier === 0) w *= 0.6; if (type === 'megalodon') w *= v === 4 ? (night ? 1 : 0.08) : 0.35; w *= (VBIAS[region] || {})[type + ':' + v] || 1; if (w > 0.01) out.push({ type, v, lv, w }); }); }
+  for (const [type, lvs] of Object.entries(MLV)) { if (type === 'kraken' || type === 'squid' || type === 'elder' || type === 'jormungandr') continue; lvs.forEach((lv, v) => { if (lv > tier + 1.7) return; let w = (bias[type] || 1) * Math.exp(-((lv - c) ** 2) / 4.5) * (lv > tier + 0.8 ? 0.45 : 1); if (type === 'angler') w *= night ? 3 : 0.3; if (type === 'serpent' && tier === 0) w *= 0.6; if (type === 'megalodon') w *= v === 4 ? (night ? 1 : 0.08) : 0.35; w *= (VBIAS[region] || {})[type + ':' + v] || 1; if (w > 0.01) out.push({ type, v, lv, w }); }); }
   out.push({ type: 'raider', v: -1, lv: 0.4, w: 1.6 * (bias.raider || 1) * (P.realm === 'hel' ? 1.4 : 1) });
   if ((night || region === 'mist') && tier >= 2 && P.realm !== 'hel') out.push({ type: 'ghost', v: -1, lv: 3.5, w: 0.8 * (bias.ghost || 1) });
   return out; }
@@ -330,8 +330,8 @@ function killMon(mon) { if (mon.dead) return; mon.dead = 0.01; mon.tag.remove();
   if (mon.type === 'ghost' && !P.relics.bane && !P.maps.some((m) => m.kind === 'relic')) setTimeout(() => giveMap('relic'), 1500); else if (mon.naval && Math.random() < (mon.treasure ? 0.6 : 0.12)) setTimeout(() => giveMap(), 1600);
   if (mon.boss && mon.lair && mon.reborn) { const n = (P.reborn[mon.lair] = Math.min(5, (P.reborn[mon.lair] || 0) + 1)); say('<b>' + mon.name.toUpperCase() + ' FALLS AGAIN!</b> Rebirth ' + n + ' of 5: it will rise stronger still.', 5); sfx.horn(); save(); }
   else if (mon.boss && mon.lair) { P.legends[mon.lair] = true; const L0 = world.lairs.find((l) => l.key === mon.lair); if (L0) L0.beaten = true; const hel = P.realm === 'hel', n = legendCount(hel);
-    say('<b>' + mon.name.toUpperCase() + ' IS SLAIN!</b> Legends of ' + (hel ? 'Helheim' : 'Midgard') + ': ' + n + ' / 3', 5); sfx.horn(); setTimeout(() => legendDesigns(mon.lair), 5200);
-    if (!hel && n >= 3 && !P.won) setTimeout(winGame, 2500); if (hel && n >= 3 && !P.helWon) { P.helWon = true; setTimeout(helWin, 2500); } save(); } }
+    say('<b>' + mon.name.toUpperCase() + ' IS SLAIN!</b> Legends of ' + (hel ? 'Helheim' : 'Midgard') + ': ' + n + ' / ' + Object.keys(hel ? LAIRS_HEL : LAIRS).length, 5); sfx.horn(); setTimeout(() => legendDesigns(mon.lair), 5200);
+    if (!hel && n >= Object.keys(LAIRS).length && !P.won) setTimeout(winGame, 2500); if (hel && n >= Object.keys(LAIRS_HEL).length && !P.helWon) { P.helWon = true; setTimeout(helWin, 2500); } save(); } }
 const legendCount = (hel) => Object.keys(hel ? LAIRS_HEL : LAIRS).filter((k) => P.legends[k]).length;
 // a slain legend leaves something for the shipwright: its hide for a hull, its likeness for a sail
 function legendDesigns(key) { sagaCheck(); const got = []; for (const [k, d] of Object.entries(HULLS)) if (d.got.legend === key && !P.owned.h.includes(k)) { P.owned.h.push(k); got.push(d.name + (/hull$/i.test(d.name) ? '' : ' hull')); }
@@ -502,7 +502,7 @@ $('pauseBtn').addEventListener('click', broadLabel);
 // slam down on your deck: shoot them first (tap one, or FIRE / Space for the one about to strike); each one you cut down hurts
 // the Kraken. Now and then its great eye opens (a gold ring): hit it for heavy damage, and every rearing tentacle flinches
 // away. Below half its health it sends them faster and more at once. FLEE breaks its grip at a cost.
-const LEGEND_KIND = { kraken: 'kraken', jormungandr: 'jorm', elder: 'elder' };
+const LEGEND_KIND = { kraken: 'kraken', squid: 'kraken', jormungandr: 'jorm', elder: 'elder' }; // the Great Squid fights the tentacle arena too
 // the action monster fight (v1.1.0): how each kind of beast strikes when ACTION BATTLES is on
 const BEAST_KIND = { shark: 'bite', megalodon: 'bite', angler: 'bite', serpent: 'slam', eel: 'slam', leviathan: 'slam', octopus: 'grab', squid: 'grab', crab: 'claw' };
 const BEAST_HINT = { bite: 'It circles under the water. When the red ring appears, turn or change speed to get out of it, or shoot it the moment it rises (SPEARS turns green) to stop the strike and daze it!', slam: 'It rears up to crash across your deck: when the red ring appears, turn or change speed to get clear, then SHOOT it while it is up!', grab: 'It comes for the rail to drag your crew overboard: shoot it as it comes, and if it grabs you, tap FIRE fast to hack it off!', claw: 'It climbs the side to tear at the planks: shoot it as it comes, and keep shooting while it clings on!' };
@@ -510,7 +510,7 @@ const lgRingGeo = (() => { const g = new THREE.RingGeometry(0.8, 1, 36); g.rotat
 function legendRing(color, geo = lgRingGeo) { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthTest: false, depthWrite: false, side: THREE.DoubleSide })); m.renderOrder = 7; scene.add(m); return m; }
 const eyeRingGeo = new THREE.TorusGeometry(1, 0.09, 6, 40);
 // the Kraken's eye in the world (the same spot the giant camera frames)
-function krakenEye(mon) { const Rk = mon.size / 6, sy = Math.sin(mon.yaw), cy = Math.cos(mon.yaw), lx = 0.98 * Rk, lz = 1.3 * Rk; return [mon.x + lx * cy + lz * sy, mon.g.position.y + Rk * 0.72, mon.z + lz * cy - lx * sy, Rk]; }
+function krakenEye(mon) { const Rk = mon.size / 6, sy = Math.sin(mon.yaw), cy = Math.cos(mon.yaw), sq = mon.type === 'squid', lx = (sq ? 0.9 : 0.98) * Rk, lz = (sq ? 1.15 : 1.3) * Rk; return [mon.x + lx * cy + lz * sy, mon.g.position.y + Rk * (sq ? 0.45 : 1.12), mon.z + lz * cy - lx * sy, Rk]; }
 function startLegend(mon) {
   const kind = LEGEND_KIND[mon.type] || (BROAD.on && !mon.naval && !mon.passive && !mon.boss && BEAST_KIND[mon.type] ? 'beast' : null); if (!kind) return false;
   const t = T(), young = !!mon.young, L = { kind, young, reload: 0.6, tents: [], spawnT: 1.4, eyeT: rnd(6, 8), eyeOpen: 0, eyeMark: null };
@@ -536,7 +536,7 @@ const legendReload = () => (battle && battle.legend && battle.legend.grab ? 0.2 
 function krakenTentacle(L) { const t = T(), mon = battle.mon, taken = L.tents.map((x) => x.a), behind = Math.atan2(boat.x - mon.x, boat.z - mon.z); let a = 0;
   for (let k = 0; k < 16; k++) { a = Math.random() * Math.PI * 2; if (Math.abs(angDiff(a, behind)) > 1.0 && taken.every((b) => Math.abs(angDiff(a, b)) > 0.7)) break; }
   const r = t.L * 0.5 + rnd(4.5, 8), bx = boat.x + Math.sin(a) * r, bz = boat.z + Math.cos(a) * r, n = 18;
-  const tb = tentacle(SPECIES.kraken.variants[0], L.young ? 0.42 : 0.66, n, 0, glowVC(), null); tb.mesh.frustumCulled = false; tb.mesh.visible = false; scene.add(tb.mesh);
+  const tb = tentacle(SPECIES[mon.type].variants[0], L.young ? 0.42 : 0.66, n, 0, glowVC(), null); tb.mesh.frustumCulled = false; tb.mesh.visible = false; scene.add(tb.mesh);
   const ring = legendRing(0xff3a2a); ring.position.set(bx, ocean.heightAt(bx, bz) + 0.3, bz); ring.scale.setScalar(2.4);
   return { a, r, bx, bz, tb, ring, pts: Array.from({ length: n }, () => new THREE.Vector3()), phase: 'warn', t: 0, hp: L.young ? 1 : 3, len: r + 3.5 }; }
 // a tentacle's shape: it grows up out of the water, bending toward your ship by `lean` at the root and `curl` along its length
@@ -1127,7 +1127,7 @@ function hallCard(list) { if (!atHarbor || atHarbor.idx !== 0) return; const n =
 // ---------- the jarl's bounties (v0.8.0): every harbour's jarl posts a job: hunt a kind of beast, sink ships, clear a sea, fish,
 // break a fleet or slay a legend's young. Take one at a time; it counts as you sail (in the realm you took it), and any harbour
 // pays it out. The pay grows with your ship, and in Helheim it includes souls ----------
-const BTYPE = { shark: ['sharks', 5, 1], serpent: ['sea serpents', 3, 1.6], eel: ['lightning eels', 4, 1.2], octopus: ['giant octopuses', 3, 1.5], crab: ['giant crabs', 4, 1.3], angler: ['anglers', 3, 1.5], megalodon: ['megalodons', 2, 2.5], leviathan: ['leviathans', 2, 2.5], squid: ['giant squids', 2, 2.4] };
+const BTYPE = { shark: ['sharks', 5, 1], serpent: ['sea serpents', 3, 1.6], eel: ['lightning eels', 4, 1.2], octopus: ['giant octopuses', 3, 1.5], crab: ['giant crabs', 4, 1.3], angler: ['anglers', 3, 1.5], megalodon: ['megalodons', 2, 2.5], leviathan: ['leviathans', 2, 2.5] };
 const offers = {};
 function makeBounty() { const hel = P.realm === 'hel', seas = ['home', 'frost', 'storm', 'mist', 'warm'], here = {};
   for (const sea of seas) for (const e of spawnTable(sea, false)) if (BTYPE[e.type]) here[e.type] = 1;
@@ -1180,7 +1180,7 @@ $('wrName').onclick = () => { let n = null; try { n = prompt('Name your ship (up
 $('wrHull').onclick = () => { wrTab = 'h'; rebuildShip(); drawWright(); }; $('wrSail').onclick = () => { wrTab = 's'; rebuildShip(); drawWright(); }; $('wrDone').onclick = () => closeWright();
 
 // ---------- lairs (legend bosses) ----------
-const LAIR_NAMES = { kraken: 'The Kraken', jorm: 'Jormungandr', rlyeh: 'The Elder One', hafgufa: 'Hafgufa', surtr: 'Surtr the Burning', nidhogg: 'Nidhögg' }, LAIR_NEED = { kraken: 2, jorm: 3, rlyeh: 4, hafgufa: 5, surtr: 6, nidhogg: 6 };
+const LAIR_NAMES = { squid: 'The Great Squid', kraken: 'The Kraken', jorm: 'Jormungandr', rlyeh: 'The Elder One', hafgufa: 'Hafgufa', surtr: 'Surtr the Burning', nidhogg: 'Nidhögg' }, LAIR_NEED = { squid: 1, kraken: 2, jorm: 3, rlyeh: 4, hafgufa: 5, surtr: 6, nidhogg: 6 };
 // Helheim's three legends are the old fights grown dead and far stronger: Hafgufa, mother of every kraken, under the ice of
 // Niflhel; Surtr the fire giant warding his forge in Muspelheim; Nidhogg the corpse-dragon gnawing the World Tree's roots
 const legendLv = (L) => MLV[L.monster][0] + (LAIRS_HEL[L.key] ? 2.6 : 0);
@@ -1189,14 +1189,14 @@ const legendLv = (L) => MLV[L.monster][0] + (LAIRS_HEL[L.key] ? 2.6 : 0);
 // you: flee, and it sinks back into the deep once you are away. Stay in a lair and another rises every minute or two,
 // each wave a little tougher (and richer), and the chance of the legend itself grows. Leaving the lair resets the waves.
 // Once a legend is slain its young still rise there for anyone who wants the gold.
-const YOUNG_NAMES = { kraken: 'Kraken Hatchling', jorm: "Jormungandr's Whelp", rlyeh: 'Spawn of the Elder One', hafgufa: "Hafgufa's Brood", surtr: 'Ember-spawn of Surtr', nidhogg: 'Corpse-wyrm of Nidhögg' }, YOUNG_SCALE = { kraken: 3.5, jormungandr: 0.7, elder: 1.1 }, PAPA_CHANCE = 0.2;
+const YOUNG_NAMES = { squid: 'Squid Spawn', kraken: 'Kraken Hatchling', jorm: "Jormungandr's Whelp", rlyeh: 'Spawn of the Elder One', hafgufa: "Hafgufa's Brood", surtr: 'Ember-spawn of Surtr', nidhogg: 'Corpse-wyrm of Nidhögg' }, YOUNG_SCALE = { kraken: 3.5, squid: 3.5, jormungandr: 0.7, elder: 1.1 }, PAPA_CHANCE = 0.2;
 let lairWarned = {}; const lairCool = {}, lairWave = {};
 // lair trials: holding out to the fifth and the tenth wave at a lair pays once (souls in Helheim)
 function lairTrial(L, w) { const r = w >= 10 ? 2 : 1; P.trials = P.trials || {}; if ((P.trials[L.key] || 0) >= r) return; P.trials[L.key] = r; const k = P.tier + 1, rw = { g: Math.round(150 * k * r * r), i: 20 * k * r, s: LAIRS_HEL[L.key] ? (r === 1 ? 100 : 300) : 0 }; setTimeout(() => { reward(rw, boat.x, 4, boat.z); say('🏆 <b>Trial of ' + L.name + ': wave ' + w + '!</b> ' + rewardHtml(rw), 5); sfx.horn(); }, 1500); save(); }
 function lairSpawn(L, big) { const w = (lairWave[L.key] = (lairWave[L.key] || 0) + 1), slain = L.beaten || !!P.legends[L.key], hl = !!LAIRS_HEL[L.key], rb = P.reborn[L.key] || 0; if (w === 5 || w === 10) lairTrial(L, w);
   // a slain legend can rise again in the later waves ('Reborn'), each time half a level stronger and richer, five times at most
   const reborn = slain && P.tier >= LAIR_NEED[L.key] + 1 && w >= 2 && rb < 5 && Math.random() < Math.min(0.4, 0.12 + 0.06 * (w - 2));
-  if (reborn || (!slain && (big || Math.random() < Math.min(0.6, PAPA_CHANCE + 0.07 * (w - 1))))) { const lv = legendLv(L) + (reborn ? 0.5 * (rb + 1) : 0) + (big ? 0 : 1), mon = spawnMon({ type: L.monster, v: hl && L.monster === 'jormungandr' ? 1 : 0, lv }, L.x, L.z, { boss: true, lair: L.key, scale: (L.monster === 'kraken' ? 17.5 : L.monster === 'elder' ? 1.5 : 1) * (hl ? 1.15 : 1) }); mon.name = LAIR_NAMES[L.key] + (reborn ? ' Reborn' : ''); mon.papa = !big; mon.reborn = reborn;
+  if (reborn || (!slain && (big || Math.random() < Math.min(0.6, PAPA_CHANCE + 0.07 * (w - 1))))) { const lv = legendLv(L) + (reborn ? 0.5 * (rb + 1) : 0) + (big ? 0 : 1), mon = spawnMon({ type: L.monster, v: hl && L.monster === 'jormungandr' ? 1 : 0, lv }, L.x, L.z, { boss: true, lair: L.key, scale: (L.monster === 'kraken' || L.monster === 'squid' ? 17.5 : L.monster === 'elder' ? 1.5 : 1) * (hl ? 1.15 : 1) }); mon.name = LAIR_NAMES[L.key] + (reborn ? ' Reborn' : ''); mon.papa = !big; mon.reborn = reborn;
     warn('⚠ ' + mon.name.toUpperCase() + (reborn ? ' RISES AGAIN!' : ' RISES!') + ' ⚠' + (big ? '' : '<br>Your ' + T().name + ' is far too small: FLEE!'), big ? 4 : 6); sfx.horn(); sfx.thunder(); flash = 1; return; }
   const lv = clamp(P.tier + 1 + 0.4 * (w - 1) + (hl ? 0.5 : 0), 1, Math.max(legendLv(L) - 0.3, P.tier + 1.5)), mon = spawnMon({ type: L.monster, v: 0, lv }, L.x, L.z, { lair: L.key, scale: YOUNG_SCALE[L.monster] || 0.6 });
   Object.assign(mon, { name: YOUNG_NAMES[L.key], young: L.key, state: 'rise', rise: 0, dive: 1, riseK: 0.6, hunt: true });

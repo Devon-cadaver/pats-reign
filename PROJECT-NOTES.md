@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.2.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.2.1. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.2.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.2.1: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -675,6 +675,18 @@ disagree with this file, this file wins.
   the Deep deed, Mist and Frost sea bias, a Squid deep hunting ground). Bestiary: a Giant Squid family (the old kraken
   pictures copied to squid-N), new kraken-N / -full / -giant pictures rendered headlessly (scratchpad rosterkraken.cjs).
   Tests: scratchpad krakenshot.cjs (showcase shots), squidtest.cjs (squid fights, the lair fight, the ground).
+- v1.2.1 (Sean: "I love it" to the skull candidate; "make the old kraken a different monster name and spawn somewhere
+  else with its own arena"): the Kraken head is the skull version: a tall tapered dome (a taperTube lathe along a leaning
+  axis, mottled by skin()) with a crown spine, five meridians of spines, bony seams and cracks, bony TOR rims round
+  deep sockets, cheekbones, a nasal hollow (CON4), a jaw with a row of teeth and two fangs; the body sits higher
+  (-0.15 R at the surface) so the face clears the water, top R*5.8, krakenEye y +1.12 Rk. The Giant Squid is no longer
+  an open-sea beast: it is Midgard's fourth legend, The Great Squid, at Ink Deep (500, 320: open water south of
+  Thunderhaven; LAIRS_MID.squid has late: true so world.js clear() ignores it and the island layout is unchanged;
+  lair() builds basalt spires tipped with ink-light round sunken masts). LEGEND_KIND squid -> kraken (the tentacle
+  arena fight), LAIR_NEED 1 (a Karvi), legendLv 3.6, boss scale 17.5, young Squid Spawn at 3.5; krakenTentacle takes
+  the colours from SPECIES[mon.type]; krakenEye is per type. Winning Midgard needs all four legends (legendCount vs
+  Object.keys(LAIRS).length; the banner says n / 4). Squid removed from spawnTable, BTYPE, the grounds and the region
+  bias. Bestiary: The Great Squid is a legend card (old pictures). Tests: scratchpad lairtest.cjs.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
