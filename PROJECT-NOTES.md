@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.12.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.12.1. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,10 +49,11 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.12.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.12.1: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
-  memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
+  memory), push when a batch is done, and when he says "zip" run npm run build:itch (dist-itch: no BOSS ARENA button, his
+  test tool stays on GitHub only) and zip dist-itch into release/itch/valhallas-tide-vX.Y.Z-html5.zip with
   C:/Windows/System32/tar.exe (not PowerShell) and send it with SendUserFile. The itch page settings and text are in
   release/itch/itch-page.md; the trailer song, clip prompts, six 540x960 clips, banners, cover and background GIFs are in
   release/itch (the wide-sides background GIF render and a fight-tester rerun were parked when his PC pegged at 99%).
@@ -889,6 +890,9 @@ disagree with this file, this file wins.
   hull shots x 1.25, BOARD HER whatever her hull (boardTarget). On deck she heaves to for 3-5 s (an aimed shot takes a few
   seconds). Pausing mid-aim drops the shot (pauseBtn -> sgame.interrupt). The hint under her name says what to do.
   CLASSIC ship fights are unchanged. Proof: scratchpad partstest.cjs (8 checks, phone, tablet, portrait).
+- v1.12.1 (Sean: keep the boss arena out of the itch zip, only he tests with it on GitHub): main.js adds the BOSS ARENA
+  button only when import.meta.env.MODE !== 'itch'; npm run build:itch builds to dist-itch with --mode itch (ignored by
+  git); the zip is made from dist-itch. The GitHub Pages build (npm run build) keeps the arena.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).

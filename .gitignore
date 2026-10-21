@@ -1,4 +1,5 @@
 node_modules
 dist
+dist-itch
 .playwright-mcp
 maps

@@ -1579,7 +1579,8 @@ function placeTut(at, x, y, cls) { const el = $('tut'), W = innerWidth, H = inne
   else if (!at) { cx = W / 2 - r.width / 2; cy = Math.min(H * 0.22, H - r.height - m); } else if (cls === 'R') { cx = x - 26 - r.width; cy = y - r.height / 2; } else if (cls === 'L') { cx = x + 26; cy = y - r.height / 2; } else if (cls === 'D') { cx = x - r.width / 2; cy = y - 24 - r.height; } else { cx = x - r.width / 2; cy = y - 44 - r.height; }
   el.style.left = clamp(cx, m, W - r.width - m) + 'px'; el.style.top = clamp(cy, top, H - r.height - m) + 'px'; }
 $('tutSkip').onclick = (e) => { e.stopPropagation(); tutEnd('Tutorial skipped. HOW TO PLAY can run it again.'); };
-{ const b = document.createElement('button'); b.id = 'arenaBtn'; b.className = 'ghost'; b.textContent = '⚔ BOSS ARENA (test)'; b.onclick = (e) => { e.stopPropagation(); unlockAudio(); arenaMenu(); }; const menu = document.querySelector('#title .menu'); if (menu) menu.appendChild(b); }
+// the boss arena is Sean's test tool: on the GitHub Pages build only, not in the itch.io zip (vite build --mode itch)
+if (import.meta.env.MODE !== 'itch') { const b = document.createElement('button'); b.id = 'arenaBtn'; b.className = 'ghost'; b.textContent = '⚔ BOSS ARENA (test)'; b.onclick = (e) => { e.stopPropagation(); unlockAudio(); arenaMenu(); }; const menu = document.querySelector('#title .menu'); if (menu) menu.appendChild(b); }
 $('howTut').onclick = () => { $('how').classList.add('hidden'); tutForce = true; begin(!!localStorage.getItem(SAVE)); };
 
 // ---------- the four seas: a banner when you cross into one, falling snow or ash, volcano smoke and embers, storm flicker ----------
