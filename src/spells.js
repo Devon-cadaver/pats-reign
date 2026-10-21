@@ -55,7 +55,7 @@ export function createSpells(G, R) {
   // ---------- casting, combos ----------
   function cast(k) { const p = P(); if (!p.spells || !p.spells[k] || SPELLS[k].ritual || G.state() !== 'play') return false; let ok;
     if (OLD.includes(k)) { const before = R.cdOf(k); if (k === 'breath') R.breath(); else R.cast(k); ok = R.cdOf(k) > before; if (ok && k === 'breath' && ambush > 0) { setTimeout(() => R.breathFree(), 500); } }
-    else { if ((cd[k] || 0) > 0) return false; ok = DO[k](); if (ok) { cd[k] = SPELLS[k].cd; G.say(SPELLS[k].icon + ' ' + SPELLS[k].name.toUpperCase() + '!', 1.5); } }
+    else { if ((cd[k] || 0) > 0) return false; ok = DO[k](); if (ok) { cd[k] = SPELLS[k].cd * (G.cdK ? G.cdK() : 1); G.say(SPELLS[k].icon + ' ' + SPELLS[k].name.toUpperCase() + '!', 1.5); } }
     if (!ok) return false; const now = performance.now(); if (last && now - last.t < 4000 && last.k !== k) { const key = [last.k, k].sort().join('+'), rit = Object.keys(SPELLS).find((r) => SPELLS[r].ritual === key); if (rit) ritual(rit); else if (COMBOS[key]) combo(key); } last = { k, t: now }; return true; }
   function combo(key) { const C = COMBOS[key], p = P(); p.combos = p.combos || {}; const first = !p.combos[key]; p.combos[key] = true; G.warn(C.icon + ' COMBO: ' + C.name.toUpperCase() + '!' + (first ? ' (new!)' : ''), 3); sfx.horn && sfx.horn(); last = null;
     if (key === 'breath+frost') { for (const t of R.targets()) if (t.frozen > 0) R.hit(t, atk() * 6, 'steam'); for (const m of G.mons()) if (!m.dead && m.stun > 0 && Math.hypot(m.x - b().x, m.z - b().z) < 60) G.hurtMon(m, atk() * 6); }

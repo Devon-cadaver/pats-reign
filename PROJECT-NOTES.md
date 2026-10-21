@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.5.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.6.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.5.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.6.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -766,6 +766,16 @@ disagree with this file, this file wins.
   columns), #spellBook (cast any, ★ to pin, combos found, rituals). raids.js's own bar is hidden; spells.js calls
   R.cast / R.breath / R.cdOf / R.breathFree for the first four. Saved: spells, combos, bar, sacks. Bestiary: every spell,
   rituals and the 12 combos with notes boxes. Test: scratchpad spelltest.cjs, ritualtest.cjs.
+- v1.6.0 (design doc step two: bring the loot home and watch Valholm grow): src/home.js. Ten BUILDINGS picked from a list
+  (BUILD on the Valholm card at the home harbour opens #buildPanel), three levels each (costOf: base x 2.6^level), each in
+  a set slot on Valholm's island (makeSlots: a ring away from the harbour side, ground by raycasting the island mesh).
+  Effects through home.K: smithy +5% attack, bone-smith +4% hull, beacon +3% speed, shipyard repairs -15%, temple spell
+  recharge -8% (G.cdK in raids.js and spells.js), market fish gold +15%; longhouse room 5/15/40/90; fish racks speed
+  families (one per 45 s / (1 + racks) while there is room). People = thralls + families (capped); each earns 0.25 x
+  (tier+1) gold a minute. STAGES Landing / Hamlet / Village / Town / Stronghold by people, buildings, raids won
+  (P.sacks) and a legend; CLAIM_MAX by stage 1 / 1 / 2 / 3 / 5 (raids maxClaims). Watchtower and walls are for raids on
+  Valholm (next). Villagers (instanced, up to 36) walk between buildings; smoke from longhouse, smithy, temple. Saved as
+  P.home { b, families }. Test: scratchpad hometest.cjs.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
