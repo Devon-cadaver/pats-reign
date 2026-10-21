@@ -196,7 +196,9 @@ export function buildWorld(scene, seed = 20261019, realm = 'mid') {
     for (const items of cells.values()) { const im = new THREE.InstancedMesh(geo, treeMat, items.length); let cx = 0, cz = 0;
       items.forEach(([[x, y, z, s, reg], i], n) => { q.setFromAxisAngle(V(0, 1, 0), i * 2.4); const sc = s * (kind === 'palm' ? 1.9 : reg === 'frost' ? 1.4 : 1.6); mt.compose(V(x, y - 0.1, z), q, V(sc, sc * (0.9 + (i % 5) * 0.08), sc)); im.setMatrixAt(n, mt); cx += x; cz += z; });
       im.computeBoundingSphere(); group.add(im); treeChunks.push({ im, x: cx / items.length, z: cz / items.length }); } }
-  function setNear(px, pz, far) { for (const c of treeChunks) c.im.visible = Math.abs(c.x - px) < far + CH * 0.6 && Math.abs(c.z - pz) < far + CH * 0.6; }
+  // draw distance: tree tiles, islands, harbour villages and lairs past the fog are not drawn
+  function setNear(px, pz, far) { for (const c of treeChunks) c.im.visible = Math.abs(c.x - px) < far + CH * 0.6 && Math.abs(c.z - pz) < far + CH * 0.6;
+    for (const isl of islands) if (isl.mesh) isl.mesh.visible = Math.hypot(isl.x - px, isl.z - pz) < far + isl.R * 1.4 + 20; for (const h of harbors) if (h.g) h.g.visible = Math.hypot(h.x - px, h.z - pz) < far + 40; for (const L of lairs) if (L.g) L.g.visible = Math.hypot(L.x - px, L.z - pz) < far + 60; }
 
   // ---------- harbours ----------
   for (const isl of islands) { if (isl.harbor == null) continue; const a = isl.rot + Math.PI / 2, coast = isl.R * isl.shape(Math.PI / 2) * 0.96, dx = Math.cos(a), dz = Math.sin(a);

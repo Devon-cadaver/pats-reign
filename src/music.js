@@ -36,7 +36,10 @@ let late = false; // the game stalled and this note's time has passed: skip it, 
 export function startSaga() {
   const n = audioNodes(); if (!n.ctx) return; if (M) return; const ctx = n.ctx;
   const out = ctx.createGain(); out.gain.value = 0.0; out.connect(n.music || n.master); out.gain.setTargetAtTime(0.55, ctx.currentTime, 2);
-  const verb = ctx.createConvolver(); verb.buffer = impulse(ctx, 1.8); const wet = ctx.createGain(); wet.gain.value = 0.32; verb.connect(wet).connect(out); // wet: each song sets its own reverb
+  // iPhone / iPad: a feedback echo instead of the convolver reverb (a small fraction of the audio thread's work, which the iPad needs to stop crackling)
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let verb; if (ios) { verb = ctx.createGain(); const d1 = ctx.createDelay(1), lp = ctx.createBiquadFilter(), fb = ctx.createGain(); d1.delayTime.value = 0.19; lp.type = 'lowpass'; lp.frequency.value = 2200; fb.gain.value = 0.42; verb.connect(d1); d1.connect(lp); lp.connect(fb).connect(d1); verb.out = lp; } else { verb = ctx.createConvolver(); verb.buffer = impulse(ctx, 1.8); verb.out = verb; }
+  const wet = ctx.createGain(); wet.gain.value = 0.32; verb.out.connect(wet).connect(out); // wet: each song sets its own reverb
   const bus = ctx.createGain(); bus.connect(out); bus.connect(verb);
   // drone: detuned saws on D2 and A2 through a breathing lowpass (hurdy-gurdy / tagelharpa)
   const dl = ctx.createBiquadFilter(); dl.type = 'lowpass'; dl.frequency.value = 520; dl.Q.value = 2; const dg = ctx.createGain(); dg.gain.value = 0.035; dl.connect(dg).connect(bus);

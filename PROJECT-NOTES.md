@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.3.1. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.3.2. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.3.1: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.3.2: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -726,6 +726,10 @@ disagree with this file, this file wins.
   Settlements: a dock each (camp 8, village 13 long) through a gap in the stakes, its end is the landing; at a calm
   settlement's dock TRADE opens their market (jarls sell timber, the fire cult iron; sell fish); they only sound the
   alarm when attacked (or on sight once you have raided them). Names on the chart and the sighting use danger(lvl).
+- v1.3.2 (Sean: music still crackles on the iPad; is draw distance used?): on iPhone/iPad the music reverb is a feedback
+  echo (one delay + lowpass) instead of the ConvolverNode; world.setNear also hides islands, harbour villages and lairs
+  past the fog; shared CYL 12 -> 8 and DISC 18 -> 12 sides (the Skeid 59k -> 40k triangles). Camera far stays 6000 (the
+  sky dome and far-water ring need it).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).

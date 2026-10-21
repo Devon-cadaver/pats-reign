@@ -24,9 +24,9 @@ export const HEMI = () => geo('hemi', () => new THREE.SphereGeometry(0.5, 14, 7,
 export const CAP = () => geo('cap', () => new THREE.CapsuleGeometry(0.5, 1, 2, 8));
 export const CON = () => geo('con', () => new THREE.ConeGeometry(0.5, 1, 8));
 export const CON4 = () => geo('con4', () => new THREE.ConeGeometry(0.5, 1, 4));
-export const CYL = () => geo('cyl', () => new THREE.CylinderGeometry(0.5, 0.5, 1, 12));
+export const CYL = () => geo('cyl', () => new THREE.CylinderGeometry(0.5, 0.5, 1, 8));
 export const CYL6 = () => geo('cyl6', () => new THREE.CylinderGeometry(0.5, 0.5, 1, 6));
-export const DISC = () => geo('disc', () => new THREE.CylinderGeometry(0.5, 0.5, 1, 18));
+export const DISC = () => geo('disc', () => new THREE.CylinderGeometry(0.5, 0.5, 1, 12));
 export const BOX = () => geo('box', () => new THREE.BoxGeometry(1, 1, 1));
 export const RBX = () => geo('rbx', () => new RoundedBoxGeometry(1, 1, 1, 2, 0.12));
 export const TOR = () => geo('tor', () => new THREE.TorusGeometry(0.5, 0.1, 6, 18));
