@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.4.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.5.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.4.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.5.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -754,6 +754,18 @@ disagree with this file, this file wins.
   pays 44 / 95 / 131 at Faering / Snekkja / Skeid, about two a minute; claims were 2-5x hunting, now one island is about
   a quarter of hunting; raid loot x0.6 (about 13 kills). Bestiary: "Peoples, faiths and spells" section
   (tools/roster-peoples.cjs reads src/raids.js) with notes boxes for 5 peoples, 4 + 2 planned spells, 24 faiths, 3 claims.
+- v1.5.0 (Sean: more spells and combinations, mini tornadoes and rogue waves, summoning the Kraken and the Elder One;
+  summons must be late game and need a combination of spells): src/spells.js. Each people teaches a spell on its first
+  sack and another on its second (raids SPELLS_OF, P.sacks): jarls Hammer Fall / Mini Tornado, Fire cult Breath / Fire
+  Rain, Rime Frost / Ice Wall, witches Veil / Draugr Boarders, corsairs Sun / Gale; the Great Squid teaches Rogue Wave
+  (LEGEND_SPELL). Summons are rituals (SPELLS.kraken / serpent / elder with ritual pair + legend): slay the legend, then
+  cast the pair within 4 s (Rogue Wave + Draugr, Tornado + Veil, Frost + Draugr); the beast (makeMonster, real model)
+  rises by the target and smashes everything within 22 every 0.9 s. COMBOS: 12 pairs cast within 4 s (Steam Burst,
+  Ambush Fire, Blizzard, Thor's Dawn, Firestorm, Ghost Run, Maelstrom, Call of the Deep, Thunder of the Dead, Madness,
+  Glacier Wave, Fire Tornado), remembered in P.combos. UI: #spellBar2 (four pinned spells + ✦ BOOK, wraps into two
+  columns), #spellBook (cast any, ★ to pin, combos found, rituals). raids.js's own bar is hidden; spells.js calls
+  R.cast / R.breath / R.cdOf / R.breathFree for the first four. Saved: spells, combos, bar, sacks. Bestiary: every spell,
+  rituals and the 12 combos with notes boxes. Test: scratchpad spelltest.cjs, ritualtest.cjs.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
