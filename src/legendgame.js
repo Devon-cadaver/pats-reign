@@ -58,7 +58,7 @@ export function createLegendGame(G) {
   function camHook(cam) { if (!L) return; const b = G.boat, t = G.T();
     if (L.toss) { const mon = L.mon, dx = mon.x - b.x, dz = mon.z - b.z, d = Math.hypot(dx, dz) || 1, sx = -dz / d, sz = dx / d, R = mon.size / 6; cam.position.set(b.x + sx * (40 + R * 4) - (dx / d) * 18, b.y + 18 + R * 2, b.z + sz * (40 + R * 4) - (dz / d) * 18); cam.lookAt(b.x * 0.75 + mon.x * 0.25, b.y + 4, b.z * 0.75 + mon.z * 0.25); return; }
     const  bx = b.x + Math.sin(b.yaw) * t.L * 0.35, bz = b.z + Math.cos(b.yaw) * t.L * 0.35, tgt = L.sel && !L.sel.dead ? partPos(L.sel).clone() : L.mon.m.head.localToWorld(V3.set(0, 0, 0)).clone();
-    const R = L.mon.size / 6, hx = L.mon.x, hz = L.mon.z, mid = L.sel && !L.sel.dead ? tgt : { x: hx, y: R * 1.6, z: hz }; cam.position.set(bx + Math.sin(b.yaw) * 3, b.y + t.rise + 6.5, bz + Math.cos(b.yaw) * 3); cam.lookAt(mid.x * 0.5 + hx * 0.5, Math.max(R * 1.2, mid.y * 0.6), mid.z * 0.5 + hz * 0.5); }
+    const R = L.mon.size / 6, hx = L.mon.x, hz = L.mon.z, mid = L.sel && !L.sel.dead ? tgt : { x: hx, y: R * 1.6, z: hz }; cam.position.set(bx + Math.sin(b.yaw) * 3, b.y + t.rise + 4, bz + Math.cos(b.yaw) * 3); cam.lookAt(mid.x * 0.5 + hx * 0.5, Math.max(R * 1.2, mid.y * 0.6), mid.z * 0.5 + hz * 0.5); }
   function clear() { ballistaHud.show(false); G.shipVisible(true); if (L) G.hideLair(L.mon, false); if (el) el.classList.add('hidden'); document.body.classList.remove('legGameOn'); L = null; }
   return { interrupt, start, update, camHook, clear, mash, get active() { return !!L; }, get L() { return L; }, pick, loose, power };
 }

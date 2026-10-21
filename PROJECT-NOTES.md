@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.10.1. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.10.2. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.10.1: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.10.2: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -827,6 +827,11 @@ disagree with this file, this file wins.
   fight the player ship is hidden (shipVisible) and the legend's own lair rocks too (L.hideFight, respected by setNear);
   abortFight shows the ship again. Tossed: the ship shows and the camera pulls out to the side to watch it fly. Fixed: the
   special-move choice never picked the toss (a !L.toss that was always true); ATTACK and TRADE showed during fights.
+- v1.10.2 (Sean sent two pictures: a heavy ballista seen from just behind, arms across the screen; and a deck with
+  shields along the rails): ballista.js redrawn: viewBox -120..920 x 230, slice-fitted across landscape screens (meet on
+  portrait), curved arms to the edges with rope lashings, iron-banded uprights, the bolt down the channel, two winch wheels,
+  painted shields on the rails and deck planks; 40% of the screen height (34% on tablets). Messages, the power meter and
+  FIRE sit above it. The legend camera is lower (rise + 4).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
