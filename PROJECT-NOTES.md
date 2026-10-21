@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.11.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.12.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.11.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.12.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -877,6 +877,18 @@ disagree with this file, this file wins.
   across the screen, so the strip is mirrored (xOf, band); the arrows on the water are thin lines. Portrait: the camera
   stands 8 back and the lens widens to 66. clearBroadside puts it all back. CLASSIC ship fights are unchanged.
   Proof: scratchpad decktest.cjs (phone, tablet, portrait; ship and strip mark on the same side), swaptest.cjs.
+- v1.12.0 (Sean: "add Kraken-style part targeting to ship battles: aim at her mast, oars and hull with the gunner game"):
+  src/shipgame.js createShipGame(G), started by broadCam when the deck view comes in (B.fpOn), updated from
+  updateBroadside, cleared by clearBroadside. No blind volleys on deck (broadFire returns, FIRE and the green zone hidden);
+  tap a marker on her ship (MAST gold, OARS blue, HULL red; on every ship in view, none mid-shot or while coming about), then
+  the gunner game: targets 3..7 by her level, the power needle, LOOSE; damage attack x 2.4 x (0.25 + accuracy) x power
+  (0.5/1/1.5) x Thor. If she is out of your arc when you loose (off screen), the bolt falls in the sea. Parts (f.sg): mast
+  35% and oars 30% of her max hp with their own bars (left, under the HUD); shots there take a quarter off the hull too.
+  The hull is her life (f.hp; burn as before). Mast down: the yard and sail fall (ship.js now returns yard and oars), her
+  column's speed x 0.55, no coming about (canTurn). Oars smashed: they vanish, speed x 0.65. Both: crippled, speed x 0.25,
+  hull shots x 1.25, BOARD HER whatever her hull (boardTarget). On deck she heaves to for 3-5 s (an aimed shot takes a few
+  seconds). Pausing mid-aim drops the shot (pauseBtn -> sgame.interrupt). The hint under her name says what to do.
+  CLASSIC ship fights are unchanged. Proof: scratchpad partstest.cjs (8 checks, phone, tablet, portrait).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).

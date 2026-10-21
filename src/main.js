@@ -22,6 +22,7 @@ import { createRaids, FAITHS, SPELLS, LEGEND_SPELL } from './raids.js';
 import { createSpells, COMBOS } from './spells.js';
 import { createHome, BUILDINGS } from './home.js';
 import { createLegendGame } from './legendgame.js';
+import { createShipGame } from './shipgame.js';
 import { ballistaHud } from './ballista.js';
 
 const $ = (id) => document.getElementById(id);
@@ -123,7 +124,7 @@ function groundOpen(g) { return spawnTable(world.regionAt(g.x, g.z), isNight()).
 const REGION_BIAS = { frost: { serpent: 2, leviathan: 2, crab: 0.5 }, storm: { eel: 3, jelly: 2, octopus: 1.5 }, mist: { angler: 3, octopus: 1.5, ghost: 3, raider: 1.5 }, warm: { shark: 2, crab: 3, jelly: 1.5 }, home: { shark: 1.5, jelly: 1.5 } };
 
 // ---------- player ----------
-let raids = null, spells = null, home = null, lgame = null; // v1.3.0: enemy settlements to smash and raid (src/raids.js)
+let raids = null, spells = null, home = null, lgame = null, sgame = null; // v1.3.0: enemy settlements to smash and raid (src/raids.js)
 const P = { raids: {}, spells: {}, thralls: 0, tier: 0, up: { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 0, oars: 0, nets: 0, lights: 0, compass: 0, hooks: 0 }, res: { w: 20, i: 5, g: 40, f: 0, s: 0 }, hp: 100, legends: {}, kills: 0, home: 0, won: false, tod: 0.16, wreck: null, prizes: [], maps: [], relics: {}, skin: 'pats', realm: 'mid', hull: 'oak', sailD: 'pats', owned: { h: ['oak'], s: ['pats'] }, helWon: false, reborn: {}, hall: 0, tithe: 0, trials: {}, st: { k: {}, d: {}, ships: 0, fish: 0, digs: 0, souls: 0 } };
 const boat = { grace: 0, x: 0, z: -20, yaw: Math.PI, v: 0, want: Math.PI, thr: 0, wp: null, fireCd: 0, thor: 0, boost: 0, spin: 0, shake: 0, hitCd: 0, y: 0, pitch: 0, roll: 0 };
 const T = () => SHIP_TIERS[P.tier];
@@ -424,7 +425,7 @@ const foeAt = (B, i) => B.anchor + (i - (B.foes.length - 1) / 2) * B.spacing; //
 function nearFoe(B) { let best = 0, bd = 1e9; B.foes.forEach((f, i) => { const d = Math.abs(foeAt(B, i) - B.sp); if (d < bd) { bd = d; best = i; } }); return best; }
 const broadReload = () => 2.4 - 0.3 * Math.min(5, P.up.ballista) - 0.05 * Math.max(0, P.up.ballista - 5);
 const broadFlight = () => clamp(battle.broad.gap / 34, 0.25, 1.1); // the same time launch() gives a bolt over that gap
-function broadFire() { const B = battle && battle.broad; if (!B || B.reload > 0 || B.k < 1 || B.swap) return; B.reload = broadReload(); unlockAudio(); sfx.throw(); ballistaHud.fire();
+function broadFire() { const B = battle && battle.broad; if (!B || B.fpOn || B.reload > 0 || B.k < 1 || B.swap) return; B.reload = broadReload(); unlockAudio(); sfx.throw(); ballistaHud.fire();
   const t = T(), n = 3 + P.up.ballista, dir = Math.sign(B.eC - B.yC);
   for (let i = 0; i < n; i++) { const s = (i / (n - 1) - 0.5) * t.L * 0.6, [fx, fz] = lanePos(B, B.sp + s, B.yC + dir * t.B * 0.5), [hx, hz] = lanePos(B, B.sp + s, B.eC);
     setTimeout(() => { if (battle && battle.broad === B) launch({ x: fx, y: boat.y + 1.8, z: fz }, { x: hx, y: 1, z: hz }, P.up.ballista ? 'bolt' : 'spear'); }, i * 50); }
@@ -433,12 +434,12 @@ function broadFoeFire(B, f, i, sAt) { const L = tierOf(f).L, dir = Math.sign(B.y
   for (let k = 0; k < 4; k++) { const s = (k / 3 - 0.5) * L * 0.6, [fx, fz] = lanePos(B, se + s, B.eC + dir * tierOf(f).B * 0.5), [hx, hz] = lanePos(B, se + s, B.yC); setTimeout(() => { if (battle && battle.broad === B) launch({ x: fx, y: 2.5, z: fz }, { x: hx, y: 1, z: hz }, 'arrow'); }, k * 60); }
   B.shots.push({ me: false, f, s: se, t: broadFlight() + 0.05 }); sfx.throw(); }
 // her column: sail past you to the far end, sometimes stopping abeam to trade volleys; one-on-one, sometimes come about
-function broadAI(B, dt) { const lv = B.foes[0].lv, vmax = 5.5 + 0.3 * Math.min(4, lv);
+function broadAI(B, dt) { const lv = B.foes[0].lv, vmax = (5.5 + 0.3 * Math.min(4, lv)) * Math.min(...B.foes.map((f) => sgame.speedK(f)));
   if (B.mode === 'hold') { B.ve += clamp(-B.ve, -4 * dt, 4 * dt); B.holdT -= dt; if (B.holdT <= 0) B.mode = 'move'; return; }
   const d = B.target - B.anchor, want = Math.sign(d) * Math.min(vmax, Math.abs(d) * 0.8 + 0.6); B.ve += clamp(want - B.ve, -3.5 * dt, 3.5 * dt);
-  if (B.stopNext && Math.abs(B.anchor - B.sp) < 1.2 && Math.abs(B.ve) > 0.5) { B.stopNext = false; B.mode = 'hold'; B.holdT = 1.6 + Math.random() * 1.2; warn('⚔ SHE HEAVES TO: TRADE VOLLEYS! ⚔', 1.6); return; }
+  if (B.stopNext && Math.abs(B.anchor - B.sp) < 1.2 && Math.abs(B.ve) > 0.5) { B.stopNext = false; B.mode = 'hold'; B.holdT = B.fpOn ? 3 + Math.random() * 2 : 1.6 + Math.random() * 1.2; warn('⚔ SHE HEAVES TO: TRADE VOLLEYS! ⚔', 1.6); return; }
   if (Math.abs(d) < 1) { B.sweeps++; B.target = -Math.sign(B.target) * B.Lh * 0.75; B.stopNext = Math.random() < 0.45; B.mode = 'hold'; B.holdT = 0.6 + Math.random() * 0.6;
-    if (B.foes.length === 1 && B.sweeps % 3 === 0 && Math.random() < 0.6) broadSwap(B); } }
+    if (B.foes.length === 1 && B.sweeps % 3 === 0 && Math.random() < 0.6 && sgame.canTurn(B.foes[0])) broadSwap(B); } }
 // coming about: both ships circle the point between them by half a turn and end on each other's side of the line
 function broadSwap(B) { const f = B.foes[0], [yx, yz] = lanePos(B, B.sp, B.yC), [ex, ez] = lanePos(B, foeAt(B, 0), B.eC), mx = (yx + ex) / 2, mz = (yz + ez) / 2;
   B.swap = { t: 0, dur: 5, mx, mz, y: [yx - mx, yz - mz], e: [ex - mx, ez - mz], yaw0: boat.yaw, eyaw0: f.yaw }; $('bHint').textContent = 'Coming about! Hold your fire.'; }
@@ -482,6 +483,7 @@ function updateBroadside(dt) { const B = battle.broad, t = T(); battle.t += dt; 
   for (const [f, tb] of B.burn) { if (tb <= 0 || f.dead) { B.burn.delete(f); continue; } B.burn.set(f, tb - dt); f.hp -= attack() * 0.12 * dt; if (Math.random() < dt * 14) embers.add(f.x + rnd(-1.5, 1.5), f.z + rnd(-1.5, 1.5), { spray: true, y: f.g.position.y + 2, vx: rnd(-1, 1), vz: rnd(-1, 1), vy: rnd(3, 6), g: 3, s: 0.4, grow: 0, life: 0.9, a: 1 }); }
   for (const f of [...B.foes]) if (f.hp <= 0) { const i = B.foes.indexOf(f); B.foes.splice(i, 1); scene.remove(f.bx.arrow); f.bx.arrow.material.dispose(); B.burn.delete(f); killMon(f); const el = $('bShip' + B.foes.length); if (el) el.remove(); if (B.foes.length) battle.mon = B.foes[0]; }
   if (!B.foes.length) { endBroadside('win'); return; }
+  if (B.fpOn) sgame.update(dt, B); // aiming at her mast, oars and hull from the deck
   // the timing strip: every ship's place along the line from your arrow, the green zone where one must be when you fire
   // (her column's speed times the flight already allowed for), its PERFECT middle, and the warning while one aims
   // (seen from the deck her lane runs the other way across the screen, so the strip turns round with it)
@@ -492,7 +494,7 @@ function updateBroadside(dt) { const B = battle.broad, t = T(); battle.t += dt; 
   B.hudT = (B.hudT || 0) - dt; if (B.hudT <= 0) { B.hudT = 0.1; broadHud(); }
   // the deck view looks straight across at her lane, where your volley lands (while coming about, at the ship you circle with)
   { const dirE = Math.sign(B.eC - B.yC), f = B.foes[0]; let ax = B.cx * dirE, az = B.cz * dirE; if (B.swap && f) { const dx = f.x - boat.x, dz = f.z - boat.z, dl = Math.hypot(dx, dz) || 1; ax = dx / dl; az = dz / dl; }
-    B.fk = Math.min(1, B.fk + dt / 2); $('bHint').classList.toggle('faded', B.fpOn && battle.t > 7 && !B.swap); if (!B.fpDir) B.fpDir = V(ax, 0, az); else { B.fpDir.x += (ax - B.fpDir.x) * Math.min(1, dt * 3); B.fpDir.z += (az - B.fpDir.z) * Math.min(1, dt * 3); B.fpDir.normalize(); } ballistaHud.update(dt); } }
+    B.fk = Math.min(1, B.fk + dt / 2); if (!B.fpDir) B.fpDir = V(ax, 0, az); else { B.fpDir.x += (ax - B.fpDir.x) * Math.min(1, dt * 3); B.fpDir.z += (az - B.fpDir.z) * Math.min(1, dt * 3); B.fpDir.normalize(); } ballistaHud.update(dt); } }
 // ---------- the battle line from the deck (v1.11.0, Sean's picture) ----------
 // ACTION ship battles are seen from your ballista: the camera eases in over 2 s from the chase view to your deck, then looks
 // across the water at her lane; her ships sail past from the side and your volley lands straight ahead. Your own ship is
@@ -501,20 +503,20 @@ function broadCam(cam) { const B = battle.broad; if (!B.fpDir) return; const t =
   if (port && B.fpOn) { cam.fov = 66; cam.updateProjectionMatrix(); }
   const px = boat.x + d.x * off + rnd(-sh, sh), py = boat.y + t.rise + 3 + rnd(-sh, sh), pz = boat.z + d.z * off + rnd(-sh, sh), lx = boat.x + d.x * B.gap, lz = boat.z + d.z * B.gap;
   cam.position.set(lerp(B.cam0.x, px, e), lerp(B.cam0.y, py, e), lerp(B.cam0.z, pz, e)); cam.lookAt(lerp(B.look0.x, lx, e), lerp(B.look0.y, 1.5, e), lerp(B.look0.z, lz, e));
-  const fp = e > 0.6; if (fp !== B.fpOn) { B.fpOn = fp; if (ship) ship.g.visible = !fp; ballistaHud.show(fp); document.body.classList.toggle('broadFp', fp); } }
+  const fp = e > 0.6; if (fp !== B.fpOn) { B.fpOn = fp; if (ship) ship.g.visible = !fp; ballistaHud.show(fp); document.body.classList.toggle('broadFp', fp); if (fp) sgame.start(B); } }
 function broadHud() { const B = battle && battle.broad; if (!B || !B.foes.length) return; const f = B.foes[nearFoe(B)];
   $('bFoeName').innerHTML = f.name + ' <small>Lv ' + (Math.round(f.lv) + 1) + '</small>' + (B.foes.length > 1 ? ' <small>· ' + B.foes.length + ' ships</small>' : ''); $('bFoeHp').style.width = clamp(f.hp / f.maxHp, 0, 1) * 100 + '%';
   $('bLoad').style.width = (1 - clamp(B.reload / broadReload(), 0, 1)) * 100 + '%'; $('bFire').classList.toggle('ready', B.reload <= 0 && B.k >= 1 && !B.swap);
   const bf = boardTarget(B), bi = bf ? boardInfo(bf) : undefined, bb = $('bBoard'); bb.classList.toggle('hidden', !bf); if (bf) { bb.textContent = bi ? '🪝 ' + bi : '🪝 BOARD HER'; bb.classList.toggle('off', !!bi); } }
 // the ship you can board: the nearest one abeam whose hull is below 40%
-function boardTarget(B) { let best = null, bd = 1e9; B.foes.forEach((f, i) => { const d = Math.abs(foeAt(B, i) - B.sp); if (f.hp / f.maxHp <= 0.4 && d < bd && d < 16) { bd = d; best = f; } }); return best; }
-function clearBroadside() { const B = battle && battle.broad; if (!B) return; if (B.fpOn) { ballistaHud.show(false); document.body.classList.remove('broadFp'); } if (ship) ship.g.visible = true; for (const a of [B.my, ...B.foes.map((f) => f.bx.arrow)]) { scene.remove(a); a.material.dispose(); } const ui = $('broad'); if (ui) ui.remove(); document.body.classList.remove('busy', 'broadOn'); $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); }
+function boardTarget(B) { let best = null, bd = 1e9; B.foes.forEach((f, i) => { const d = Math.abs(foeAt(B, i) - B.sp); if ((f.hp / f.maxHp <= 0.4 || sgame.crippled(f)) && d < bd && d < 16) { bd = d; best = f; } }); return best; }
+function clearBroadside() { const B = battle && battle.broad; if (!B) return; sgame.clear(); if (B.fpOn) { ballistaHud.show(false); document.body.classList.remove('broadFp'); } if (ship) ship.g.visible = true; for (const a of [B.my, ...B.foes.map((f) => f.bx.arrow)]) { scene.remove(a); a.material.dispose(); } const ui = $('broad'); if (ui) ui.remove(); document.body.classList.remove('busy', 'broadOn'); $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); }
 function endBroadside(result) { const B = battle && battle.broad; if (!B) return; const foes = [...B.foes], target = result === 'board' ? boardTarget(B) : null; clearBroadside(); battle = null; setBattle(false); boat.lastHit = time; boat.grace = 3.5; hud();
   if (result === 'win') setThrottle(0, true);
   else if (result === 'flee') { damage(Math.max(...foes.map((f) => f.dmg)) * 0.5 * (1 - defense()), 'You break away under fire!'); for (const f of foes) f.stun = 7; boat.boost = 3.5; boat.v = topSpeed(); setThrottle(1, true); }
   else if (result === 'board' && target) { if (boardInfo(target)) return; for (const f of foes) if (f !== target) f.stun = 9; startBattle(target, true, { classic: true, board: true }); } }
 const broadLabel = () => { const b = $('broadToggle'); if (!b) return; b.textContent = '⚔ ACTION BATTLES: ' + (BROAD.on ? 'ON' : 'OFF (classic)'); b.classList.toggle('on', BROAD.on); b.classList.toggle('ghost', !BROAD.on); };
-$('pauseBtn').addEventListener('click', broadLabel);
+$('pauseBtn').addEventListener('click', broadLabel); $('pauseBtn').addEventListener('click', () => sgame.interrupt());
 { const b = document.createElement('button'); b.id = 'broadToggle'; b.onclick = () => { BROAD.on = !BROAD.on; try { localStorage.setItem('pr_broad', BROAD.on ? '1' : '0'); } catch (e) { /* ignore */ } broadLabel(); reFight(); say(BROAD.on ? '⚔ Action battles ON: ship fights on the battle line, monster fights at the helm.' : '⚔ Action battles OFF: ship and monster fights use the classic aim bar.', 3); }; $('paused').insertBefore(b, $('saveQuit')); broadLabel(); }
 
 // ---------- LEGEND FIGHTS: each legend (and its young) fights its own way, live on the water ----------
@@ -1599,6 +1601,7 @@ spells = createSpells({ inBattle: () => !!battle, cdK: () => (home ? home.K.spel
   hurtMon(m, d) { if (m.dead) return; if (m.boss && !inFight(m)) { pop(m.x, m.top + m.g.position.y, m.z, 'IT SHRUGS IT OFF', '#c8c8c8'); return; } m.hp -= d; pop(m.x, m.top + m.g.position.y, m.z, '−' + Math.round(d), '#c8a0ff'); if (m.hp <= 0) killMon(m); else if (!m.passive) m.state = 'chase'; },
   legends: () => P.legends || {}, makeTwister() { return twisters.make(false, [], null); }, removeTwister(g) { twisters.remove(g); }, iceGeo: () => sharedGeo('iceSpike', () => new THREE.ConeGeometry(0.5, 1, 5)), shake(k) { boat.shake = Math.max(boat.shake || 0, k); }, flashSky() { flash = Math.max(flash, 0.5); } }, raids);
 home = createHome({ say, embers, spawnMon, removeMon, launch, inFight, mons: () => mons, hurtMon: (m, d) => spells.hurtMon ? spells.hurtMon(m, d) : (m.hp -= d, m.hp <= 0 && killMon(m)), flare: (x, z, name, why) => raids.flareAt(x, z, name, why), clearFlare: () => raids.clearFlare(), scene, ocean, smoke, sfx, get P() { return P; }, get boat() { return boat; }, world: () => world, pop, warn, hud, save, costHtml, can, pay, redraw: () => { if (state === 'harbor') drawHarbor(); } });
+sgame = createShipGame({ get boat() { return boat; }, T: () => T(), attack, thor: () => boat.thor > 0, burn(f) { const B = battle && battle.broad; if (B && P.up.fire) B.burn.set(f, (3 + P.up.fire) * (1 + perk('fire'))); }, toScreen, launch, pop, say, warn, sfx, splash: (x, z, k) => foam.splash(x, z, k), explode: (x, y, z, k, c) => raids.explode(x, y, z, k, c) });
 lgame = createLegendGame({ shipVisible(on) { if (ship) { ship.g.visible = on; if (on && ship.mask) ship.mask.visible = true; } }, hideLair(mon, on) { const L = mon && mon.lair && world.lairs.find((l) => l.key === mon.lair); if (L) { L.hideFight = on; if (L.g) L.g.visible = !on; } }, pause() { $('pauseBtn').click(); }, sfx, get boat() { return boat; }, world: () => world, T: () => T(), seaY: (x, z) => ocean.heightAt(x, z), attack, defense, damage, launch, pop, say, warn, toScreen, explode: (x, y, z, k, c) => raids.explode(x, y, z, k, c), splash: (x, z, k) => foam.splash(x, z, k), shake(k) { boat.shake = Math.max(boat.shake || 0, k); }, endLegend: (r) => endLegend(r) });
 const ashC = new THREE.Color(0x8a8480), snowC = new THREE.Color(0xffffff), helAsh = new THREE.Color(0x7a6a6e), emberC = new THREE.Color(0xff8a3a), rimeC = new THREE.Color(0xd8e4f4);
 const soulFx = createFoam(scene, ocean, 260, { color: 0xc8a0ff });
@@ -1679,4 +1682,4 @@ function tick(dt) { time += dt;
 { const h = world.harbors[0]; boat.x = h.dock.x + Math.cos(h.dir) * 12; boat.z = h.dock.z + Math.sin(h.dir) * 12; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); }
 const hadSave = load(); if (!hadSave) P.hp = maxHp(); rebuildShip(); placeWreck(); toTitle(); env.snap(P.tod, null, world.regionWeights(boat.x, boat.z, {})); camTgt.set(boat.x, 0, boat.z);
 requestAnimationFrame(frame);
-window.__pr = { removeMon, maxHp, arenaStart: (k) => arenaStart(ARENA.find((a) => a.k === k)), get testMode() { return testMode; }, get home() { return home; }, get spells() { return spells; }, get raids() { return raids; }, get tut() { return tut; }, grounds, groundAt, get fall() { return fall; }, get rain() { return rain; }, renderer, scene, broadSwap, startBroadside, broadFire, endBroadside, endLegend, abortFight, BROAD, planRoute, autoDock, cleanSave, giveMap, prizeChoice, startDig, boardInfo, spouts, startAir, liftK, pods, spawnPod, EV, startEvent, aur, get wreck() { return P.wreck; }, sink, get chartView() { return chartView; }, step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); }, helm, setThrottle, set timeScale(v) { timeScale = v; }, dmgLog, P, boat, mons, spots, floats, get world() { return world; }, worlds, setRealm, makeBounty, bountyText, bountyHit, crossRealm, gateAsk, gates, GATES, HULLS, SAILS, perk, UPG, TIER_COST, legendCount, lvShift, spawnTable, ocean, wx, setWeather, spawnMon, startBattle, startFishing, openHarbor, fire, get state() { return state; }, set state(v) { state = v; }, get battle() { return battle; }, minis, MLV, killMon, landBolt, warnRing, spawnSpout, rebuildShip, save, load, camera, renderer, scene, get ship() { return ship; }, setCourse };
+window.__pr = { removeMon, maxHp, arenaStart: (k) => arenaStart(ARENA.find((a) => a.k === k)), get testMode() { return testMode; }, get home() { return home; }, get spells() { return spells; }, get raids() { return raids; }, get tut() { return tut; }, grounds, groundAt, get fall() { return fall; }, get rain() { return rain; }, renderer, scene, broadSwap, startBroadside, broadFire, endBroadside, endLegend, abortFight, BROAD, planRoute, autoDock, cleanSave, giveMap, prizeChoice, startDig, boardInfo, spouts, startAir, liftK, pods, spawnPod, EV, startEvent, aur, get wreck() { return P.wreck; }, sink, get chartView() { return chartView; }, step(n = 30, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); }, helm, setThrottle, set timeScale(v) { timeScale = v; }, dmgLog, P, boat, mons, spots, floats, get world() { return world; }, worlds, setRealm, makeBounty, bountyText, bountyHit, crossRealm, gateAsk, gates, GATES, HULLS, SAILS, perk, UPG, TIER_COST, legendCount, lvShift, spawnTable, ocean, wx, setWeather, spawnMon, startBattle, startFishing, openHarbor, fire, get state() { return state; }, set state(v) { state = v; }, get battle() { return battle; }, get sgame() { return sgame; }, minis, MLV, killMon, landBolt, warnRing, spawnSpout, rebuildShip, save, load, camera, renderer, scene, get ship() { return ship; }, setCourse };

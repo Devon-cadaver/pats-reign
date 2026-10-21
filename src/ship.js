@@ -346,7 +346,7 @@ export function buildShip(tier = 0, up = {}, pal = PLAYER_PAL, seed = 1) {
     for (const l of lamps) l.visible = ghost || night; braziers.forEach((b, i) => { b.visible = night; b.scale.y = (i % 2 ? 0.6 : 0.9) * (0.85 + Math.sin(time * 11 + i * 2) * 0.15); }); for (const gl of potGlow) gl.scale.setScalar(0.1 * (0.85 + Math.sin(time * 9 + gl.position.x * 7) * 0.15));
     for (const f of dmg.fires) if (f.f.visible) { const fl = 0.8 + Math.sin(time * 13 + f.ph) * 0.15 + Math.sin(time * 23 + f.ph * 2) * 0.08; f.o.scale.set(1, fl, 1); f.c.scale.set(1, 1.9 - fl, 1); f.o.rotation.y = time * 2 + f.ph; }
   }
-  return { g: root, body, t, tier, anim, len: t.L, beam: t.B, mastTop, deckY, sail, ballista, bowZ: half * 1.06, sailMat, hull, mask, setDamage, fireSpots, dmg };
+  return { g: root, body, t, tier, anim, len: t.L, beam: t.B, mastTop, deckY, sail, yard, oars, ballista, bowZ: half * 1.06, sailMat, hull, mask, setDamage, fireSpots, dmg };
 }
 
 function flatten(st) { st.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(st.matrixWorld).invert(); const list = []; st.traverse((o) => { if (o.isMesh && o.parent !== st) list.push(o); });
