@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.3.3. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.3.4. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.3.3: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.3.4: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -732,6 +732,11 @@ disagree with this file, this file wins.
   sky dome and far-water ring need it).
 - v1.3.3 (Sean: entering a save code on the iPhone moved the whole screen): iOS zooms on focus of any input under
   16px; the save-code textareas are 16px, the viewport adds maximum-scale=1, and on blur the page scrolls back to 0,0.
+- v1.3.4 (Sean after his first raid: the raid was OK, a great start; mini-games for beasts and raids need work AFTER
+  the outposts are in; no damage from hitting islands; ships too fast and turn too fast; never saw the perfect-shot
+  colours): bumping land or ice only slows the ship (v x0.5), no damage; turnRate x0.72, topSpeed x0.9; in a beast fight
+  the whole SPEARS button fills with the colour (red / yellow / green, scaled up / blue) and its label reads WAIT / READY /
+  NOW! / FIRE (fireKey reset in clearLegend restores SPEARS). Sean also said the shark and serpent fights feel too alike.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).

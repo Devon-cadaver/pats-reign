@@ -268,6 +268,7 @@ html.tabletHud #tutHand { font-size: 50px; width: 58px; height: 58px; line-heigh
 .howNav { display: flex; gap: 10px; align-items: center; font-size: 14px; color: var(--gold); } .howNav button { min-width: 56px; padding: 6px 10px; }
 /* in a helm fight the tutorial card sits below the foe bar and its hints */
 /* the SPEARS button in a beast fight: red (its shot is lost), yellow (get ready), green (hit it now: a perfect shot), blue-white (free shots) */
+#bFire.aimNo { border-color: #ff4a3a; box-shadow: 0 0 0 3px #ff4a3a88; } #bFire.aimSoon { border-color: #ffe066; box-shadow: 0 0 22px #ffe066; } #bFire.aimNow { border-color: #7dff6a; background: linear-gradient(#9dff8a, #2a9a3a); color: #0a1a0a; box-shadow: 0 0 26px #7dff6a; } #bFire.aimFree { border-color: #9fe0ff; box-shadow: 0 0 18px #9fe0ff; }
 #fireBtn.aimNo { border-color: #ff4a3a; box-shadow: 0 0 0 2px #ff4a3a66, 0 2px 6px #0008; } #fireBtn.aimSoon { border-color: #ffe066; box-shadow: 0 0 14px #ffe066, 0 2px 6px #0008; } #fireBtn.aimNow { border-color: #7dff6a; background: linear-gradient(#9dff8a, #2a9a3a); color: #0a1a0a; box-shadow: 0 0 18px #7dff6a; } #fireBtn.aimFree { border-color: #9fe0ff; box-shadow: 0 0 12px #9fe0ff, 0 2px 6px #0008; }
 /* raids (v1.3.0): RAID at the landing, RETURN on a flare, the loot bar, Dragon's Breath */
 .raidBtn { position: fixed; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 12; padding: 12px 26px; font-size: 20px; letter-spacing: 2px; background: linear-gradient(#ff9a4a, #b8401a); color: #fff; border: 2px solid #ffd24a; animation: pulse 1s infinite; }
@@ -380,3 +381,6 @@ html.tabletHud #dockBtn { top: auto; right: auto; left: max(12px, env(safe-area-
 html.tabletHud #swapBtn { left: calc(max(12px, env(safe-area-inset-left, 0px)) + 114px); }
 html.leftHand.tabletHud #dockBtn { left: auto; right: max(12px, env(safe-area-inset-right, 0px)); }
 html.leftHand.tabletHud #swapBtn { left: auto; right: calc(max(12px, env(safe-area-inset-right, 0px)) + 114px); }
+/* v1.3.4 (Sean never saw the perfect-shot colours): the whole SPEARS button fills with the colour in a beast fight */
+#fireBtn.aimNo { background: radial-gradient(circle at 40% 35%, #8a2a1a, #3a0a06) !important; } #fireBtn.aimSoon { background: radial-gradient(circle at 40% 35%, #ffe066, #a88a10) !important; color: #1a1406 !important; } #fireBtn.aimNow { background: radial-gradient(circle at 40% 35%, #b8ff9a, #2a9a3a) !important; color: #0a1a0a !important; transform: scale(1.12); } #fireBtn.aimFree { background: radial-gradient(circle at 40% 35%, #b8e8ff, #2a6a9a) !important; color: #06121a !important; }
+#fireBtn.aimNow small, #fireBtn.aimSoon small { font-weight: 900; }
