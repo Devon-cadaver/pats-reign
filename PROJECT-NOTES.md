@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.2.3. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.3.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.2.3: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.3.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -701,6 +701,21 @@ disagree with this file, this file wins.
   renderer.render to place a side camera, shoots 40 frames at 0.1 s and ffmpeg makes the GIF (then a second ffmpeg pass
   shrinks it: fps=8, scale=320, 48 colours, no dither). __pr exposes renderer and scene for that. The Legends header
   counts LEGENDS.length (four) and the ending needs all four.
+- v1.3.0 (Sean's raid design, step one: smashing islands; the design doc is the Claude Docs page "Valhalla's Tide: Raids and
+  the Home Island", https://claude.ai/artifact/RyyttCSs8ZE1z7Hf1a1Ekp, with Sean's answers): src/raids.js. Settlements on
+  non-harbour islands (R 8-34, 90+ from docks, 200+ from lairs, 120+ apart): Home waters' rival jarls (2) and the Storm
+  Sea's Fire cult of Muspel (up to 3). Each: name, jarl, faith, houses (raycast onto the terrain), a landmark, 1-2
+  watchtowers that shoot arrow volleys within 70 (fire cult also fire bursts), a stake ring in the shallows that blocks
+  and scrapes the hull, villagers as one InstancedMesh walking between houses (they run for the hall on the alarm).
+  Spears/bolts hit the nearest tower or wall when no monster is in range (fire() fallback). Destroyed: explode() =
+  additive fireball sprites, a point-light flash, a shockwave ring, debris, smoke, embers, shake. All down: a gold ring
+  at the landing, RAID button; the crew (instanced) run between houses, houses burn, a loot bar (22 s camp, 40 s
+  village), guard ships spawn (spawnGuard); away > 70 when they come: a flare and RETURN (sailTo via the autopilot).
+  Sacked: gold/timber/iron/fish, thralls (P.thralls), charred ruins; after 480 s (and you 160+ away) it rebuilds a
+  level higher under a faith that wards what broke it (COUNTER: fire -> Ran, bolt -> Thor, spear -> Loki). The Fire
+  cult's sack gives P.spells.breath: Dragon's Breath (#breathBtn, 22 s), a fire cone from the bow, 4x attack to
+  towers and monsters in it. Saved in P.raids / P.spells / P.thralls (cleanSave). Chart icons 🏘 🔥 💀.
+  Tests: scratchpad raidtest.cjs, raidshots.cjs.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
