@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.8.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.9.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.8.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.9.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -799,6 +799,16 @@ disagree with this file, this file wins.
   three buildings lose a level and a fifth of the people flee. More than 200 away for 2 minutes: settled by walls, towers
   and stage against the attackers' levels. Full destruction and choosing a new god (Sean's earlier answer) are not in yet.
   Test: scratchpad siegetest.cjs.
+- v1.9.0 (Sean's raid design: two parts): ⚔ ATTACK near a calm settlement (or shooting a tower) sounds the alarm.
+  Part 1, the fleet: 1-5 defenders (by level and size) come out one at a time (updateFleet, spawnGuard at lvl + 0.35 per
+  ship). Part 2, the bombardment: the town splits into three quarters (Left, Harbour, Right: buildings sorted by angle
+  round the village centre), each with a yellow circle offshore spread across the village side. Every house has health
+  now (hall x2). Sail into a circle: the gunner mini-game (#bombGame, body.bombOn hides the HUD; camHook puts the camera on
+  the deck looking at the quarter): AIM, 2-7 shrinking targets to tap (count by level), then POWER, a sweeping needle
+  with a yellow zone (x1) and a green one (x1.5, else x0.5); the volley (bolts + explosions) deals attack x 7 x (0.25 +
+  accuracy) x power, weakest building first; health bars per building; next round until the quarter falls; SAIL OFF
+  leaves. All three quarters down: finishRaid (loot, thralls, spell, claim). The old smash-and-dock RAID is retired.
+  Tests: scratchpad bombtest2.cjs, bombdbg.cjs, bombshot.cjs (volleys run on real timers: tests must wait in real time).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
