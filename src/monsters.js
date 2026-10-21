@@ -6,7 +6,7 @@
 //   g faces +z and sits at the sea surface (the game sets g.position to the water height and g.rotation.y to the heading).
 //   st = { t, speed 0..1, attack 0..1 (lunge / slam), dive 0..1 (0 surfaced), hurt 0..1, rise 0..1 (bosses) }
 import * as THREE from 'three';
-import { M, part, grp, rod, V, SpineTube, taperTube, curvePts, orient, SPH, SPH_LO, HEMI, CAP, CON, CON4, CYL, BOX, RBX, TOR, glowVC, FAN, FINTRI, CRESCENT, WING, hash2, smooth } from './geom.js';
+import { M, part, grp, rod, V, SpineTube, taperTube, curvePts, orient, SPH, SPH_LO, CAP, CON, CON4, CYL, BOX, RBX, TOR, glowVC, FAN, FINTRI, CRESCENT, WING, hash2, smooth } from './geom.js';
 import { mergeParts } from './perf.js';
 
 const TAU = Math.PI * 2, tmpC = new THREE.Color(), tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3();
@@ -187,6 +187,14 @@ function leviathan(P, S) {
 function jormungandr(P, S) { const m = serpentBody(P, S, { R: 2.1, N: 80, seg: 1.35, humps: 3.4, lambda: 22, spikes: 44, finH: 0.6, big: true, radial: 16, freq: 120, headK: 0.9 }); m.size = 2.1 * S * 5; return m; }
 
 // ---------- octopus / kraken ----------
+// a tentacle with hold of something (v1.10.4, the legends' grab): A.grip = { p, up, ax, r, len, lift, k } in the body's space. The
+// arm arcs up from its root and over, then its last part coils round p (the ship's waist, r its half-beam, len its length), the
+// tentacle's own thickness outside the hull; k blends it from the arm's own pose
+const _g1 = new THREE.Vector3(), _g2 = new THREE.Vector3(), _ge = new THREE.Vector3(), _gs = new THREE.Vector3(), _gq = new THREE.Vector3();
+function gripArm(A) { const H = A.grip; if (!H || !(H.k > 0)) return; const n = A.pts.length, m = Math.round(n * 0.6), p0 = A.pts[0], rr = (k) => H.r + A.tb.r(k / (n - 1)) * 0.85, e = _ge.copy(H.p).addScaledVector(H.up, rr(m)).addScaledVector(H.ax, -H.len * 0.25), top = Math.max(p0.y, e.y) + H.lift;
+  _g1.set(p0.x, top, p0.z); _g2.set(e.x, top, e.z); _gs.crossVectors(H.ax, H.up).normalize();
+  for (let k = 1; k < m; k++) { const s = k / (m - 1), a = 1 - s; _gq.set(0, 0, 0).addScaledVector(p0, a * a * a).addScaledVector(_g1, 3 * a * a * s).addScaledVector(_g2, 3 * a * s * s).addScaledVector(e, s * s * s); A.pts[k].lerp(_gq, H.k); }
+  for (let k = m; k < n; k++) { const s = (k - m + 1) / (n - m), a = s * Math.PI * 2.6, r = rr(k); _gq.copy(H.p).addScaledVector(H.up, Math.cos(a) * r).addScaledVector(_gs, Math.sin(a) * r).addScaledVector(H.ax, (s - 0.5) * H.len * 0.5); A.pts[k].lerp(_gq, H.k); } }
 export function tentacle(P, R, n, len, mat, glowFn) { return new SpineTube(n, { radial: 9, mat, r: (s) => R * Math.pow(1 - s * 0.94, 1.15) + R * 0.03, color: (s, a, c) => { c.setHex(P.top); if (P.pattern === 'rings' && Math.abs(Math.sin(s * 30)) > 0.85) c.setHex(P.accent); const under = smooth(0.35, 0.95, -Math.cos(a)); c.multiplyScalar(0.8 + 0.25 * Math.max(0, Math.cos(a))); if (under > 0) { c.lerp(tmpC.setHex(P.belly), under * 0.55); if (Math.abs(Math.sin(s * len * 3.2)) > 0.7 && under > 0.5) c.lerp(tmpC.setHex(P.sucker || 0xf2d8d0), 0.7); } }, glow: glowFn }); }
 function cephalopod(P, S, kraken) {
   const g = new THREE.Group(), body = grp(g), R = (kraken ? 1.3 : 0.75) * S, mat = glowVC(), arms = [], nA = kraken ? 10 : 8;
@@ -210,7 +218,7 @@ function cephalopod(P, S, kraken) {
       const p = A.pts[0].set(dir.x * R * 0.9, R * 0.1, dir.z * R * 0.9 + R * 0.4); let ang = -0.35, yaw = 0;
       for (let k = 1; k < n; k++) { const s = k / (n - 1); ang += (rise * 3.6 / n) * (0.35 + s * 1.5) * (1 + Math.sin(t * 2 + A.ph + s * 4) * 0.3) + Math.sin(t * 1.7 + A.ph + s * 7) * 0.07; yaw = Math.sin(t * 1.3 + A.ph + s * 3) * 0.35 * s;
         const ca = Math.cos(ang), sa = Math.sin(ang), d2 = tmpV.copy(dir).multiplyScalar(ca).addScaledVector(up, sa).addScaledVector(side, yaw); A.pts[k].copy(A.pts[k - 1]).addScaledVector(d2.normalize(), segL); }
-      void p; A.tb.set(A.pts); if (A.club) { A.club.position.copy(A.pts[n - 1]); const fr = A.tb.frameAt(n - 1); orient(A.club, tmpV2.copy(fr.T).negate().negate(), fr.N); } }
+      void p; gripArm(A); A.tb.set(A.pts); if (A.club) { A.club.position.copy(A.pts[n - 1]); const fr = A.tb.frameAt(n - 1); orient(A.club, tmpV2.copy(fr.T).negate().negate(), fr.N); } }
     body.position.y = lerp(-R * 0.55, -R * 6, st.dive) + (kraken ? R * 0.15 : 0) + Math.sin(t * 0.8) * R * 0.08; face.rotation.x = Math.sin(t * 0.6) * 0.05 - st.attack * 0.2; }
   return { g, size: R * (kraken ? 6 : 4.2), top: R * (kraken ? 2.2 : 4), anim, mats: [mat], giant: kraken && S > 6, arms, body, head: face, eyes: [V(-0.9 * R, 0.25 * R, 0.55 * R + 0.06 * R * ek), V(0.9 * R, 0.25 * R, 0.55 * R + 0.06 * R * ek)] };
 }
@@ -255,7 +263,7 @@ function kraken(P, S) {
       A.pts[0].set(dir.x * R * 1.35, -R * 0.25, dir.z * R * 1.35 + R * 0.2); let ang = -0.3, yaw = 0;
       for (let k = 1; k < n; k++) { const s = k / (n - 1); ang += (rise * 3.6 / n) * (0.35 + s * 1.5) * (1 + Math.sin(t * 2 + A.ph + s * 4) * 0.3) + Math.sin(t * 1.7 + A.ph + s * 7) * 0.07; yaw = Math.sin(t * 1.3 + A.ph + s * 3) * 0.35 * s;
         const ca = Math.cos(ang), sa = Math.sin(ang), d2 = tmpV.copy(dir).multiplyScalar(ca).addScaledVector(up, sa).addScaledVector(side, yaw); A.pts[k].copy(A.pts[k - 1]).addScaledVector(d2.normalize(), segL); }
-      A.tb.set(A.pts);
+      gripArm(A); A.tb.set(A.pts);
       for (let j = 0; j < perArm; j++) { const k = 3 + j * 2, s = k / (n - 1), rr = A.tb.r(s), fr = A.tb.frameAt(k); inner.set(0, A.pts[k].y * 0.35 + R * 2.2, 0).sub(A.pts[k]); inner.addScaledVector(fr.T, -inner.dot(fr.T)).normalize(); sideV.crossVectors(fr.T, inner).normalize(); for (const row of [-0.42, 0.42]) { off.copy(inner).multiplyScalar(Math.cos(row)).addScaledVector(sideV, Math.sin(row)); _dummy.position.copy(A.pts[k]).addScaledVector(off, rr * 0.92); _dummy.quaternion.setFromUnitVectors(_up, off); const d = A.dead ? 0.0001 : rr * 0.9; _dummy.scale.set(d, d * 0.45, d); _dummy.updateMatrix(); suckers.setMatrixAt(si++, _dummy.matrix); } } }
     suckers.instanceMatrix.needsUpdate = true;
     body.position.y = lerp(-R * 0.15, -R * 6.5, st.dive) + Math.sin(t * 0.8) * R * 0.08; head.rotation.x = Math.sin(t * 0.6) * 0.04 - st.attack * 0.18; }

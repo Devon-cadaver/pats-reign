@@ -7,7 +7,7 @@
 //   Warm Sea (south): white beaches, palm trees and coral reefs in turquoise shallows.
 // Plus sea stacks in each sea's own stone, six harbours, shipwrecks and three legend lairs. Same seed every game.
 import * as THREE from 'three';
-import { M, part, grp, rod, V, rand, SPH, SPH_LO, CON, CYL, CYL6, BOX, RBX, TOR, HEMI, canvasTex, glowVC } from './geom.js';
+import { M, part, grp, rod, V, rand, SPH, SPH_LO, CON, CYL, CYL6, BOX, RBX, glowVC } from './geom.js';
 import { mergeParts } from './perf.js';
 import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 

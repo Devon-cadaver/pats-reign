@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.10.2. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.10.4. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.10.2: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.10.4: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -832,6 +832,40 @@ disagree with this file, this file wins.
   portrait), curved arms to the edges with rope lashings, iron-banded uprights, the bolt down the channel, two winch wheels,
   painted shields on the rails and deck planks; 40% of the screen height (34% on tablets). Messages, the power meter and
   FIRE sit above it. The legend camera is lower (rise + 4).
+- v1.10.3 (Sean asked for a full bug, exploit and code check): three read-only review passes (raids/home, spells/legend
+  fight, saves/economy), then fixes, proven by scratchpad fixtest.cjs and a hook check (every G.x a module uses is passed
+  by main.js). Fights: FLEE button in the ACTION Kraken/Squid fight (#lgFlee -> endLegend('flee')); spells and breath
+  cannot hurt a legend outside its fight; the slam UI survives a shot in flight; stale aim timers guarded; null guards
+  after damage. Spells: no combo chaining (cast returns after a combo or ritual), two impossible combos removed
+  (kraken+rogue, elder+veil), Maelstrom only boosts fresh twisters (cap 30 s), the draugr interval stops off the sea.
+  Raids/home: new voyage resets settlements (raids.reset) and Valholm (home.reset); TRADE fixed at the frost, mist and
+  warm peoples (their goods were missing); a siege is cancelled, not won, when the raiders vanish or you sink; raid
+  defenders have mon.keep (not culled, so sailing off no longer counts them sunk); SAIL OFF stays out until you leave
+  the circle; sinking or changing realm stops the gunner game (raids.exitAll); dead faith wards now work (regrow, heal,
+  slow, guards, bombard); section rings disposed; claims pay only in play, scaled by the market; outpost repair 20 s
+  cooldown; claimed defences dropped on load; double-tap guards on build, monument and trade buttons; createHome got
+  its missing 'say'. Saves: won is derived from the legends slain; topTier saved (upgrades were cut on load after
+  selling a big ship); every size from the Busse needs Midgard won (a size-6 prize got round it); salvaged wrecks stay
+  salvaged over a reload (wl); saga and trial rewards pay at once; sinking saves the respawn at home straight away
+  (reloading the sunk screen undid it); cleanSave uses has() for spells, combos and faiths, monuments need the faith
+  beaten, Valholm keeps its siege clock; the save-code reader rejects a voyage that is not a v1 save. Arena: testMode
+  is cleared by any real begin, SAVE & QUIT from the arena reloads the page. Also: the Jarl's Hall only in Midgard,
+  the pause screen counts the real legends, unused imports removed. Left as is: window.__pr (tests use it), a raid in
+  progress is not saved, small leaks on a Valholm rebuild, the gunner code duplicated in raids.js and legendgame.js.
+- v1.10.4 (Sean, playing the Great Squid: the toss was too quick and rough; back the camera out slower, show the ship held in
+  a tentacle, smash it on the water twice, toss it like the tornadoes do, then back to first person; same for the Kraken):
+  legendgame.js toss() is a 10.8 s timeline run by held(dt), which main.js updateBoat calls first (boat.held) so the ship
+  and the arm holding it move together: 0 the arm reaches (camera eases out over 2.4 s), 1.8 it has the ship and lifts it
+  (H1 = 0.9R + 8, pulled in to 0.72 d), 3.4 and 5.4 it smashes it down (0.18 x dmg each), 6.0 winds up, 7.2 lets go,
+  flight like flyStep (spin, wobble, arc), 9.4 lands (0.3 x dmg), 9.8 to 10.8 the camera eases back to the bow, the ship
+  turned to face the legend. The arm: monsters.js gripArm(A) bends an arm with A.grip = { p, up, ax, r, len, lift, k }
+  (body space): a Bezier up from the root and over, then a coil round the hull (half-beam + the tube's own radius, spread
+  over half the ship's length); while it grips, the arm's radius function tapers to a whip (cap 0.42 x beam) because a
+  legend's arm tip is thicker than a ship (restored by done/clear). The grabbing arm is the live one facing the ship (not
+  the squid's club arms). The camera aims at the ship exactly and only its position eases (rate 2.5, 4 in flight), from
+  out behind the ship away from the legend (the legends' arms reach ~105-120 of the 130 between), D = 2L + 30. The hull's
+  water mask is off and the sea does not hug the hull while it is in the air. It lands on the side with open water within
+  30 if it can. The empty fight message box is hidden (it sat mid-screen). Proof: scratchpad tosstest.cjs.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).

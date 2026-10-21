@@ -28,7 +28,7 @@ export async function readCode(code) {
   if (check(m[2]) !== m[3]) throw new Error('That code has a typo in it. Copy it again, all of it.');
   let bytes = unb64(m[2]); if (m[1] === 'PR1') { if (typeof DecompressionStream === 'undefined') throw new Error('This browser is too old to read save codes.'); bytes = await pipeCapped(bytes, new DecompressionStream('deflate-raw'), 262144); } if (bytes.length > 262144) throw new Error("That code is too big to be a Valhalla's Tide save code.");
   const data = JSON.parse(new TextDecoder().decode(bytes)); const clean = {}; for (const k in data) if (KEEP.test(k) && typeof data[k] === 'string') clean[k] = data[k];
-  if (!clean.pr_save) throw new Error('That code has no voyage in it.'); if (clean.pr_save.length > 100000) throw new Error("That code is too big to be a Valhalla's Tide save code.");
+  if (!clean.pr_save) throw new Error('That code has no voyage in it.'); try { const v = JSON.parse(clean.pr_save); if (!v || v.v !== 1) throw 0; } catch { throw new Error('That code has no voyage in it.'); } if (clean.pr_save.length > 100000) throw new Error("That code is too big to be a Valhalla's Tide save code.");
   return { data: clean, summary: summarize(clean.pr_save) };
 }
 // replaces this device's voyage; if the new one cannot be stored, the old one is put back and it returns false

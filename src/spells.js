@@ -16,9 +16,7 @@ export const COMBOS = {
   'breath+firerain': { name: 'Firestorm', icon: '🌋', desc: 'Eight more explosions rain on everything near the target.' },
   'gale+veil': { name: 'Ghost Run', icon: '👻', desc: 'Hidden in mist and twice as fast for 10 s.' },
   'rogue+twister': { name: 'Maelstrom', icon: '🌀', desc: 'The tornado rides the wave: four times as long and twice the damage.' },
-  'kraken+rogue': { name: 'Call of the Deep', icon: '🌊', desc: 'The Kraken rises with the wave and stays twice as long.' },
   'draugr+hammer': { name: 'Thunder of the Dead', icon: '⚡', desc: 'Lightning strikes every enemy ship within 80.' },
-  'elder+veil': { name: 'Madness', icon: '👁', desc: 'Every enemy within 80 forgets you for 10 s.' },
   'icewall+rogue': { name: 'Glacier Wave', icon: '🧊', desc: 'The wave freezes as it goes: everything it hits is frozen 8 s.' },
   'firerain+twister': { name: 'Fire Tornado', icon: '🔥', desc: 'The tornado burns: triple damage.' },
 };
@@ -39,7 +37,7 @@ export function createSpells(G, R) {
     twister() { const [x, z] = ahead(12); const g = G.makeTwister(); g.position.set(x, 0, z); g.scale.setScalar(1.6); scene.add(g); twisters.push({ g, x, z, yaw: b().yaw, t: 0, life: 6 * twK, k: twK }); twK = 1; return true; },
     firerain() { const T = nearest(90) || { x: ahead(40)[0], z: ahead(40)[1], y: 0 }; for (let i = 0; i < 6; i++) setTimeout(() => { const x = T.x + (Math.random() - 0.5) * 14, z = T.z + (Math.random() - 0.5) * 14; R.explode(x, 2, z, 0.9, 0xff8a40); hurtAround(x, z, 10, atk() * 1.5, 'fire'); }, 200 + i * 220); return true; },
     icewall() { let n = 0; for (const m of G.mons()) { if (m.dead) continue; if (Math.hypot(m.x - b().x, m.z - b().z) < 55) { m.stun = Math.max(m.stun || 0, 8); n++; } } for (let i = 0; i < 9; i++) { const a = b().yaw + (i - 4) * 0.35, x = b().x + Math.sin(a) * 22, z = b().z + Math.cos(a) * 22; const p = new THREE.Mesh(G.iceGeo(), new THREE.MeshLambertMaterial({ color: 0xcfeaff, transparent: true, opacity: 0.85, emissive: 0x204060 })); p.position.set(x, -3, z); p.scale.set(2.4, 7 + Math.random() * 3, 2.4); scene.add(p); walls.push({ p, t: 0, life: 8 }); } G.say('🧊 An ice wall rises: ' + n + ' held fast.', 2); return true; },
-    draugr() { const T = nearest(70, true); if (!T) { G.say('No enemy ship to board.'); return false; } const m = T.m, total = m.maxHp * 0.45; let k = 0; const iv = setInterval(() => { if (m.dead || k++ >= 6) { clearInterval(iv); return; } G.hurtMon(m, total / 6); G.pop(m.x, m.top + 2, m.z, '💀 DRAUGR', '#9affc0'); for (let i = 0; i < 8; i++) foam.add(m.x + (Math.random() - 0.5) * 4, m.z + (Math.random() - 0.5) * 4, { spray: true, y: 2, vy: 2, s: 0.6, life: 1, a: 0.8 }); }, 900); m.stun = Math.max(m.stun || 0, 6); return true; },
+    draugr() { const T = nearest(70, true); if (!T) { G.say('No enemy ship to board.'); return false; } const m = T.m, total = m.maxHp * 0.45; let k = 0; const iv = setInterval(() => { if (G.state() !== 'play') return; if (m.dead || !G.mons().includes(m) || k++ >= 6) { clearInterval(iv); return; } G.hurtMon(m, total / 6); G.pop(m.x, m.top + 2, m.z, '💀 DRAUGR', '#9affc0'); for (let i = 0; i < 8; i++) foam.add(m.x + (Math.random() - 0.5) * 4, m.z + (Math.random() - 0.5) * 4, { spray: true, y: 2, vy: 2, s: 0.6, life: 1, a: 0.8 }); }, 900); m.stun = Math.max(m.stun || 0, 6); return true; },
     gale() { b().boost = Math.max(b().boost || 0, 6); for (let i = 0; i < 30; i++) foam.add(b().x - Math.sin(b().yaw) * 6, b().z - Math.cos(b().yaw) * 6, { spray: true, y: 2, vx: Math.sin(b().yaw) * 18 + (Math.random() - 0.5) * 4, vz: Math.cos(b().yaw) * 18 + (Math.random() - 0.5) * 4, vy: 1, s: 0.8, life: 1.2, a: 0.9 }); return true; },
     rogue(freeze) { const yaw = b().yaw; for (let s = 0; s < 8; s++) setTimeout(() => { for (let k = -5; k <= 5; k++) { const d = 10 + s * 6, a = yaw + k * 0.08, x = b().x + Math.sin(a) * d, z = b().z + Math.cos(a) * d; foam.splash(x, z, 1.4); } }, s * 90);
       for (const m of G.mons()) { if (m.dead || m.rise < 1) continue; const dx = m.x - b().x, dz = m.z - b().z, d = Math.hypot(dx, dz); if (d < 60 && Math.abs(G.angDiff(Math.atan2(dx, dz), yaw)) < 0.5) { m.x += (dx / d) * 18; m.z += (dz / d) * 18; G.hurtMon(m, atk() * 2); if (freeze) m.stun = Math.max(m.stun || 0, 8); } }
@@ -56,7 +54,7 @@ export function createSpells(G, R) {
   function cast(k) { const p = P(); if (!p.spells || !p.spells[k] || SPELLS[k].ritual || G.state() !== 'play') return false; let ok;
     if (OLD.includes(k)) { const before = R.cdOf(k); if (k === 'breath') R.breath(); else R.cast(k); ok = R.cdOf(k) > before; if (ok && k === 'breath' && ambush > 0) { setTimeout(() => R.breathFree(), 500); } }
     else { if ((cd[k] || 0) > 0) return false; ok = DO[k](); if (ok) { cd[k] = SPELLS[k].cd * (G.cdK ? G.cdK() : 1); G.say(SPELLS[k].icon + ' ' + SPELLS[k].name.toUpperCase() + '!', 1.5); } }
-    if (!ok) return false; const now = performance.now(); if (last && now - last.t < 4000 && last.k !== k) { const key = [last.k, k].sort().join('+'), rit = Object.keys(SPELLS).find((r) => SPELLS[r].ritual === key); if (rit) ritual(rit); else if (COMBOS[key]) combo(key); } last = { k, t: now }; return true; }
+    if (!ok) return false; const now = performance.now(); if (last && now - last.t < 4000 && last.k !== k) { const key = [last.k, k].sort().join('+'), rit = Object.keys(SPELLS).find((r) => SPELLS[r].ritual === key); if (rit) { ritual(rit); return true; } if (COMBOS[key]) { combo(key); return true; } } last = { k, t: now }; return true; }
   function combo(key) { const C = COMBOS[key], p = P(); p.combos = p.combos || {}; const first = !p.combos[key]; p.combos[key] = true; G.warn(C.icon + ' COMBO: ' + C.name.toUpperCase() + '!' + (first ? ' (new!)' : ''), 3); sfx.horn && sfx.horn(); last = null;
     if (key === 'breath+frost') { for (const t of R.targets()) if (t.frozen > 0) R.hit(t, atk() * 6, 'steam'); for (const m of G.mons()) if (!m.dead && m.stun > 0 && Math.hypot(m.x - b().x, m.z - b().z) < 60) G.hurtMon(m, atk() * 6); }
     else if (key === 'breath+veil') { ambush = 1; setTimeout(() => { R.breathFree(); ambush = 0; }, 600); }
@@ -64,10 +62,8 @@ export function createSpells(G, R) {
     else if (key === 'hammer+sun') { const h = Math.round(G.maxHp() * 0.3); p.hp = Math.min(G.maxHp(), p.hp + h); G.hud(); G.pop(b().x, b().y + 5, b().z, '🌅 +' + h, '#ffe06a'); }
     else if (key === 'breath+firerain') { const T = nearest(100) || { x: ahead(40)[0], z: ahead(40)[1] }; for (let i = 0; i < 8; i++) setTimeout(() => { const x = T.x + (Math.random() - 0.5) * 24, z = T.z + (Math.random() - 0.5) * 24; R.explode(x, 3, z, 1.2, 0xff6a20); hurtAround(x, z, 12, atk() * 2, 'fire'); }, 300 + i * 160); }
     else if (key === 'gale+veil') { b().veil = Math.max(b().veil || 0, 10); b().boost = Math.max(b().boost || 0, 10); }
-    else if (key === 'rogue+twister') { for (const w of twisters) { w.life *= 4; w.k = 2; } }
-    else if (key === 'kraken+rogue') { for (const s of summons) if (s.m) s.life *= 2; }
+    else if (key === 'rogue+twister') { for (const w of twisters) if (w.t < 4 && !w.boosted) { w.boosted = true; w.life = Math.min(30, w.life * 4); w.k = 2; } }
     else if (key === 'draugr+hammer') { for (const m of G.mons()) if (!m.dead && m.naval && Math.hypot(m.x - b().x, m.z - b().z) < 80) { bolt(m.x, m.z); G.hurtMon(m, atk() * 5); } }
-    else if (key === 'elder+veil') { G.loseSight(); b().veil = Math.max(b().veil || 0, 10); }
     else if (key === 'icewall+rogue') DO.rogue(true);
     else if (key === 'firerain+twister') { for (const w of twisters) w.k = 3; } }
   // a ritual: the legend's relic and the right pair of spells
@@ -87,7 +83,7 @@ export function createSpells(G, R) {
   const cdLeft = (k) => (OLD.includes(k) ? R.cdOf(k) : cd[k] || 0);
   function ensureUI() { if (ui) return; ui = document.createElement('div'); ui.id = 'spellBar2'; document.body.appendChild(ui); book = document.createElement('div'); book.id = 'spellBook'; book.className = 'hidden'; document.body.appendChild(book); }
   let sig = '';
-  function paint() { const L = learned(), show = G.state() === 'play' && L.length > 0; ui.classList.toggle('hidden', !show); if (!show) { book.classList.add('hidden'); return; } const p = P(); p.bar = (p.bar || []).filter((k) => L.includes(k)); for (const k of L) if (p.bar.length < 4 && !p.bar.includes(k)) p.bar.push(k);
+  function paint() { const L = learned(), show = G.state() === 'play' && L.length > 0; if (G.inBattle && G.inBattle()) book.classList.add('hidden'); ui.classList.toggle('hidden', !show); if (!show) { book.classList.add('hidden'); return; } const p = P(); p.bar = (p.bar || []).filter((k) => L.includes(k)); for (const k of L) if (p.bar.length < 4 && !p.bar.includes(k)) p.bar.push(k);
     const s = p.bar.join(',') + '|' + L.length; if (s !== sig) { sig = s; ui.innerHTML = p.bar.map((k) => `<button class="act spell" data-k="${k}"><em>${SPELLS[k].icon}</em><small>${SPELLS[k].short || SPELLS[k].name.split(' ').pop().toUpperCase()}</small><i class="cd"></i></button>`).join('') + (L.length > 0 ? '<button class="act more" id="spellMore"><em>✦</em><small>BOOK</small></button>' : '');
       ui.querySelectorAll('[data-k]').forEach((bt) => { bt.onclick = (e) => { e.stopPropagation(); cast(bt.dataset.k); }; }); ui.querySelector('#spellMore').onclick = (e) => { e.stopPropagation(); openBook(); }; }
     ui.querySelectorAll('[data-k]').forEach((bt) => { const k = bt.dataset.k, c = cdLeft(k); bt.classList.toggle('ready', c <= 0); bt.querySelector('.cd').style.height = (c / SPELLS[k].cd) * 100 + '%'; }); }
