@@ -48,7 +48,7 @@ const CSS = `
 #saveBox .card { width: min(440px, 94vw); display: grid; gap: 8px; padding: 16px; border-radius: 14px; background: #1e140c; border: 2px solid #d8b04a; text-align: left; color: #f2e6c8; box-shadow: 0 10px 30px #000a; }
 #saveBox h2 { margin: 0; color: #f2d27a; font: 700 22px Georgia, serif; letter-spacing: 2px; } #saveBox h3 { margin: 8px 0 0; color: #d8b04a; font: 700 14px Georgia, serif; letter-spacing: 2px; }
 #saveBox p { margin: 0; font-size: 13px; line-height: 1.35; color: #e8dcc0; } #saveBox .sum { color: #f2d27a; font-weight: 700; }
-#saveBox textarea { width: 100%; box-sizing: border-box; min-height: 74px; resize: vertical; font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; word-break: break-all; color: #f2d27a; background: #0e0905; border: 2px solid #6a4a1a; border-radius: 10px; padding: 8px; -webkit-user-select: text; user-select: text; }
+#saveBox textarea { width: 100%; box-sizing: border-box; min-height: 74px; resize: vertical; font: 16px/1.35 ui-monospace, Menlo, Consolas, monospace; word-break: break-all; color: #f2d27a; background: #0e0905; border: 2px solid #6a4a1a; border-radius: 10px; padding: 8px; -webkit-user-select: text; user-select: text; }
 #saveBox .row { display: flex; gap: 8px; flex-wrap: wrap; } #saveBox .row > * { flex: 1; margin: 0; text-align: center; text-decoration: none; }
 #saveBox a.ghost { display: inline-block; padding: 9px 12px; border-radius: 10px; border: 1.5px solid #d8b04a; color: #f2e6c8; background: #2a1c12d8; font: 700 14px Georgia, serif; }
 #saveBox .msg { min-height: 1.3em; font-weight: 700; } #saveBox .msg.bad { color: #ff7a5a; } #saveBox .msg.good { color: #9fe86a; }
@@ -73,6 +73,8 @@ export function initSaveCodes() {
   let code = '', pending = null, armT = 0;
   const say = (id, text, cls = '') => { const el = $(id); el.textContent = text; el.className = 'msg ' + cls; };
   const disarm = () => { $('saveLoad').classList.remove('armed'); $('saveLoad').textContent = '⬇️ LOAD'; };
+  // iOS: after typing in a box the page can stay scrolled or shifted; put it back when the box loses focus
+  for (const id of ['saveIn', 'saveOut']) { const t = $(id); if (t) t.addEventListener('blur', () => setTimeout(() => { window.scrollTo(0, 0); document.documentElement.scrollLeft = 0; document.body.scrollLeft = 0; }, 50)); }
   async function open() { box.classList.remove('hidden'); say('saveOutMsg', ''); say('saveInMsg', ''); $('saveIn').value = ''; pending = null; disarm();
     let raw = null; try { raw = localStorage.getItem('pr_save'); } catch { /* ignore */ } $('saveSum').textContent = summarize(raw);
     code = raw ? await makeCode() : ''; $('saveOut').value = code || 'Set sail first: there is no voyage to save yet.';
