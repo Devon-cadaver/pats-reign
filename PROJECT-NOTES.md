@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.2.1. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.2.2. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.2.1: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.2.2: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -687,6 +687,10 @@ disagree with this file, this file wins.
   the colours from SPECIES[mon.type]; krakenEye is per type. Winning Midgard needs all four legends (legendCount vs
   Object.keys(LAIRS).length; the banner says n / 4). Squid removed from spawnTable, BTYPE, the grounds and the region
   bias. Bestiary: The Great Squid is a legend card (old pictures). Tests: scratchpad lairtest.cjs.
+- v1.2.2 (Sean: move the DOCK button to just over the mini map): #dockBtn sits above the little map on every layout
+  (phone: left 8 / bottom 112, the ⇄ swap button beside it at +54; tablet: left 12 / bottom 172, ⇄ at +114; left-hand
+  mode mirrors both to the right), rules appended at the end of pr.css; the short-screen media query that parked DOCK
+  beside the view button is gone. scratchpad docklayout.cjs prints the three rects on four viewports both hands.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).

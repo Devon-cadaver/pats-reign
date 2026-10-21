@@ -348,11 +348,6 @@ body.legendOn #warn, body.broadOn #warn { top: calc(150px + env(safe-area-inset-
 body.legendOn #msg, body.broadOn #msg { top: calc(190px + env(safe-area-inset-top, 0px)); }
 html.tabletHud body.legendOn #warn, html.tabletHud body.broadOn #warn { top: calc(176px + var(--padTop)); }
 html.tabletHud body.legendOn #msg, html.tabletHud body.broadOn #msg { top: calc(218px + var(--padTop)); }
-/* very short screens (a landscape phone with Safari's bars showing): DOCK moves beside the view button, off the telegraph */
-@media (max-height: 360px) {
-  html:not(.tabletHud) #dockBtn { top: calc(96px + env(safe-area-inset-top, 0px)); right: calc(max(8px, env(safe-area-inset-right, 0px)) + 74px); }
-  html.leftHand:not(.tabletHud) #dockBtn { right: auto; left: calc(max(8px, env(safe-area-inset-left, 0px)) + 74px); }
-}
 /* the shipwright header on a narrow phone: title and DONE on top, the tabs and the name below */
 #wright .wrHead { flex-wrap: wrap; }
 #wrName { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -369,3 +364,12 @@ html:not(.tabletHud) #hud .row2 > span { white-space: nowrap; }
 html.leftHand:not(.tabletHud) #hud .row2 { margin-left: auto; }
 html:not(.tabletHud) #compWrap { top: calc(84px + env(safe-area-inset-top, 0)); } /* below a wrapped second HUD line */
 #contBtn .contInfo { display: block; font-size: 11px; font-weight: 400; letter-spacing: 0; opacity: .8; margin-top: 2px; }
+/* v1.2.2 (Sean): the DOCK button sits just above the little map, with the hand-swap button beside it */
+html:not(.tabletHud) #dockBtn { top: auto; right: auto; left: max(8px, env(safe-area-inset-left, 0px)); bottom: calc(112px + env(safe-area-inset-bottom, 0)); }
+html:not(.tabletHud) #swapBtn { left: calc(max(8px, env(safe-area-inset-left, 0px)) + 54px); }
+html.leftHand:not(.tabletHud) #dockBtn { left: auto; right: max(8px, env(safe-area-inset-right, 0px)); }
+html.leftHand:not(.tabletHud) #swapBtn { left: auto; right: calc(max(8px, env(safe-area-inset-right, 0px)) + 54px); }
+html.tabletHud #dockBtn { top: auto; right: auto; left: max(12px, env(safe-area-inset-left, 0px)); bottom: calc(172px + env(safe-area-inset-bottom, 0)); }
+html.tabletHud #swapBtn { left: calc(max(12px, env(safe-area-inset-left, 0px)) + 114px); }
+html.leftHand.tabletHud #dockBtn { left: auto; right: max(12px, env(safe-area-inset-right, 0px)); }
+html.leftHand.tabletHud #swapBtn { left: auto; right: calc(max(12px, env(safe-area-inset-right, 0px)) + 114px); }
