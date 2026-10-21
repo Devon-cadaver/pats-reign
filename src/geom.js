@@ -18,10 +18,10 @@ export const M = (c, kind = 'skin') => { const k = c + ':' + kind; if (!mats.has
 export const VC = { lambert: new THREE.MeshLambertMaterial({ vertexColors: true }), wet: new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 40, specular: 0x34444a }), flat: new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), double: new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }) };
 const geos = new Map(); export const geo = (k, make) => { if (!geos.has(k)) { const g = make(); g.userData.shared = true; geos.set(k, g); } return geos.get(k); };
 for (const m of Object.values(VC)) m.userData.shared = true;
-export const SPH = () => geo('sph', () => new THREE.SphereGeometry(0.5, 14, 10));
+export const SPH = () => geo('sph', () => new THREE.SphereGeometry(0.5, 11, 8));
 export const SPH_LO = () => geo('sphlo', () => new THREE.SphereGeometry(0.5, 8, 6));
 export const HEMI = () => geo('hemi', () => new THREE.SphereGeometry(0.5, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2));
-export const CAP = () => geo('cap', () => new THREE.CapsuleGeometry(0.5, 1, 3, 10));
+export const CAP = () => geo('cap', () => new THREE.CapsuleGeometry(0.5, 1, 2, 8));
 export const CON = () => geo('con', () => new THREE.ConeGeometry(0.5, 1, 8));
 export const CON4 = () => geo('con4', () => new THREE.ConeGeometry(0.5, 1, 4));
 export const CYL = () => geo('cyl', () => new THREE.CylinderGeometry(0.5, 0.5, 1, 12));

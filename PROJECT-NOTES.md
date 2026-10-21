@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.3.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.3.1. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.3.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.3.1: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -716,6 +716,16 @@ disagree with this file, this file wins.
   cult's sack gives P.spells.breath: Dragon's Breath (#breathBtn, 22 s), a fire cone from the bow, 4x attack to
   towers and monsters in it. Saved in P.raids / P.spells / P.thralls (cleanSave). Chart icons 🏘 🔥 💀.
   Tests: scratchpad raidtest.cjs, raidshots.cjs.
+- v1.3.1 (Sean: very low fps on the tablet; every base needs a dock where you can trade before you raid; keep the level
+  colours): triangles per frame cut from 520-620k to 175-217k (tablet size, scratchpad perfprobe.cjs / triprobe.cjs):
+  trees were one instanced mesh per kind for the whole world, all drawn every frame (240k for pines alone); now split
+  into 200-unit tiles (world.treeChunks) hidden beyond the fog by world.setNear(camTgt), lower-poly (5-sided open cones,
+  4-sided trunks) and three in five kept. Ocean grid 170 -> 140; shared SPH 14x10 -> 11x8 and CAP 3,10 -> 2,8. The
+  villagers' ground height is a per-village 2-unit height grid (no ray casts while they walk). Still heavy: the player's
+  ship (~59k at Skeid, crew and shields) and world-wide instanced rocks and bergs (~100k, not tiled yet).
+  Settlements: a dock each (camp 8, village 13 long) through a gap in the stakes, its end is the landing; at a calm
+  settlement's dock TRADE opens their market (jarls sell timber, the fire cult iron; sell fish); they only sound the
+  alarm when attacked (or on sight once you have raided them). Names on the chart and the sighting use danger(lvl).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).

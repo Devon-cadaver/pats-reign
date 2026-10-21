@@ -43,7 +43,7 @@ export function createRaids(G) {
   // ---------- building one settlement ----------
   function build(S) { const pp = PEOPLES[S.people], g = new THREE.Group(), st = grp(g), isl = S.isl, L = S.land, fire = S.people === 'storm';
     const wood = M(pp.wood), dark = M(pp.dark), roof = M(pp.roof), glow = M(pp.glow, 'glow'), banner = M(FAITH_COL[S.faith] || pp.banner), stone = M(fire ? 0x2e2a28 : 0x8a8a86, 'flat');
-    S.houses = []; S.towers = []; const spots = [];
+    S.houses = []; S.towers = []; S.hf = null; const spots = [];
     // houses on a ring inland of the landing, a hall at the heart
     const cx = isl.x + L.dx * (L.r - isl.R * 0.55), cz = isl.z + L.dz * (L.r - isl.R * 0.55); S.cx = cx; S.cz = cz;
     const nH = S.size === 'village' ? 7 : 4;
@@ -62,10 +62,12 @@ export function createRaids(G) {
       part(t, BOX(), banner, 0.08, 1.4, 1.1, 1.9, 8, 0); mergeParts(t);
       const hp = Math.round(260 * Math.pow(1.6, S.lvl) * pp.towerHp); S.towers.push({ g: t, x, z, y, top: y + 9.5, hp, max: hp, cd: 2 + i, dead: false, kind: 'tower', name: 'Watchtower' }); }
     // the stake ring: sharpened logs in the shallows round the landing
-    S.wall = null; if (S.size === 'village') { const wg = grp(g), stakes = []; const R0 = L.r + 7; for (let k = -6; k <= 6; k++) { const a = L.a + k * 0.09, x = isl.x + Math.sin(a) * R0, z = isl.z + Math.cos(a) * R0; const s = part(wg, CON(), dark, 0.55, 3.4, 0.55, x - isl.x, 0.6, z - isl.z); s.rotation.set(Math.cos(a) * 0.5, 0, -Math.sin(a) * 0.5); stakes.push([x, z]); } wg.position.set(isl.x, 0, isl.z); mergeParts(wg);
+    S.wall = null; if (S.size === 'village') { const wg = grp(g), stakes = []; const R0 = L.r + 7; for (let k = -7; k <= 7; k++) { if (Math.abs(k) <= 1) continue; const a = L.a + k * 0.09, x = isl.x + Math.sin(a) * R0, z = isl.z + Math.cos(a) * R0; const s = part(wg, CON(), dark, 0.55, 3.4, 0.55, x - isl.x, 0.6, z - isl.z); s.rotation.set(Math.cos(a) * 0.5, 0, -Math.sin(a) * 0.5); stakes.push([x, z]); } wg.position.set(isl.x, 0, isl.z); mergeParts(wg);
       const hp = Math.round(200 * Math.pow(1.6, S.lvl)); S.wall = { g: wg, x: isl.x + L.dx * R0, z: isl.z + L.dz * R0, y: 1, top: 3, hp, max: hp, dead: false, kind: 'wall', name: 'Stake wall', R0, stakes }; }
-    // the landing point (gold ring on the water once the way is open)
-    const lx = isl.x + L.dx * (L.r + 4), lz = isl.z + L.dz * (L.r + 4); S.lx = lx; S.lz = lz;
+    // the dock: planks on posts from the shore out past the stakes (bigger settlement, longer dock); its end is the landing
+    const dl = S.size === 'village' ? 13 : 8, dock = grp(g, isl.x + L.dx * (L.r - 1), 0, isl.z + L.dz * (L.r - 1)); dock.rotation.y = Math.atan2(L.dx, L.dz);
+    part(dock, BOX(), wood, 3, 0.3, dl, 0, 0.9, dl / 2); for (let i = 0; i <= dl; i += 2.2) for (const s of [-1, 1]) part(dock, CYL6(), dark, 0.32, 3, 0.32, s * 1.35, -0.4, i); for (const s of [-1, 1]) part(dock, CYL6(), dark, 0.3, 1.3, 0.3, s * 1.25, 1.4, dl - 0.4); mergeParts(dock);
+    const lx = isl.x + L.dx * (L.r + dl + 3), lz = isl.z + L.dz * (L.r + dl + 3); S.lx = lx; S.lz = lz;
     const ring = new THREE.Mesh(new THREE.RingGeometry(3.2, 3.8, 32), new THREE.MeshBasicMaterial({ color: 0xffd24a, transparent: true, opacity: 0.8, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.position.set(lx, 0.3, lz); ring.visible = false; scene.add(ring); S.ring = ring;
     // villagers: one instanced batch, walking between houses
     const nF = S.size === 'village' ? 22 : 12, fig = new THREE.InstancedMesh(FIG(), new THREE.MeshLambertMaterial(), nF); fig.instanceMatrix.setUsage(THREE.DynamicDrawUsage); const col = new THREE.Color();
@@ -106,9 +108,9 @@ export function createRaids(G) {
   function nearestTarget(x, z, range) { let best = null, bd = range; for (const t of targets()) { const d = Math.hypot(t.x - x, t.z - z); if (d < bd) { bd = d; best = t; } } return best; }
   // ---------- the raid ----------
   function ensureBtns() { if (btns) return; const mk = (id, html, cls) => { const b = document.createElement('button'); b.id = id; b.className = cls; b.innerHTML = html; b.classList.add('hidden'); document.body.appendChild(b); return b; };
-    btns = { raid: mk('raidBtn', '⚔ RAID', 'raidBtn'), ret: mk('returnBtn', '🔥 RETURN', 'raidBtn ret'), breath: mk('breathBtn', '<em>🐉</em><small>BREATH</small><i class="cd"></i>', 'act breath'), bar: mk('raidBar', '<b></b><i></i>', 'raidBar') };
+    btns = { trade: mk('tradeBtn', '⚖ TRADE', 'raidBtn trade'), raid: mk('raidBtn', '⚔ RAID', 'raidBtn'), ret: mk('returnBtn', '🔥 RETURN', 'raidBtn ret'), breath: mk('breathBtn', '<em>🐉</em><small>BREATH</small><i class="cd"></i>', 'act breath'), bar: mk('raidBar', '<b></b><i></i>', 'raidBar') };
     btns.raid.onclick = (e) => { e.stopPropagation(); startRaid(); }; btns.ret.onclick = (e) => { e.stopPropagation(); if (flare) G.sailTo(flare.x, flare.z, flare.name); btns.ret.classList.add('hidden'); };
-    btns.breath.onclick = (e) => { e.stopPropagation(); breath(); }; const acts = document.getElementById('acts'); if (acts) acts.insertBefore(btns.breath, acts.firstChild); }
+    btns.breath.onclick = (e) => { e.stopPropagation(); breath(); }; btns.trade.onclick = (e) => { e.stopPropagation(); openTrade(); }; const acts = document.getElementById('acts'); if (acts) acts.insertBefore(btns.breath, acts.firstChild); }
   function startRaid() { const S = list.find((q) => q.state === 'alert' && open(q) && Math.hypot(q.lx - G.boat.x, q.lz - G.boat.z) < 16); if (!S) return; S.state = 'raid'; S.ring.visible = false; const need = S.size === 'village' ? 40 : 22; raid = { S, t: 0, need, wave: 0, nextWave: 8 };
     S.crew.visible = true; S.crewPos = Array.from({ length: 8 }, (_, i) => ({ x: S.lx + (i % 4) - 1.5, z: S.lz + (i >> 2), tx: 0, tz: 0, i })); sfx.horn && sfx.horn(); G.warn('⚔ THE CREW STORM ' + S.name.toUpperCase() + '! HOLD THE SEA WHILE THEY LOOT', 3.5); }
   function updateRaid(dt) { const R = raid, S = R.S, b = G.boat; R.t += dt; const away = Math.hypot(S.lx - b.x, S.lz - b.z);
@@ -125,6 +127,15 @@ export function createRaids(G) {
   function ruin(S, quiet) { for (const h of S.houses) { h.burn = Math.max(h.burn, 0.5); h.g.scale.y = 0.45; h.g.traverse((o) => { if (o.isMesh && o.material && o.material.color && !o.userData.charred) { o.material = o.material.clone(); o.material.color.multiplyScalar(0.25); o.userData.charred = true; } }); } for (const t of S.towers) { t.dead = true; t.g.rotation.z = 1.2; } if (S.wall) { S.wall.dead = true; S.wall.g.visible = false; } S.fig.count = Math.max(2, Math.round(S.folk.length * 0.2)); void quiet; }
   function rebuild(S) { const why = S.lastHit; S.faith = (why && COUNTER[why]) || Object.keys(FAITHS)[(Object.keys(FAITHS).indexOf(S.faith) + 2) % 6]; if (S.faith === S.lastFaith) S.faith = 'odin'; S.lastFaith = S.faith; S.lvl += 0.6; S.state = 'idle'; S.sacked = 0; clear(S); build(S); S.seen = false; G.say('🏗 ' + S.name + ' has risen again under ' + FAITHS[S.faith].name + '. ' + FAITHS[S.faith].desc, 5); }
   function sendFlare(S, why) { flare = { x: S.lx, z: S.lz, name: S.name, t: 0 }; G.warn('🔴 A FLARE OVER ' + S.name.toUpperCase() + '! ' + why, 4); btns.ret.classList.remove('hidden'); }
+  // ---------- trading at a calm settlement's dock ----------
+  const GOODS = { home: { sell: 'w', name: 'timber', ic: '🪵', per: 2 }, storm: { sell: 'i', name: 'iron', ic: '⚙️', per: 4 } };
+  function openTrade() { const S = list.find((q) => q.state === 'idle' && Math.hypot(q.lx - G.boat.x, q.lz - G.boat.z) < 14); if (!S) return; let el = document.getElementById('tradePanel'); if (!el) { el = document.createElement('div'); el.id = 'tradePanel'; document.body.appendChild(el); }
+    const P = G.P, gd = GOODS[S.people], t = P.tier + 1, q = 20 * t, cost = Math.round(q * gd.per * (1 + S.lvl * 0.1)), fishG = 4 + P.tier + (S.people === 'storm' ? 2 : 0);
+    el.innerHTML = '<h3>⚖ ' + S.name + '</h3><p>' + S.jarl + ' trades with you, for now. They have ' + gd.name + ' to spare.</p><button id="trBuy">Buy ' + q + ' ' + gd.ic + ' for ' + cost + ' 🪙</button><button id="trFish">Sell your ' + (P.res.f || 0) + ' 🐟 for ' + (P.res.f || 0) * fishG + ' 🪙</button><button id="trClose" class="ghost">CLOSE</button>'; el.classList.remove('hidden');
+    const buy = el.querySelector('#trBuy'), fish = el.querySelector('#trFish'); buy.disabled = P.res.g < cost; fish.disabled = !P.res.f;
+    buy.onclick = () => { if (P.res.g < cost) return; P.res.g -= cost; P.res[gd.sell] = (P.res[gd.sell] || 0) + q; sfx.coins && sfx.coins(); G.hud(); openTrade(); };
+    fish.onclick = () => { if (!P.res.f) return; P.res.g += P.res.f * fishG; P.res.f = 0; sfx.coins && sfx.coins(); G.hud(); openTrade(); };
+    el.querySelector('#trClose').onclick = () => el.classList.add('hidden'); }
   // ---------- Dragon's Breath: a cone of fire from the bow ----------
   let breathCd = 0, breathT = 0;
   function breath() { const P = G.P; if (!P.spells || !P.spells.breath || breathCd > 0 || G.state() !== 'play') return; breathCd = 22; breathT = 1.6; sfx.boom(); G.say('🐉 DRAGON\'S BREATH!', 1.5);
@@ -136,16 +147,16 @@ export function createRaids(G) {
   function update(dt, time) { ensureBtns(); updateFx(dt); updateBreath(dt); if (shakeOut > 0) { G.boat.shake = Math.max(G.boat.shake || 0, shakeOut); shakeOut = 0; }
     const b = G.boat, playing = G.state() === 'play'; if (raid) updateRaid(dt);
     if (flare) { flare.t += dt; if (Math.random() < dt * 8) embers.add(flare.x, flare.z, { spray: true, y: 22 + Math.sin(flare.t) * 2, vx: 0, vz: 0, vy: 0.5, g: 0, s: 2.2, grow: 0.2, life: 0.6, a: 1 }); }
-    let canRaid = false;
+    let canRaid = false, canTrade = false;
     for (const S of list) { const d = Math.hypot(S.cx - b.x, S.cz - b.z), near = d < 230;
       if (S.state === 'ruin') { S.sacked -= dt; if (S.sacked <= 0 && d > 160) rebuild(S); }
-      if (!S.seen && d < 110 && playing) { S.seen = true; const F = FAITHS[S.faith]; G.say(PEOPLES[S.people].icon + ' <b>' + S.name + '</b>, a ' + S.size + ' of the ' + PEOPLES[S.people].name + '. Jarl: ' + S.jarl + '. They worship ' + F.icon + ' ' + F.name + '. ' + F.desc, 6); }
+      if (!S.seen && d < 110 && playing) { S.seen = true; const F = FAITHS[S.faith]; G.say(PEOPLES[S.people].icon + ' <b style="color:' + G.danger(S.lvl) + '">' + S.name + ' (Lv ' + (Math.round(S.lvl) + 1) + ')</b>, a ' + S.size + ' of the ' + PEOPLES[S.people].name + '. Jarl: ' + S.jarl + '. They worship ' + F.icon + ' ' + F.name + '. ' + F.desc, 6); }
       if (S.g) S.g.visible = near; if (!near) continue;
       // villagers walk between houses; when the alarm sounds they run for the hall
       const scared = S.state === 'alert' || S.state === 'raid', n = S.fig.count;
       for (let i = 0; i < n; i++) { const f = S.folk[i]; if (f.wait > 0 && !scared) f.wait -= dt; else { if (!f.to || Math.hypot(f.to[0] - f.x, f.to[1] - f.z) < 0.6) { f.to = scared ? [S.cx + (Math.random() - 0.5) * 3, S.cz + (Math.random() - 0.5) * 3] : S.spots[(Math.random() * S.spots.length) | 0].map((v) => v + (Math.random() - 0.5) * 5); f.wait = scared ? 0 : 1 + Math.random() * 4; }
           const dx = f.to[0] - f.x, dz = f.to[1] - f.z, dd = Math.hypot(dx, dz) || 1, sp = f.v * (scared ? 3 : 1); f.x += (dx / dd) * sp * dt; f.z += (dz / dd) * sp * dt; f.yaw = Math.atan2(dx, dz); }
-        tmp.position.set(f.x, (f.y ??= groundYFast(S, f.x, f.z)) + Math.abs(Math.sin(time * 8 + i)) * (f.wait > 0 ? 0 : 0.12), f.z); if (i % 7 === (Math.floor(time * 10) % 7)) f.y = groundYFast(S, f.x, f.z); tmp.rotation.set(0, f.yaw || 0, 0); tmp.updateMatrix(); S.fig.setMatrixAt(i, tmp.matrix); }
+        tmp.position.set(f.x, groundYFast(S, f.x, f.z) + Math.abs(Math.sin(time * 8 + i)) * (f.wait > 0 ? 0 : 0.12), f.z); tmp.rotation.set(0, f.yaw || 0, 0); tmp.updateMatrix(); S.fig.setMatrixAt(i, tmp.matrix); }
       S.fig.instanceMatrix.needsUpdate = true;
       // the raiding crew run from the landing to the burning houses
       if (S.state === 'raid') { S.crewPos.forEach((c, i) => { const h = S.houses[(i + Math.floor(raid.t / 3)) % S.houses.length]; const dx = h.x - c.x, dz = h.z - c.z, dd = Math.hypot(dx, dz) || 1; if (dd > 1.5) { c.x += (dx / dd) * 4 * dt; c.z += (dz / dd) * 4 * dt; } tmp.position.set(c.x, groundYFast(S, c.x, c.z), c.z); tmp.rotation.set(0, Math.atan2(dx, dz), 0); tmp.updateMatrix(); S.crew.setMatrixAt(i, tmp.matrix); if (Math.random() < dt * 3) embers.add(c.x, c.z, { spray: true, y: tmp.position.y + 1.8, vy: 1.5, g: -0.5, s: 0.35, life: 0.5, a: 1 }); }); S.crew.instanceMatrix.needsUpdate = true; }
@@ -154,9 +165,12 @@ export function createRaids(G) {
       // the stake ring holds you off until it is broken
       if (S.wall && !S.wall.dead && S.state !== 'ruin') { const W = S.wall; for (const [x, z] of W.stakes) { const dx = b.x - x, dz = b.z - z, dd = Math.hypot(dx, dz); if (dd < 2.6) { b.x += (dx / (dd || 1)) * (2.6 - dd); b.z += (dz / (dd || 1)) * (2.6 - dd); if (b.v > 3) { b.v *= 0.5; G.damage(G.maxHp() * 0.02, 'The stakes tear at your hull! Break the stake wall first.'); } } } }
       // towers shoot when you come close
-      if (playing && S.state !== 'ruin') for (const t of S.towers) { if (t.dead) continue; const dt2 = Math.hypot(t.x - b.x, t.z - b.z); if (dt2 > 70) continue; if (S.state === 'idle' && dt2 < 55) alarm(S); t.cd -= dt; if (t.cd <= 0 && S.state !== 'idle') { t.cd = 2.6 - Math.min(1, S.lvl * 0.15); const pp = PEOPLES[S.people], hurt = 6 * Math.pow(1.55, S.lvl) * pp.dmg * (1 - G.defense()); for (let k = 0; k < 3; k++) G.launch({ x: t.x, y: t.top, z: t.z }, { x: b.x + (Math.random() - 0.5) * 3, y: b.y + 1.5, z: b.z + (Math.random() - 0.5) * 3 }, 'arrow', k ? null : () => G.damage(hurt, null)); if (S.people === 'storm' && Math.random() < 0.5) setTimeout(() => explode(b.x + (Math.random() - 0.5) * 10, 0.5, b.z + (Math.random() - 0.5) * 10, 0.5, 0xff8a40), 700); } }
+      if (playing && S.state !== 'ruin') for (const t of S.towers) { if (t.dead) continue; const dt2 = Math.hypot(t.x - b.x, t.z - b.z); if (dt2 > 70) continue; if (S.state === 'idle' && dt2 < 55 && S.raids > 0) alarm(S); t.cd -= dt; if (t.cd <= 0 && S.state !== 'idle') { t.cd = 2.6 - Math.min(1, S.lvl * 0.15); const pp = PEOPLES[S.people], hurt = 6 * Math.pow(1.55, S.lvl) * pp.dmg * (1 - G.defense()); for (let k = 0; k < 3; k++) G.launch({ x: t.x, y: t.top, z: t.z }, { x: b.x + (Math.random() - 0.5) * 3, y: b.y + 1.5, z: b.z + (Math.random() - 0.5) * 3 }, 'arrow', k ? null : () => G.damage(hurt, null)); if (S.people === 'storm' && Math.random() < 0.5) setTimeout(() => explode(b.x + (Math.random() - 0.5) * 10, 0.5, b.z + (Math.random() - 0.5) * 10, 0.5, 0xff8a40), 700); } }
+      if (S.state === 'idle' && Math.hypot(S.lx - b.x, S.lz - b.z) < 14 && b.v < 4) canTrade = true;
       if (S.state === 'alert' && open(S)) { S.ring.visible = true; S.ring.material.opacity = 0.5 + 0.4 * Math.sin(time * 5); if (Math.hypot(S.lx - b.x, S.lz - b.z) < 16) canRaid = true; } }
-    if (btns) btns.raid.classList.toggle('hidden', !(canRaid && playing && !raid)); }
-  const yCache = new Map(); function groundYFast(S, x, z) { const k = S.id + ':' + Math.round(x * 2) + ':' + Math.round(z * 2); let y = yCache.get(k); if (y === undefined) { y = Math.max(0.2, groundY(x, z)); if (yCache.size > 6000) yCache.clear(); yCache.set(k, y); } return y; }
+    if (btns) { btns.raid.classList.toggle('hidden', !(canRaid && playing && !raid)); btns.trade.classList.toggle('hidden', !(canTrade && playing)); if (!canTrade) { const tp = document.getElementById('tradePanel'); if (tp) tp.classList.add('hidden'); } } }
+  // the ground under a villager: a 2-unit height grid sampled once per village (no ray casts while they walk)
+  function groundYFast(S, x, z) { if (!S.hf) { const R = S.isl.R * 1.3, n = Math.ceil((R * 2) / 2) + 1, a = new Float32Array(n * n); for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) a[j * n + i] = Math.max(0.2, groundY(S.isl.x - R + i * 2, S.isl.z - R + j * 2)); S.hf = { x0: S.isl.x - R, z0: S.isl.z - R, n, a }; }
+    const H = S.hf, fx = Math.max(0, Math.min(H.n - 1.001, (x - H.x0) / 2)), fz = Math.max(0, Math.min(H.n - 1.001, (z - H.z0) / 2)), i = fx | 0, j = fz | 0, u = fx - i, v = fz - j, A = H.a, n = H.n; return A[j * n + i] * (1 - u) * (1 - v) + A[j * n + i + 1] * u * (1 - v) + A[(j + 1) * n + i] * (1 - u) * v + A[(j + 1) * n + i + 1] * u * v; }
   return { init, update, saveData, nearestTarget, hit, explode, list, targets, startRaid, breath, get raid() { return raid; }, get flare() { return flare; }, FAITHS, PEOPLES };
 }
