@@ -21,6 +21,7 @@ import { makeGate } from './hel.js';
 import { createRaids, FAITHS, SPELLS, LEGEND_SPELL } from './raids.js';
 import { createSpells, COMBOS } from './spells.js';
 import { createHome, BUILDINGS } from './home.js';
+import { createLegendGame } from './legendgame.js';
 
 const $ = (id) => document.getElementById(id);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, k) => a + (b - a) * k, rnd = (a, b) => a + Math.random() * (b - a);
@@ -121,7 +122,7 @@ function groundOpen(g) { return spawnTable(world.regionAt(g.x, g.z), isNight()).
 const REGION_BIAS = { frost: { serpent: 2, leviathan: 2, crab: 0.5 }, storm: { eel: 3, jelly: 2, octopus: 1.5 }, mist: { angler: 3, octopus: 1.5, ghost: 3, raider: 1.5 }, warm: { shark: 2, crab: 3, jelly: 1.5 }, home: { shark: 1.5, jelly: 1.5 } };
 
 // ---------- player ----------
-let raids = null, spells = null, home = null; // v1.3.0: enemy settlements to smash and raid (src/raids.js)
+let raids = null, spells = null, home = null, lgame = null; // v1.3.0: enemy settlements to smash and raid (src/raids.js)
 const P = { raids: {}, spells: {}, thralls: 0, tier: 0, up: { shields: 0, armor: 0, ballista: 0, fire: 0, ram: 0, sail: 0, oars: 0, nets: 0, lights: 0, compass: 0, hooks: 0 }, res: { w: 20, i: 5, g: 40, f: 0, s: 0 }, hp: 100, legends: {}, kills: 0, home: 0, won: false, tod: 0.16, wreck: null, prizes: [], maps: [], relics: {}, skin: 'pats', realm: 'mid', hull: 'oak', sailD: 'pats', owned: { h: ['oak'], s: ['pats'] }, helWon: false, reborn: {}, hall: 0, tithe: 0, trials: {}, st: { k: {}, d: {}, ships: 0, fish: 0, digs: 0, souls: 0 } };
 const boat = { grace: 0, x: 0, z: -20, yaw: Math.PI, v: 0, want: Math.PI, thr: 0, wp: null, fireCd: 0, thor: 0, boost: 0, spin: 0, shake: 0, hitCd: 0, y: 0, pitch: 0, roll: 0 };
 const T = () => SHIP_TIERS[P.tier];
@@ -517,11 +518,11 @@ const eyeRingGeo = new THREE.TorusGeometry(1, 0.09, 6, 40);
 // the Kraken's eye in the world (the same spot the giant camera frames)
 function krakenEye(mon) { const Rk = mon.size / 6, sy = Math.sin(mon.yaw), cy = Math.cos(mon.yaw), sq = mon.type === 'squid', lx = (sq ? 0.9 : 0.98) * Rk, lz = (sq ? 1.15 : 1.3) * Rk; return [mon.x + lx * cy + lz * sy, mon.g.position.y + Rk * (sq ? 0.45 : 1.12), mon.z + lz * cy - lx * sy, Rk]; }
 function startLegend(mon) {
-  const kind = LEGEND_KIND[mon.type] || (BROAD.on && !mon.naval && !mon.passive && !mon.boss && BEAST_KIND[mon.type] ? 'beast' : null); if (!kind) return false;
+  const kind0 = LEGEND_KIND[mon.type], kind = (kind0 === 'kraken' && BROAD.on && mon.m && mon.m.arms ? 'kgame' : kind0) || (BROAD.on && !mon.naval && !mon.passive && !mon.boss && BEAST_KIND[mon.type] ? 'beast' : null); if (!kind) return false;
   const t = T(), young = !!mon.young, L = { kind, young, reload: 0.6, tents: [], spawnT: 1.4, eyeT: rnd(6, 8), eyeOpen: 0, eyeMark: null };
   mon.stState = mon.stState || { t: 0, speed: 0, attack: 0, dive: 0, hurt: 0, rise: 1 }; mon.state = 'chase'; if (mon.boss && !mon.legendHp) { mon.legendHp = true; mon.maxHp *= 1.5; mon.hp *= 1.5; }
   if (mon.boss && LAIRS_HEL[mon.lair] && !mon.helBuff) { mon.helBuff = true; const hk = mon.lair === 'nidhogg' ? 2.2 : 1.6; mon.maxHp = Math.round(mon.maxHp * hk); mon.hp = Math.round(mon.hp * hk); mon.dmg = Math.round(mon.dmg * (mon.lair === 'nidhogg' ? 2.4 : 1.8)); mon.rageAt = mon.lair === 'nidhogg' ? 1.01 : mon.lair === 'surtr' ? 0.5 : 0.7; }
-  if (kind === 'kraken') { // the Kraken rises ahead of the bow, facing you; your ship is held fast
+  if (kind === 'kraken' || kind === 'kgame') { // the Kraken rises ahead of the bow, facing you; your ship is held fast
     const dist = mon.giant ? mon.size * 0.55 + t.L * 0.6 : mon.size * 0.55 + t.L * 0.6 + 4; let dir = boat.yaw;
     for (const c of [0, 0.6, -0.6, 1.2, -1.2, Math.PI]) { const a = boat.yaw + c, x = boat.x + Math.sin(a) * dist, z = boat.z + Math.cos(a) * dist; if (!world.blockAt(x, z, mon.size * 0.3)) { dir = a; break; } }
     mon.x = boat.x + Math.sin(dir) * dist; mon.z = boat.z + Math.cos(dir) * dist; mon.yaw = dir + Math.PI; mon.stState.reach = 0.35; helm.held = false; setThrottle(0, true); boat.v = 0; }
@@ -529,7 +530,7 @@ function startLegend(mon) {
   else if (kind === 'elder') elderStart(L, mon);
   else if (kind === 'beast') beastStart(L, mon);
   for (const m of [...mons]) if (m !== mon && !m.boss && !m.dead && Math.hypot(m.x - boat.x, m.z - boat.z) < 90) removeMon(m);
-  battle = { mon, t: 0, legend: L }; boat.wp = null; setBattle(true);
+  battle = { mon, t: 0, legend: L }; boat.wp = null; setBattle(true); if (kind === 'kgame') lgame.start(L, mon);
   const held = !L.sail; if (held) { $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy'); } document.body.classList.add('legendOn');
   const ui = document.createElement('div'); ui.id = 'broad'; ui.className = 'legend' + (held ? '' : ' sail');
   const hint = kind === 'beast' ? (L.learn ? 'It bites at your hull: tap SPEARS to throw at it! Bigger beasts dive, and a red ring shows where they will strike.' : BEAST_HINT[L.bk]) : kind === 'kraken' ? 'Tentacles rise where the red rings are: tap one (or FIRE) to cut it down before it slams your deck!' : kind === 'elder' ? 'Shoot the ghost lights before they reach you! Then watch the runes…' : 'It hunts you under the water. When the red ring appears, turn or change speed to dodge its strike, then shoot its head!';
@@ -575,7 +576,7 @@ function updateKraken(dt) { const L = battle.legend, mon = battle.mon, t = T(), 
   if (mon.hp <= 0) { endLegend('win'); return; } }
 // what FIRE / Space shoots: the open eye first, else the tentacle that will strike soonest
 function krakenTarget(L) { if (L.grab && L.grab.K.phase === 'grab') return { K: L.grab.K }; if (L.eyeOpen) return { eye: true }; let best = null, bt = 1e9; for (const K of L.tents) { const left = K.phase === 'rise' ? 9 + (0.7 - K.t) : K.phase === 'coil' ? 0 + (9 - K.t) : 1e9; if (left < bt) { bt = left; best = K; } } return best ? { K: best } : null; }
-function legendFire(target) { const L = battle && battle.legend; if (!L) return; if (L.kind === 'beast') { beastFire(L, battle.mon); return; } if (L.reload > 0) return; if (L.kind === 'jorm') { jormFire(L, battle.mon); return; } if (L.kind === 'elder') { elderFire(L, battle.mon, target); return; } const tg = target || krakenTarget(L); if (!tg) return; L.reload = legendReload(); unlockAudio(); sfx.throw();
+function legendFire(target) { const L = battle && battle.legend; if (!L) return; if (L.kind === 'kgame') { lgame.mash(); return; } if (L.kind === 'beast') { beastFire(L, battle.mon); return; } if (L.reload > 0) return; if (L.kind === 'jorm') { jormFire(L, battle.mon); return; } if (L.kind === 'elder') { elderFire(L, battle.mon, target); return; } const tg = target || krakenTarget(L); if (!tg) return; L.reload = legendReload(); unlockAudio(); sfx.throw();
   const mon = battle.mon, kind = P.up.ballista ? 'bolt' : 'spear', from = { x: boat.x, y: boat.y + 2.2, z: boat.z };
   if (tg.eye) { const [ex, ey, ez] = krakenEye(mon); launch(from, { x: ex, y: ey, z: ez }, kind, () => { const L2 = battle && battle.legend; if (L2 !== L || !L.eyeOpen) { pop(ex, ey + 1, ez, 'MISS', '#9ab8c8'); return; }
       const d = Math.round(attack() * 2.4 * (boat.thor > 0 ? 2 : 1) * rnd(0.9, 1.1)); mon.hp -= d; mon.stState.hurt = 1; pop(ex, ey + 2, ez, '👁 THE EYE! −' + d, '#ffd24a'); sfx.hit(); sfx.boom();
@@ -744,10 +745,10 @@ function elderTap(L, mon, x, y) { const near = (wx, wy, wz, r) => { const s = to
   for (const W of L.wisps) if (near(W.m.position.x, W.m.position.y, W.m.position.z, 70)) { elderFire(L, mon, { W }); return; } }
 
 function updateLegend(dt) { const L = battle.legend, mon = battle.mon; battle.t += dt; L.reload = Math.max(0, L.reload - dt); if (!L.sail) { boat.v = 0; boat.wp = null; }
-  if (L.kind === 'kraken') updateKraken(dt); else if (L.kind === 'jorm') updateJorm(dt); else if (L.kind === 'elder') updateElder(dt); else if (L.kind === 'beast') updateBeast(dt); if (!battle) return;
+  if (L.kind === 'kgame') { lgame.update(dt); if (!battle) return; } else if (L.kind === 'kraken') updateKraken(dt); else if (L.kind === 'jorm') updateJorm(dt); else if (L.kind === 'elder') updateElder(dt); else if (L.kind === 'beast') updateBeast(dt); if (!battle) return;
   L.hudT = (L.hudT || 0) - dt; if (L.hudT <= 0) { L.hudT = 0.1; $('bFoeHp').style.width = clamp(mon.hp / mon.maxHp, 0, 1) * 100 + '%'; if ($('bFire')) { $('bLoad').style.width = (1 - clamp(L.reload / legendReload(), 0, 1)) * 100 + '%'; $('bFire').classList.toggle('ready', L.reload <= 0); } } }
 function clearLegend() { const L = battle && battle.legend; if (!L) return; for (const k of ['shadow', 'ring', 'mark', 'ward']) if (L[k]) { scene.remove(L[k]); L[k].material.dispose(); } for (const Rn of L.runes || []) { scene.remove(Rn.m); Rn.m.material.dispose(); } for (const W of [...(L.wisps || [])]) dropWisp(L, W); boat.dunk = 0; L.grab = null; if (ship.mask && !boat.air) ship.mask.visible = true; for (const K of L.tents) dropTentacle(K); L.tents.length = 0; if (L.eyeMark) { scene.remove(L.eyeMark); L.eyeMark.material.dispose(); }
-  const ui = $('broad'); if (ui) ui.remove(); $('fireBtn').classList.remove('aimNow', 'aimSoon', 'aimFree', 'aimNo'); fireKey = null; document.body.classList.remove('busy', 'legendOn'); $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); if (battle.mon.stState) { battle.mon.stState.attack = 0; battle.mon.stState.reach = 1; } }
+  if (lgame && lgame.active) lgame.clear(); const ui = $('broad'); if (ui) ui.remove(); $('fireBtn').classList.remove('aimNow', 'aimSoon', 'aimFree', 'aimNo'); fireKey = null; document.body.classList.remove('busy', 'legendOn'); $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); if (battle.mon.stState) { battle.mon.stState.attack = 0; battle.mon.stState.reach = 1; } }
 function endLegend(result) { const L = battle && battle.legend; if (!L) return; const mon = battle.mon; clearLegend(); battle = null; setBattle(false); boat.lastHit = time; boat.grace = 4; hud();
   if (result === 'win') { killMon(mon); setThrottle(0, true); }
   else if (result === 'flee') { damage(mon.dmg * 1.2 * (1 - defense()), 'You tear free of its grip!'); mon.stun = 2.5; boat.yaw = Math.atan2(boat.x - mon.x, boat.z - mon.z); helm.angle = 0; boat.boost = 3.5; boat.v = topSpeed(); setThrottle(1, true); }
@@ -1580,6 +1581,7 @@ spells = createSpells({ cdK: () => (home ? home.K.spellCd() : 1), scene, ocean, 
   hurtMon(m, d) { if (m.dead) return; m.hp -= d; pop(m.x, m.top + m.g.position.y, m.z, '−' + Math.round(d), '#c8a0ff'); if (m.hp <= 0) killMon(m); else if (!m.passive) m.state = 'chase'; },
   legends: () => P.legends || {}, makeTwister() { return twisters.make(false, [], null); }, removeTwister(g) { twisters.remove(g); }, iceGeo: () => sharedGeo('iceSpike', () => new THREE.ConeGeometry(0.5, 1, 5)), shake(k) { boat.shake = Math.max(boat.shake || 0, k); }, flashSky() { flash = Math.max(flash, 0.5); } }, raids);
 home = createHome({ embers, spawnMon, removeMon, launch, inFight, mons: () => mons, hurtMon: (m, d) => spells.hurtMon ? spells.hurtMon(m, d) : (m.hp -= d, m.hp <= 0 && killMon(m)), flare: (x, z, name, why) => raids.flareAt(x, z, name, why), clearFlare: () => raids.clearFlare(), scene, ocean, smoke, sfx, get P() { return P; }, get boat() { return boat; }, world: () => world, pop, warn, hud, save, costHtml, can, pay, redraw: () => { if (state === 'harbor') drawHarbor(); } });
+lgame = createLegendGame({ sfx, get boat() { return boat; }, world: () => world, T: () => T(), attack, defense, damage, launch, pop, say, warn, toScreen, explode: (x, y, z, k, c) => raids.explode(x, y, z, k, c), splash: (x, z, k) => foam.splash(x, z, k), shake(k) { boat.shake = Math.max(boat.shake || 0, k); }, endLegend: (r) => endLegend(r) });
 const ashC = new THREE.Color(0x8a8480), snowC = new THREE.Color(0xffffff), helAsh = new THREE.Color(0x7a6a6e), emberC = new THREE.Color(0xff8a3a), rimeC = new THREE.Color(0xd8e4f4);
 const soulFx = createFoam(scene, ocean, 260, { color: 0xc8a0ff });
 function updateSeas(dt) {
@@ -1654,7 +1656,7 @@ function tick(dt) { time += dt;
     $('region').textContent = rname(world.regionAt(boat.x, boat.z)) + (isNight() ? ' · 🌙' : ''); $('wxTxt').textContent = wx.k > 0.3 ? (P.realm === 'hel' && WXNAME_HEL[wx.type]) || WXNAME[wx.type] : ''; $('buff').textContent = [boat.thor > 0 ? '⚡ Thor ×2 damage ' + Math.ceil(boat.thor) + 's' : '', boat.curse > 0 ? '☠ Cursed ' + Math.ceil(boat.curse) + 's' : '', lairHud ? '⚔ Lair wave ' + lairHud : '', P.bounty ? '📜 ' + (P.bounty.n >= P.bounty.need ? 'Bounty done: claim it at a harbour' : bountyText(P.bounty) + ' ' + P.bounty.n + '/' + P.bounty.need) : '', boat.pod ? '🐬 Porpoises +10% speed' : '', boat.boost > 0 ? '💨 Escape +35% speed' : '', boat.bifrost > 0 ? '🌈 Bifröst +25% speed, mending ' + Math.ceil(boat.bifrost) + 's' : '', P.tithe > 0 && P.realm === 'hel' ? '🕯 Tithe +25% souls ' + Math.ceil(P.tithe / 60) + 'm' : '', boat.mending ? '🔨 Crew mending' : ''].filter(Boolean).join(' · '); $('hurt').classList.toggle('thor', boat.thor > 0); }
   else for (const mon of mons) mon.tag.style.display = 'none';
   msgT -= dt; if (msgT <= 0) $('msg').style.opacity = 0; warnT -= dt; if (warnT <= 0) $('warn').innerHTML = '';
-  if (raids && raids.mg) raids.camHook(camera); renderer.render(scene, camera); }
+  if (raids && raids.mg) raids.camHook(camera); if (lgame && lgame.active) lgame.camHook(camera); renderer.render(scene, camera); }
 // start on the title: the ship rides at anchor off Valholm
 { const h = world.harbors[0]; boat.x = h.dock.x + Math.cos(h.dir) * 12; boat.z = h.dock.z + Math.sin(h.dir) * 12; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); }
 const hadSave = load(); if (!hadSave) P.hp = maxHp(); rebuildShip(); placeWreck(); toTitle(); env.snap(P.tod, null, world.regionWeights(boat.x, boat.z, {})); camTgt.set(boat.x, 0, boat.z);

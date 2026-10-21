@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.9.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.10.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.9.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.10.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -809,6 +809,16 @@ disagree with this file, this file wins.
   accuracy) x power, weakest building first; health bars per building; next round until the quarter falls; SAIL OFF
   leaves. All three quarters down: finishRaid (loot, thralls, spell, claim). The old smash-and-dock RAID is retired.
   Tests: scratchpad bombtest2.cjs, bombdbg.cjs, bombshot.cjs (volleys run on real timers: tests must wait in real time).
+- v1.10.0 (Sean: legend fights are button mash; ACTION version should be like the raid: ship still, first person from the
+  ballista, destroy sections such as tentacles and eyes, special moves like a crashing tentacle you mash FIRE to stop and
+  being picked up and tossed to a new spot; CLASSIC stays the easier masher; Kraken and Great Squid first): src/legendgame.js.
+  With ACTION on, startLegend gives the Kraken and Squid kind kgame (monsters.js now exposes arms, body, head and eye points).
+  Parts: every Kraken arm (8) or the Squid's 4 arms + 2 clubs, and two eyes (shielded until half the arms are cut); health
+  = the boss hp shared out. Tap a part marker (projected each frame) to aim: the raid's AIM targets then POWER needle;
+  damage attack x 2 x (0.25 + accuracy) x power (eyes x1.3). Cut arms vanish (suckers too). Specials every 9-14 s (faster
+  enraged): slam (mash FIRE 7-14 times in 2.6 s or take 1.4x damage; success cuts 35% of that arm) or toss (the ship is
+  lifted and thrown round the body to a new angle, small damage). Camera: the bow, above the prow, looking at the target.
+  The Kraken rises 0.95 x its size away. Test: scratchpad kgametest.cjs (real-time waits).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
