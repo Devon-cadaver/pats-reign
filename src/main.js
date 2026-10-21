@@ -265,7 +265,7 @@ function disposeTree(g) { g.traverse((o) => { if (o.geometry && !o.geometry.user
 function removeMon(mon) { scene.remove(mon.g); disposeTree(mon.g); mon.tag.remove(); const i = mons.indexOf(mon); if (i >= 0) mons.splice(i, 1); }
 const calm = () => !!tut || (P.tier === 0 && P.kills < 2);
 function updateSpawns(dt) { spawnT -= dt; if (spawnT > 0 || (battle && battle.legend)) return; spawnT = 1.5;
-  for (const mon of [...mons]) { if (mon.boss) continue; if (Math.hypot(mon.x - boat.x, mon.z - boat.z) > 280 && !mon.dead) removeMon(mon); }
+  for (const mon of [...mons]) { if (mon.boss || mon.siege) continue; if (Math.hypot(mon.x - boat.x, mon.z - boat.z) > 280 && !mon.dead) removeMon(mon); }
   const maxN = tut ? 1 : calm() ? 3 : Math.min(10, 5 + P.tier) + (isNight() ? 2 : 0); if (mons.filter((m) => !m.boss && !(tut && m === tut.mon)).length >= maxN) return;
   const a = Math.random() * 6.28, d = rnd(95, 170), x = boat.x + Math.sin(a) * d, z = boat.z + Math.cos(a) * d; if (Math.abs(x) > HALF - 30 || Math.abs(z) > HALF - 30 || world.blockAt(x, z, 12) || Math.hypot(x, z + 40) < 70) return;
   const table = spawnTable(world.regionAt(x, z), isNight()); if (!table.length) return; { const gr = groundAt(x, z) || groundAt(boat.x, boat.z, 40); if (gr) for (const t of table) if (t.type === gr.type) t.w *= 6; } let sum = table.reduce((s, e) => s + e.w, 0), pick = Math.random() * sum; let e = table[0]; for (const t of table) { pick -= t.w; if (pick <= 0) { e = t; break; } } e = levelled(e);
@@ -1579,7 +1579,7 @@ raids = createRaids({ claimMax: () => (home ? home.claimMax() : 3), cdK: () => (
 spells = createSpells({ cdK: () => (home ? home.K.spellCd() : 1), scene, ocean, foam, smoke, embers, sfx, get P() { return P; }, get boat() { return boat; }, mons: () => mons, state: () => state, attack, maxHp, hud, pop, say, warn, save, angDiff, loseSight: () => { for (const m of mons) { if (m.dead || inFight(m)) continue; if (m.state === 'chase') { m.state = 'wander'; m.stun = Math.max(m.stun || 0, 3); } } },
   hurtMon(m, d) { if (m.dead) return; m.hp -= d; pop(m.x, m.top + m.g.position.y, m.z, '−' + Math.round(d), '#c8a0ff'); if (m.hp <= 0) killMon(m); else if (!m.passive) m.state = 'chase'; },
   legends: () => P.legends || {}, makeTwister() { return twisters.make(false, [], null); }, removeTwister(g) { twisters.remove(g); }, iceGeo: () => sharedGeo('iceSpike', () => new THREE.ConeGeometry(0.5, 1, 5)), shake(k) { boat.shake = Math.max(boat.shake || 0, k); }, flashSky() { flash = Math.max(flash, 0.5); } }, raids);
-home = createHome({ scene, ocean, smoke, sfx, get P() { return P; }, get boat() { return boat; }, world: () => world, pop, warn, hud, save, costHtml, can, pay, redraw: () => { if (state === 'harbor') drawHarbor(); } });
+home = createHome({ embers, spawnMon, removeMon, launch, inFight, mons: () => mons, hurtMon: (m, d) => spells.hurtMon ? spells.hurtMon(m, d) : (m.hp -= d, m.hp <= 0 && killMon(m)), flare: (x, z, name, why) => raids.flareAt(x, z, name, why), clearFlare: () => raids.clearFlare(), scene, ocean, smoke, sfx, get P() { return P; }, get boat() { return boat; }, world: () => world, pop, warn, hud, save, costHtml, can, pay, redraw: () => { if (state === 'harbor') drawHarbor(); } });
 const ashC = new THREE.Color(0x8a8480), snowC = new THREE.Color(0xffffff), helAsh = new THREE.Color(0x7a6a6e), emberC = new THREE.Color(0xff8a3a), rimeC = new THREE.Color(0xd8e4f4);
 const soulFx = createFoam(scene, ocean, 260, { color: 0xc8a0ff });
 function updateSeas(dt) {

@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.7.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.8.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.7.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.8.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -790,6 +790,15 @@ disagree with this file, this file wins.
   (Great City). Monuments: the first sack of a village of a faith marks it conquered (P.faithsBeaten); the BUILD panel
   lists them and RAISE builds a statue on a plinth in the faith's colour along the shore (P.valholm.mon), each +1%
   attack and +1% hull; cost rises with each (monCost). Up to 60 villagers. Shot: scratchpad epicshot.cjs.
+- v1.8.0 (raids on Valholm, first version; Sean is sending his own ideas for raids): home.js startSiege/updateSiege.
+  From Hamlet on, every 15-25 minutes of play (P.valholm.lastSiege / nextSiege) 2-5 raiders (or 2-4 crabs, serpents,
+  octopuses: "drawn by the fish store", 30%) appear 130 off Valholm and make for the harbour (m.siege; they chase you within
+  55, else sail for the harbour; exempt from the 280 despawn). A horn, a warning, a flare and RETURN (raids.flareAt).
+  Valholm has health (400 x (tier+1) x walls x stage), shown in #siegeBar; attackers at the harbour wear it down (walls
+  -12% each level); the watchtower shoots bolts at the nearest attacker. All dead: Valholm holds (+gold). Health 0: two or
+  three buildings lose a level and a fifth of the people flee. More than 200 away for 2 minutes: settled by walls, towers
+  and stage against the attackers' levels. Full destruction and choosing a new god (Sean's earlier answer) are not in yet.
+  Test: scratchpad siegetest.cjs.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).

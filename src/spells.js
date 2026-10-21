@@ -97,5 +97,5 @@ export function createSpells(G, R) {
     book.querySelector('#bookClose').onclick = (e) => { e.stopPropagation(); book.classList.add('hidden'); }; }
   // teach: a people's second sack, a legend
   function teach(k, why) { const p = P(); p.spells = p.spells || {}; if (!SPELLS[k] || p.spells[k]) return; p.spells[k] = true; setTimeout(() => G.say(why + ' <b>' + SPELLS[k].icon + ' ' + SPELLS[k].name.toUpperCase() + '</b> is yours!', 5), 1200); G.save(); }
-  return { cast, update, teach, COMBOS, get cd() { return cd; } };
+  return { hurtMon: (m, d) => G.hurtMon(m, d), cast, update, teach, COMBOS, get cd() { return cd; } };
 }
