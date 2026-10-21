@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.6.2. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.7.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.6.2: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.7.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -783,6 +783,13 @@ disagree with this file, this file wins.
   arenaStart: testMode (save() does nothing), begin(false, keep) keeps the real save and skips the tutorial, places the
   ship at the lair and starts the fight; when it ends the monsters clear and AGAIN / ARENA (reload) appear. Test:
   scratchpad arenatest.cjs (all 16 start; the real save is untouched).
+- v1.7.0 (Sean: the base should get epically big; monuments for each religion we take on): buildings go to level 5
+  (longhouse room 5/15/40/90/180/350), two more stages (Great City: 250 people, 14 raids, 2 legends, 3 monuments;
+  Capital of the North: 340, 20 raids, 4 legends, 6 monuments), CLAIM_MAX 1/1/2/3/5/7/9. Set pieces in rebuild(): a gold-roofed
+  Great Hall on the hill (Town), a stone sea wall with towers round the island (Stronghold), a stone Odin with his spear
+  (Great City). Monuments: the first sack of a village of a faith marks it conquered (P.faithsBeaten); the BUILD panel
+  lists them and RAISE builds a statue on a plinth in the faith's colour along the shore (P.valholm.mon), each +1%
+  attack and +1% hull; cost rises with each (monCost). Up to 60 villagers. Shot: scratchpad epicshot.cjs.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).

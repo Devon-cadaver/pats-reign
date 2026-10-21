@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { M, V, part, grp, BOX, CYL6, CON, CON4, SPH_LO } from './geom.js';
 import { mergeParts } from './perf.js';
+import { FAITHS } from './raids.js';
 
 export const BUILDINGS = {
   longhouse: { icon: '🏠', name: 'Longhouse', effect: (l) => 'Room for ' + capOf(l) + ' people', base: [40, 10, 150] },
@@ -19,16 +20,20 @@ export const BUILDINGS = {
   market: { icon: '⚖', name: 'Market', effect: (l) => 'Fish and trade-post gold +' + 15 * l + '%', base: [50, 10, 350] },
   beacon: { icon: '🔥', name: 'Beacon', effect: (l) => '+' + 3 * l + '% sailing speed', base: [30, 20, 200] },
 };
-const capOf = (l) => [5, 15, 40, 90][l] || 5;
+const capOf = (l) => [5, 15, 40, 90, 180, 350][l] || 5;
 export const STAGES = [
   { name: 'Landing', need: 'start' },
   { name: 'Hamlet', pop: 10, blds: 2 },
   { name: 'Village', pop: 30, blds: 5, raids: 2 },
   { name: 'Town', pop: 70, blds: 8, raids: 5 },
   { name: 'Stronghold', pop: 150, blds: 10, raids: 8, legend: 1 },
+  { name: 'Great City', pop: 250, blds: 10, raids: 14, legend: 2, mons: 3 },
+  { name: 'Capital of the North', pop: 340, blds: 10, raids: 20, legend: 4, mons: 6 },
 ];
-export const CLAIM_MAX = [1, 1, 2, 3, 5]; // islands you may hold, by stage (Landing, Hamlet, Village, Town, Stronghold)
-const MAXLV = 3;
+export const CLAIM_MAX = [1, 1, 2, 3, 5, 7, 9]; // islands you may hold, by stage (Landing, Hamlet, Village, Town, Stronghold)
+const MAXLV = 5;
+const FAITH_COL = { odin: 0x2a4a8a, thor: 0xb8b8c8, ran: 0x2a8ab8, frey: 0x4a8a2a, freyja: 0xc87ab8, tyr: 0x8a2a2a, heimdall: 0xe8d070, loki: 0x4a2a6a, njord: 0x2a6a8a, aegir: 0x3a7a9a, skadi: 0xd8e8f4, ullr: 0x6a8a3a, baldr: 0xffe8a0, hel: 0x3a3a4a, surtr: 0xff5a1a, bragi: 0xc8a040, idunn: 0x8ad04a, vidar: 0x5a5a5a, vali: 0x7a1a1a, sol: 0xffc83a, mani: 0xb8c8ff, jord: 0x7a5a3a, forseti: 0xd8d8c8, kvasir: 0x8a6ac8 };
+export const monCost = (n) => [Math.round(120 * (1 + n * 0.6)), Math.round(60 * (1 + n * 0.6)), Math.round(800 * (1 + n * 0.6))];
 export const costOf = (k, l) => { const f = Math.pow(2.6, l); return BUILDINGS[k].base.map((n) => Math.round(n * f)); }; // l = the level you are buying (0 -> 1 uses f=1)
 
 export function createHome(G) {
@@ -37,8 +42,9 @@ export function createHome(G) {
   const lv = (k) => H().b[k] || 0;
   const pop = () => Math.min(capOf(lv('longhouse')), (G.P.thralls || 0) + (H().families || 0));
   const nBuilt = () => Object.values(H().b).filter((n) => n > 0).length;
+  const monsBuilt = () => Object.keys(H().mon || {}).filter((k) => H().mon[k]).length;
   function stage() { const P = G.P, raidsDone = Object.values(P.sacks || {}).reduce((s, n) => s + n, 0), leg = Object.keys(P.legends || {}).length; let s = 0;
-    for (let i = 1; i < STAGES.length; i++) { const S = STAGES[i]; if (pop() >= S.pop && nBuilt() >= S.blds && raidsDone >= (S.raids || 0) && leg >= (S.legend || 0)) s = i; else break; } return s; }
+    for (let i = 1; i < STAGES.length; i++) { const S = STAGES[i]; if (pop() >= S.pop && nBuilt() >= S.blds && raidsDone >= (S.raids || 0) && leg >= (S.legend || 0) && monsBuilt() >= (S.mons || 0)) s = i; else break; } return s; }
   // the island: Valholm is the first harbour; buildings sit on a ring away from the harbour's side
   const isl = () => G.world().harbors[0] && G.world().harbors[0].isl;
   const ray = new THREE.Raycaster(), down = V(0, -1, 0);
@@ -61,8 +67,13 @@ export function createHome(G) {
     else if (k === 'beacon') { part(g, CYL6(), S(), 1.6, 3 + l * 2, 1.6, 0, (3 + l * 2) / 2, 0); part(g, SPH_LO(), GL(), 1.4 + l * 0.3, 1.2 + l * 0.3, 1.4 + l * 0.3, 0, 3.6 + l * 2, 0); } }
   function rebuild() { const I = isl(); if (!I) return; if (built) { scene.remove(built); built.traverse((o) => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); }); } built = new THREE.Group(); slots = slots || makeSlots();
     Object.keys(BUILDINGS).forEach((k, i) => { const l = lv(k), s = slots[i]; if (!l || !s) return; const g = grp(built, s.x, s.y - 0.1, s.z); g.rotation.y = s.a + Math.PI / 2; model(k, l, g); mergeParts(g); g.traverse((o) => { if (o.isGroup && o !== g) mergeParts(o); }); });
+    { const st = stage(), I2 = isl(); if (st >= 3) { const top = [I2.x, I2.z], y = groundY(top[0], top[1]); const gh = grp(built, top[0], y - 0.3, top[1]); part(gh, BOX(), W(), 9, 4.5, 20, 0, 2.25, 0); for (const sd of [-1, 1]) { const rf = part(gh, BOX(), M(0xd8a83a), 6.6, 0.5, 22, sd * 2.8, 5.8, 0); rf.rotation.z = sd * -0.8; } for (const zz of [-10, 10]) for (const sd of [-1, 1]) part(gh, CON(), M(0xd8a83a), 0.5, 3, 0.5, sd * 1.6, 8.6, zz, 0, 0, sd * 0.5); part(gh, BOX(), M(0xb8322a), 0.1, 3, 2, 4.6, 2.5, 0); mergeParts(gh); }
+      if (st >= 4) { const sw = grp(built, I2.x, 0, I2.z); const hd = Math.atan2(G.world().harbors[0].x - I2.x, G.world().harbors[0].z - I2.z); for (let k = 0; k < 44; k++) { const a = (k / 44) * Math.PI * 2; if (Math.abs(Math.atan2(Math.sin(a - hd), Math.cos(a - hd))) < 0.25) continue; const r = I2.R * 1.06 * I2.shape(a - I2.rot), x = Math.sin(a) * r, z = Math.cos(a) * r; const seg = part(sw, BOX(), S(), 5.2, 3.2, 1.6, x, 1.4, z); seg.rotation.y = a; if (k % 6 === 0) part(sw, CYL6(), S(), 2.6, 6, 2.6, x, 2.8, z); } mergeParts(sw); }
+      if (st >= 5) { const hy = groundY(I2.x, I2.z) + 6, od = grp(built, I2.x + 6, hy, I2.z - 8); part(od, BOX(), S(), 4, 2, 4, 0, 1, 0); part(od, CYL6(), M(0x9a9a92, 'flat'), 2.2, 9, 2.2, 0, 6.5, 0); part(od, SPH_LO(), M(0x9a9a92, 'flat'), 2.4, 2.6, 2.4, 0, 12, 0); part(od, CON(), M(0x7a7a72, 'flat'), 3.4, 2, 3.4, 0, 13.6, 0); part(od, CYL6(), M(0x6a5a3a), 0.35, 14, 0.35, 2, 8, 0); part(od, SPH_LO(), GL(), 0.9, 0.9, 0.9, 2, 15.2, 0); for (const sd of [-1, 1]) part(od, BOX(), M(0x3a3a3a), 0.4, 1.2, 0.8, sd * 1.6, 13, 0, 0, 0, sd * 0.4); mergeParts(od); } }
+    // monuments to the faiths you have conquered, along the shore
+    { const I2 = isl(), mons = Object.keys(H().mon || {}).filter((k) => H().mon[k]); mons.forEach((k, i) => { const a = (i / 24) * Math.PI * 2 + 0.4, r = I2.R * 0.8 * I2.shape(a - I2.rot), x = I2.x + Math.sin(a) * r, z = I2.z + Math.cos(a) * r, y = Math.max(0.6, groundY(x, z)); const g = grp(built, x, y, z), c = M(FAITH_COL[k] || 0x8a8a86, 'flat'); part(g, BOX(), S(), 2.4, 1.2, 2.4, 0, 0.6, 0); part(g, CYL6(), c, 1, 4, 1, 0, 3.2, 0); part(g, SPH_LO(), c, 1.3, 1.4, 1.3, 0, 5.8, 0); part(g, SPH_LO(), M(FAITH_COL[k] || 0xffd24a, 'glow'), 0.6, 0.6, 0.6, 0, 7.3, 0); mergeParts(g); }); }
     // villagers: up to 36 walking between the buildings and the harbour village
-    const n = Math.min(36, Math.round(pop() / 2.5)); figs = new THREE.InstancedMesh(FIG(), new THREE.MeshLambertMaterial(), Math.max(1, n)); figs.count = n; figs.frustumCulled = false; const col = new THREE.Color(), cols = [0x8a5a3a, 0x5a6a8a, 0x7a3a2a, 0x6a7a4a, 0xc8b89a];
+    const n = Math.min(60, Math.round(pop() / 3)); figs = new THREE.InstancedMesh(FIG(), new THREE.MeshLambertMaterial(), Math.max(1, n)); figs.count = n; figs.frustumCulled = false; const col = new THREE.Color(), cols = [0x8a5a3a, 0x5a6a8a, 0x7a3a2a, 0x6a7a4a, 0xc8b89a];
     folk = []; const pts = slots.filter((s, i) => lv(Object.keys(BUILDINGS)[i])).concat([{ x: G.world().harbors[0].x, z: G.world().harbors[0].z }]); for (let i = 0; i < n; i++) { const p = pts[i % pts.length]; folk.push({ x: p.x + (Math.random() - 0.5) * 6, z: p.z + (Math.random() - 0.5) * 6, to: null, wait: Math.random() * 3, pts }); figs.setColorAt(i, col.setHex(cols[i % cols.length])); }
     built.add(figs); scene.add(built); }
   let figGeo = null; function FIG() { if (!figGeo) { figGeo = new THREE.CapsuleGeometry(0.28, 0.75, 2, 6); figGeo.translate(0, 0.65, 0); } return figGeo; }
@@ -81,10 +92,12 @@ export function createHome(G) {
     d.innerHTML = `<div class="ic">🏰</div><div class="tx"><b>Valholm: ${STAGES[s].name}</b><div>👥 ${pop()} / ${capOf(lv('longhouse'))} people · 🏗 ${nBuilt()} / 10 buildings · hold up to ${CLAIM_MAX[s]} islands</div><div class="cost">${nx ? 'Next, ' + nx.name + ': ' + [nx.pop + ' people', nx.blds + ' buildings', nx.raids ? nx.raids + ' raids won' : '', nx.legend ? 'a legend slain' : ''].filter(Boolean).join(', ') : 'Valholm is a Stronghold.'}</div></div>`;
     const b = document.createElement('button'); b.textContent = 'BUILD'; b.onclick = (e) => { e.stopPropagation(); openPanel(); }; d.appendChild(b); list.appendChild(d); }
   function openPanel() { let el = document.getElementById('buildPanel'); if (!el) { el = document.createElement('div'); el.id = 'buildPanel'; document.body.appendChild(el); } const P = G.P;
-    el.innerHTML = '<h3>🏰 Build in Valholm</h3><p>Each building has its own place on the island. 🪵 ' + P.res.w + ' · ⚙️ ' + P.res.i + ' · 🪙 ' + P.res.g + '</p><div class="blist">' + Object.entries(BUILDINGS).map(([k, B]) => { const l = lv(k), max = l >= MAXLV, c = max ? null : costOf(k, l); return `<div class="brow"><div class="bt"><b>${B.icon} ${B.name}</b> <span class="pips">${'◆'.repeat(l)}${'◇'.repeat(MAXLV - l)}</span><div>${l ? 'Now: ' + B.effect(l) + '.' : ''} ${max ? 'Complete.' : 'Next: ' + B.effect(l + 1) + '.'}</div>${max ? '' : `<div class="cost">${G.costHtml(c)}</div>`}</div>${max ? '' : `<button data-k="${k}" ${G.can(c) ? '' : 'disabled'}>${l ? 'UPGRADE' : 'BUILD'}</button>`}</div>`; }).join('') + '</div><button class="ghost" id="buildClose">CLOSE</button>';
+    el.innerHTML = '<h3>🏰 Build in Valholm</h3><p>Each building has its own place on the island. 🪵 ' + P.res.w + ' · ⚙️ ' + P.res.i + ' · 🪙 ' + P.res.g + '</p><div class="blist">' + Object.entries(BUILDINGS).map(([k, B]) => { const l = lv(k), max = l >= MAXLV, c = max ? null : costOf(k, l); return `<div class="brow"><div class="bt"><b>${B.icon} ${B.name}</b> <span class="pips">${'◆'.repeat(l)}${'◇'.repeat(MAXLV - l)}</span><div>${l ? 'Now: ' + B.effect(l) + '.' : ''} ${max ? 'Complete.' : 'Next: ' + B.effect(l + 1) + '.'}</div>${max ? '' : `<div class="cost">${G.costHtml(c)}</div>`}</div>${max ? '' : `<button data-k="${k}" ${G.can(c) ? '' : 'disabled'}>${l ? 'UPGRADE' : 'BUILD'}</button>`}</div>`; }).join('') + '</div>' + monRows() + '<button class="ghost" id="buildClose">CLOSE</button>';
     el.classList.remove('hidden'); el.querySelectorAll('[data-k]').forEach((bt) => { bt.onclick = (e) => { e.stopPropagation(); const k = bt.dataset.k, l = lv(k), c = costOf(k, l); if (l >= MAXLV || !G.can(c)) return; G.pay(c); H().b[k] = l + 1; G.sfx.horn && G.sfx.horn(); rebuild(); G.hud(); G.save(); G.redraw(); openPanel(); }; });
+    el.querySelectorAll('[data-m]').forEach((bt) => { bt.onclick = (e) => { e.stopPropagation(); const k = bt.dataset.m, c = monCost(monsBuilt()); if (!G.can(c) || (H().mon || {})[k]) return; G.pay(c); H().mon = H().mon || {}; H().mon[k] = true; G.sfx.horn && G.sfx.horn(); G.say('🗿 A monument to ' + FAITHS[k].name + ' rises in Valholm.', 3); rebuild(); G.hud(); G.save(); G.redraw(); openPanel(); }; });
     el.querySelector('#buildClose').onclick = (e) => { e.stopPropagation(); el.classList.add('hidden'); G.redraw(); }; }
+  function monRows() { const beaten = Object.keys(G.P.faithsBeaten || {}).filter((k) => FAITHS[k]); const c = monCost(monsBuilt()); return '<h4 class="mh">🗿 Monuments: ' + monsBuilt() + ' built, ' + beaten.length + ' of ' + Object.keys(FAITHS).length + ' faiths conquered</h4>' + (beaten.length ? beaten.map((k) => { const F = FAITHS[k], done = (H().mon || {})[k]; return `<div class="brow"><div class="bt"><b>${F.icon} ${F.name}</b><div>${done ? 'Raised. +1% attack, +1% hull.' : 'Raise a monument: +1% attack and +1% hull for good.'}</div>${done ? '' : `<div class="cost">${G.costHtml(c)}</div>`}</div>${done ? '' : `<button data-m="${k}" ${G.can(c) ? '' : 'disabled'}>RAISE</button>`}</div>`; }).join('') : '<p>Sack a village to conquer its faith; its monument can then be raised here.</p>'); }
   // effects the game reads
-  const K = { atk: () => 1 + 0.05 * lv('smithy'), hp: () => 1 + 0.04 * lv('bonesmith'), spd: () => 1 + 0.03 * lv('beacon'), repair: () => 1 - 0.15 * lv('shipyard'), spellCd: () => 1 - 0.08 * lv('temple'), market: () => 1 + 0.15 * lv('market') };
-  return { update, card, openPanel, rebuild, stage, pop, lv, K, claimMax: () => CLAIM_MAX[stage()] };
+  const K = { atk: () => 1 + 0.05 * lv('smithy') + 0.01 * monsBuilt(), hp: () => 1 + 0.04 * lv('bonesmith') + 0.01 * monsBuilt(), spd: () => 1 + 0.03 * lv('beacon'), repair: () => 1 - 0.15 * lv('shipyard'), spellCd: () => 1 - 0.08 * lv('temple'), market: () => 1 + 0.15 * lv('market') };
+  return { monsBuilt, update, card, openPanel, rebuild, stage, pop, lv, K, claimMax: () => CLAIM_MAX[stage()] };
 }
