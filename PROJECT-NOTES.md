@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.3.5. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.4.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.3.5: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.4.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -739,6 +739,21 @@ disagree with this file, this file wins.
   NOW! / FIRE (fireKey reset in clearLegend restores SPEARS). Sean also said the shark and serpent fights feel too alike.
 - v1.3.5 (Sean: his thumb hides the button): the ring on the beast (L.mark) takes the same colour (red / yellow /
   green, bigger and pulsing fast at NOW / blue) and shows at yellow and green even while the beast is still rising.
+- v1.4.0 (Sean: build out the other peoples and outposts; at least four settlements per sea; rebuilt villages choose from
+  ~24 religions; do not let held islands level the player too fast): raids.js PEOPLES gains frost (Rime clans: ice houses
+  under snow domes, ice crystals), mist (seidr witches: stilt huts, bone totem, green lanterns) and warm (southern corsairs:
+  sandstone, red awnings, domed hall, sun pillar), each with a style key used by build(); NAMES has five per sea;
+  pickIslands relaxes its rules in four passes until each sea has four or five (24 in all). BASE_LV home 0 / storm 2 /
+  frost 2.5 / mist 3 / warm 3.5 (+0.5 each). Spells (SPELLS, a #spellBar column above DOCK): breath (Fire cult), frost
+  (Rime: freeze nearest tower 6 s + stun beasts within 60, G.freezeNear), veil (witches: boat.veil 8 s, towers blind,
+  G.loseSight), sun (corsairs: heal 40%); each people's first sack teaches its spell (SPELL_OF). 24 FAITHS each with a
+  ward (range, bolt, fire, regrow, heal, sharp, veil, spear, guards, frost, reload, hp, rich, slow) applied in the fight;
+  rebuild picks a faith whose ward counters S.lastHit 75% of the time (COUNTER), else any other, and grows a level.
+  CLAIMS: after a sack offerClaim() asks to hold it (3 at most): outpost (free repair at its dock), trade post
+  (14 x (tier+1) gold a minute), storehouse (3t timber + 1.5t iron a minute). Balance (scratchpad balance.cjs): a kill
+  pays 44 / 95 / 131 at Faering / Snekkja / Skeid, about two a minute; claims were 2-5x hunting, now one island is about
+  a quarter of hunting; raid loot x0.6 (about 13 kills). Bestiary: "Peoples, faiths and spells" section
+  (tools/roster-peoples.cjs reads src/raids.js) with notes boxes for 5 peoples, 4 + 2 planned spells, 24 faiths, 3 claims.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).

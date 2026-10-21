@@ -87,7 +87,7 @@ for (const sp of SPECIES) {
 <div class="about"><ul>${sp.does.map((d) => `<li>${esc(d)}</li>`).join('')}<li>Speed ${sp.speed} <span class="dim">(your ships sail at 9 to 13)</span>.</li>${sp.atk.length ? `<li>In battle it ${sp.atk.map((a) => '<em>' + esc(a.toLowerCase()) + '</em>').join(', ').replace(/, ([^,]*)$/, ' or $1')}.</li>` : ''}</ul>${noteBox('sp-' + sp.key, 'Notes for all ' + sp.name)}</div>
 <div class="grid">${vs}</div></section>`;
 }
-nav += '<a href="#legends">Legends</a><a href="#ships">Ships</a><a href="#attacks">Attacks</a><a href="#mechanics">Game mechanics</a>';
+nav += '<a href="#legends">Legends</a><a href="#ships">Ships</a><a href="#attacks">Attacks</a><a href="#peoples">Peoples &amp; faiths</a><a href="#mechanics">Game mechanics</a>';
 let leg = '';
 for (const L of LEGENDS) {
   let vs = '';
@@ -109,6 +109,9 @@ for (const [key, name, clipKey, action, classic, special, undead] of ATTACKS) { 
 let wld = ''; for (const [key, name, clipKey, what, beat] of ATTACKS.world) { const id = 'wx-' + key, clip = gif('attack-' + clipKey + '.gif'); cards.push(id); wld += `<article class="card atk" id="${id}">${clip ? `<div class="pics"><figure class="clip"><img src="${clip}" alt="${esc(name)}, from the game" loading="lazy" width="320" height="180"><figcaption>From the game</figcaption></figure></div>` : ''}<div class="body"><h3>${esc(name)}</h3><p><b>What it does.</b> ${esc(what)}</p><p><b>How to beat it.</b> ${esc(beat)}</p>${noteBox(id, 'Notes on ' + name.toLowerCase(), 'Needs a change')}</div></article>`; }
 wld = `<div class="legend" id="mg-world"><header><h3 class="lh">World and weather</h3><span class="count">${ATTACKS.world.length} dangers</span></header><div class="grid">${wld}</div></div>`;
 sections += `<section class="species" id="attacks"><header><h2>Attacks</h2><span class="count">${ATTACKS.length} fighters</span></header><div class="about"><ul><li>What each monster does to your ship, in both kinds of fight. <b>ACTION</b> (the switch in the pause menu, on by default): beasts are fought at the helm, you dodge and shoot; ships on a battle line. <b>CLASSIC</b>: the turn-by-turn mini-game with an aim bar and swipe-away prompts.</li><li>The clips are recorded from the game itself, in an ACTION fight. Damage multipliers are of the monster's own damage for its level.</li><li>Each card has a notes box: say what the attack should look like or do instead (jump onto the deck, pull a man off, smash the mast…), and flag it.</li></ul>${noteBox('atk-general', 'Notes on fighting in general (new attacks, new moves for the player, pacing)', 'Needs a change')}</div><div class="grid">${atk}</div>${wld}</section>`;
+
+// ---------- peoples, faiths and spells (tools/roster-peoples.cjs) ----------
+sections += require('./roster-peoples.cjs')(cards, esc, noteBox);
 
 // ---------- game mechanics (tools/roster-mechanics.cjs): a card and a notes box for every mechanic ----------
 const MECH = require('./roster-mechanics.cjs'); let mech = '', mechN = 0;
