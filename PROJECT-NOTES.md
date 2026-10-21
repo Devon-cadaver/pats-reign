@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.1.3. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.1.4. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.1.3: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.1.4: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -653,6 +653,15 @@ disagree with this file, this file wins.
   the camera every frame): flakes live in world space and wrap around the camera target (wrap90); rain drops wrap too
   (wrap100). __pr exposes tut, fall and rain. Tests: scratchpad learnflash.cjs (colour changes per fight), chartshot.cjs,
   snowtest.cjs, tutend.cjs (14 steps).
+- v1.1.4 (Sean: mark shark-infested waters and megalodon deeps on the map so things to hunt are easier to find): hunting
+  grounds. GROUNDS lists ten seeds (two Shark waters, two Megalodon deeps, Serpent shoals, Leviathan deep, Eel reefs,
+  Octopus holes, Angler deeps, Crab flats; r 75-85); grounds() settles each on open water at least 110 from a harbour
+  dock, 120 from a lair and 110 from each other (a spiral search from the seed, cached per world as world.grounds, so
+  Helheim gets its own placing). updateSpawns multiplies that beast's table weights by six when the spawn point or the
+  ship (r+40) is inside one (measured: 38 of 70 spawns were sharks in Shark waters at tier 2, 8 of 73 in open home
+  sea). drawMap draws each as a dashed red circle with the beast's icon (GICON), the chart adds the name below; a
+  ground whose beast cannot spawn at your tier yet is dim (groundOpen). The chart hint and the bounty tutorial step
+  mention them. __pr exposes grounds and groundAt; scratchpad groundtest.cjs checks placing, bias and screenshots.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
