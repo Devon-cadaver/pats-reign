@@ -5,6 +5,7 @@
 const fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..'), IMG = path.join(ROOT, 'release', 'roster-img');
 const img = (n) => { const f = path.join(IMG, n); return fs.existsSync(f) ? 'data:image/jpeg;base64,' + fs.readFileSync(f).toString('base64') : ''; };
+const gif = (n) => { const f = path.join(IMG, n); return fs.existsSync(f) ? 'data:image/gif;base64,' + fs.readFileSync(f).toString('base64') : ''; };
 const SHIPS = ['Faering', 'Karvi', 'Snekkja', 'Skeid', 'Drakkar'];
 const lvShow = (lv) => Math.round(lv) + 1, hull = (lv, boss) => Math.round(45 * Math.pow(1.65, lv) * (boss ? 0.8 : 1)), hit = (lv) => Math.round(9 * Math.pow(1.5, lv));
 function meets(lv) { const t = []; for (let i = 0; i < 5; i++) if (lv <= i + 1.7 && lv >= i - 1.4) t.push(i); if (!t.length) return 'never at random'; return t.length === 1 ? SHIPS[t[0]] : SHIPS[t[0]] + ' to ' + SHIPS[t[t.length - 1]]; }
@@ -86,7 +87,7 @@ for (const sp of SPECIES) {
 <div class="about"><ul>${sp.does.map((d) => `<li>${esc(d)}</li>`).join('')}<li>Speed ${sp.speed} <span class="dim">(your ships sail at 9 to 13)</span>.</li>${sp.atk.length ? `<li>In battle it ${sp.atk.map((a) => '<em>' + esc(a.toLowerCase()) + '</em>').join(', ').replace(/, ([^,]*)$/, ' or $1')}.</li>` : ''}</ul>${noteBox('sp-' + sp.key, 'Notes for all ' + sp.name)}</div>
 <div class="grid">${vs}</div></section>`;
 }
-nav += '<a href="#legends">Legends</a><a href="#ships">Ships</a><a href="#mechanics">Game mechanics</a>';
+nav += '<a href="#legends">Legends</a><a href="#ships">Ships</a><a href="#attacks">Attacks</a><a href="#mechanics">Game mechanics</a>';
 let leg = '';
 for (const L of LEGENDS) {
   let vs = '';
@@ -96,10 +97,16 @@ for (const L of LEGENDS) {
   });
   leg += `<div class="legend" id="sp-${L.key}"><header><h3 class="lh">${L.name}</h3><span class="count">${esc(L.lair)} · needs a ${L.need}</span></header><div class="about"><ul><li>${esc(L.does)}</li><li>Speed ${L.speed}. Attacks three times a turn: ${L.atk.map((a) => '<em>' + esc(a.toLowerCase()) + '</em>').join(', ').replace(/, ([^,]*)$/, ' or $1')}.</li></ul>${noteBox('sp-' + L.key, 'Notes for ' + L.name)}</div><div class="grid">${vs}</div></div>`;
 }
-sections += `<section class="species" id="legends"><header><h2>Legends</h2><span class="count">3 bosses</span></header><div class="about"><ul><li>They never appear at random. Each sleeps in its lair, marked on the map, and rises when you sail in with a big enough ship.</li><li>Slay all three for the LORD OF THE SEA ending.</li></ul></div>${leg}</section>`;
+sections += `<section class="species" id="legends"><header><h2>Legends</h2><span class="count">${LEGENDS.length} bosses</span></header><div class="about"><ul><li>They never appear at random. Each sleeps in its lair, marked on the map, and rises when you sail in with a big enough ship.</li><li>Slay all four for the LORD OF THE SEA ending.</li></ul></div>${leg}</section>`;
 let sh = '';
 for (const s of SHIPFOES) sh += variantCard('ship-' + s.id, s.name, [[s.lv, 'lv']], [esc(s.what)], img(s.img), '');
 sections += `<section class="species" id="ships"><header><h2>Ships at sea</h2><span class="count">6 kinds</span></header><div class="about"><ul><li>Raider longships come in every ship size (a raider's level is its size). They shoot four-arrow volleys from 12 to 34 away, then fight a ship battle. Half again as common in the Mist Sea.</li><li>Raider fleets (a sea event) bring two to four ships of one clan, led by a Warlord one size bigger. Sink them all for their war chest.</li><li>Winning a ship battle pays timber, iron and gold.</li></ul>${noteBox('sp-ships', 'Notes for all ships')}</div><div class="grid">${sh}</div></section>`;
+
+// ---------- attacks (tools/roster-attacks.cjs): what each monster does in a fight, with a clip from the game ----------
+const ATTACKS = require('./roster-attacks.cjs'); let atk = '';
+for (const [key, name, clipKey, action, classic, special, undead] of ATTACKS) { const id = 'atk-' + key, clip = clipKey ? gif('attack-' + clipKey + '.gif') : ''; cards.push(id);
+  atk += `<article class="card atk" id="${id}">${clip ? `<div class="pics"><figure class="clip"><img src="${clip}" alt="${esc(name)} attacking, from the game" loading="lazy" width="480" height="270"><figcaption>From the game: an ACTION fight</figcaption></figure></div>` : ''}<div class="body"><h3>${esc(name)}</h3><p><b>ACTION fight.</b> ${esc(action)}</p><p><b>CLASSIC fight.</b> ${esc(classic)}</p>${special !== 'None.' ? `<p><b>Special move.</b> ${esc(special)}</p>` : ''}${undead !== 'None.' ? `<p><b>Undead (Helheim).</b> ${esc(undead)}</p>` : ''}${noteBox(id, 'Notes on how ' + name.replace(/^The /, 'the ') + ' should attack', 'Needs a change')}</div></article>`; }
+sections += `<section class="species" id="attacks"><header><h2>Attacks</h2><span class="count">${ATTACKS.length} fighters</span></header><div class="about"><ul><li>What each monster does to your ship, in both kinds of fight. <b>ACTION</b> (the switch in the pause menu, on by default): beasts are fought at the helm, you dodge and shoot; ships on a battle line. <b>CLASSIC</b>: the turn-by-turn mini-game with an aim bar and swipe-away prompts.</li><li>The clips are recorded from the game itself, in an ACTION fight. Damage multipliers are of the monster's own damage for its level.</li><li>Each card has a notes box: say what the attack should look like or do instead (jump onto the deck, pull a man off, smash the mast…), and flag it.</li></ul>${noteBox('atk-general', 'Notes on fighting in general (new attacks, new moves for the player, pacing)', 'Needs a change')}</div><div class="grid">${atk}</div></section>`;
 
 // ---------- game mechanics (tools/roster-mechanics.cjs): a card and a notes box for every mechanic ----------
 const MECH = require('./roster-mechanics.cjs'); let mech = '', mechN = 0;
@@ -151,6 +158,7 @@ button:focus-visible, textarea:focus-visible { outline: 2px solid var(--gold-hi)
 .pics { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 2px; background: #000; }
 figure { margin: 0; position: relative; }
 figure img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; }
+figure.clip img { aspect-ratio: 16 / 9; } .card.atk .pics { grid-template-columns: 1fr; }
 figcaption { position: absolute; left: 6px; bottom: 6px; font: 13px var(--label); letter-spacing: .6px; color: #fff; background: #000a; padding: 1px 7px; border-radius: 4px; }
 .body { padding: 12px 14px 14px; display: grid; gap: 8px; min-width: 0; }
 .body p { margin: 0; font-size: 16px; }

@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.2.2. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.2.3. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.2.2: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.2.3: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -691,6 +691,16 @@ disagree with this file, this file wins.
   (phone: left 8 / bottom 112, the ⇄ swap button beside it at +54; tablet: left 12 / bottom 172, ⇄ at +114; left-hand
   mode mirrors both to the right), rules appended at the end of pr.css; the short-screen media query that parked DOCK
   beside the view button is gone. scratchpad docklayout.cjs prints the three rects on four viewports both hands.
+- v1.2.3 (Sean: "in the roster add a section for the monsters' main attack types… animations that show what each thing
+  does… a notes box for my suggestions"): the Bestiary has an Attacks section (tools/roster-attacks.cjs: one entry per
+  monster with its ACTION-fight move, its CLASSIC moves, its special and its undead form, text taken from BEAST_KIND /
+  BEAST_HINT / ATK / minigames SPECIAL), each card with a clip recorded from the game (release/roster-img/attack-<key>.gif,
+  320x180 at 8 fps, ~0.5 MB each: the eight beasts from a low side camera, the Kraken arena and a raider broadside from
+  the game camera) and a notes box flagged Needs a change. The recorder is scratchpad attackclips.cjs: one headless
+  browser at below-normal priority; it starts an action fight, waits for the beast to commit (lock / approach), hooks
+  renderer.render to place a side camera, shoots 40 frames at 0.1 s and ffmpeg makes the GIF (then a second ffmpeg pass
+  shrinks it: fps=8, scale=320, 48 colours, no dither). __pr exposes renderer and scene for that. The Legends header
+  counts LEGENDS.length (four) and the ending needs all four.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
