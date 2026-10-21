@@ -775,7 +775,7 @@ disagree with this file, this file wins.
   (tier+1) gold a minute. STAGES Landing / Hamlet / Village / Town / Stronghold by people, buildings, raids won
   (P.sacks) and a legend; CLAIM_MAX by stage 1 / 1 / 2 / 3 / 5 (raids maxClaims). Watchtower and walls are for raids on
   Valholm (next). Villagers (instanced, up to 36) walk between buildings; smoke from longhouse, smithy, temple. Saved as
-  P.home { b, families }. Test: scratchpad hometest.cjs.
+  P.valholm { b, families } (P.home is the home harbour index: do not reuse it). Test: scratchpad hometest.cjs.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).

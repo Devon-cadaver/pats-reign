@@ -33,7 +33,7 @@ export const costOf = (k, l) => { const f = Math.pow(2.6, l); return BUILDINGS[k
 
 export function createHome(G) {
   const { scene, ocean, smoke } = G; let built = null, figs = null, folk = [], famT = 0, incT = 0, stageShown = -1, slots = null;
-  const H = () => { const P = G.P; P.home = P.home || { b: {}, families: 0 }; P.home.b = P.home.b || {}; return P.home; };
+  const H = () => { const P = G.P; if (!P.valholm || typeof P.valholm !== 'object') P.valholm = { b: {}, families: 0 }; P.valholm.b = P.valholm.b || {}; return P.valholm; };
   const lv = (k) => H().b[k] || 0;
   const pop = () => Math.min(capOf(lv('longhouse')), (G.P.thralls || 0) + (H().families || 0));
   const nBuilt = () => Object.values(H().b).filter((n) => n > 0).length;
