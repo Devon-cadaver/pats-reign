@@ -418,3 +418,11 @@ html.leftHand.tabletHud #swapBtn { left: auto; right: calc(max(12px, env(safe-ar
 #bombGame .bgMsg, #legGame .bgMsg { bottom: calc(40vh + 6px); } html.tabletHud #bombGame .bgMsg, html.tabletHud #legGame .bgMsg { bottom: calc(34vh + 6px); } .bgPower { top: 34%; } .bgStrike { top: 46%; } .lgSlam { top: 22%; }
 /* an empty message box is hidden (v1.10.4: during the toss it sat in the middle of the view) */
 #bombGame .bgMsg:empty, #legGame .bgMsg:empty { display: none; }
+/* v1.11.0: a ship battle seen from the deck: the HUD sits over the ballista; FIRE is the trigger at the foot of the ballista; the
+   timing strip just above the ballista, clear of her ship; the hint fades after the first seconds */
+body.broadFp #ballistaHud { z-index: 4; }
+body.broadFp #broad .bFire { width: 96px; height: 96px; font-size: 19px; bottom: calc(6px + env(safe-area-inset-bottom, 0)); }
+html.tabletHud body.broadFp #broad .bFire { width: 128px; height: 128px; font-size: 24px; }
+body.broadFp #broad .bStrip, html:not(.tabletHud) body.broadFp #broad .bStrip { bottom: calc(40vh + 22px); }
+html.tabletHud body.broadFp #broad .bStrip { bottom: calc(34vh + 22px); }
+#broad .bHint { transition: opacity .6s; } body.broadFp #broad .bHint.faded { opacity: 0; }

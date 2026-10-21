@@ -22,6 +22,7 @@ import { createRaids, FAITHS, SPELLS, LEGEND_SPELL } from './raids.js';
 import { createSpells, COMBOS } from './spells.js';
 import { createHome, BUILDINGS } from './home.js';
 import { createLegendGame } from './legendgame.js';
+import { ballistaHud } from './ballista.js';
 
 const $ = (id) => document.getElementById(id);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, k) => a + (b - a) * k, rnd = (a, b) => a + Math.random() * (b - a);
@@ -409,7 +410,7 @@ function startBroadside(mon) {
       let ok = true; for (let u = -(Lh + Lmax); ok && u <= Lh + Lmax; u += 5) for (const v of [-(gap / 2 + t.B + 3), 0, gap / 2 + Bmax + 3]) { const x = ox + ax * u + cx * v, z = oz + az * u + cz * v; if (Math.abs(x) > HALF - 25 || Math.abs(z) > HALF - 25 || world.blockAt(x, z, 1)) { ok = false; break; } }
       if (ok) F = { ox, oz, ax, az, cx, cz }; } }
   if (!F) { say('⚔ No sea room for a battle line here: <b>close quarters!</b>', 3); return false; }
-  const B = { ...F, gap, spacing, Lh, foes, yC: -gap / 2, eC: gap / 2, sp: 0, vp: 0, anchor: Lh * 0.7, ve: 0, mode: 'move', target: -Lh * 0.75, holdT: 0, stopNext: Math.random() < 0.5, sweeps: 0, swap: null, k: 0, reload: 0.8, start: [[boat.x, boat.z], ...foes.map((f) => [f.x, f.z])], camYaw: Math.atan2(F.cx, F.cz), my: broadArrow(0xffd24a), shots: [], burn: new Map() };
+  const B = { ...F, gap, spacing, Lh, foes, yC: -gap / 2, eC: gap / 2, sp: 0, vp: 0, anchor: Lh * 0.7, ve: 0, mode: 'move', target: -Lh * 0.75, holdT: 0, stopNext: Math.random() < 0.5, sweeps: 0, swap: null, k: 0, reload: 0.8, start: [[boat.x, boat.z], ...foes.map((f) => [f.x, f.z])], camYaw: Math.atan2(F.cx, F.cz), my: broadArrow(0xffd24a), shots: [], burn: new Map(), fk: 0, fpDir: null, fpOn: false, cam0: camera.position.clone(), look0: camera.position.clone().add(camera.getWorldDirection(V(0, 0, 0)).multiplyScalar(30)) };
   for (const f of foes) { f.bx = { reload: 2 + Math.random(), err: 0, last: null, aimT: 0, arrow: broadArrow(0xff4a3a) }; f.state = 'chase'; }
   battle = { mon, t: 0, broad: B }; boat.wp = null; helm.held = false; setBattle(true); if ((boat.throttle || 0) < 0.3) setThrottle(0.6, true);
   $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy', 'broadOn');
@@ -423,7 +424,7 @@ const foeAt = (B, i) => B.anchor + (i - (B.foes.length - 1) / 2) * B.spacing; //
 function nearFoe(B) { let best = 0, bd = 1e9; B.foes.forEach((f, i) => { const d = Math.abs(foeAt(B, i) - B.sp); if (d < bd) { bd = d; best = i; } }); return best; }
 const broadReload = () => 2.4 - 0.3 * Math.min(5, P.up.ballista) - 0.05 * Math.max(0, P.up.ballista - 5);
 const broadFlight = () => clamp(battle.broad.gap / 34, 0.25, 1.1); // the same time launch() gives a bolt over that gap
-function broadFire() { const B = battle && battle.broad; if (!B || B.reload > 0 || B.k < 1 || B.swap) return; B.reload = broadReload(); unlockAudio(); sfx.throw();
+function broadFire() { const B = battle && battle.broad; if (!B || B.reload > 0 || B.k < 1 || B.swap) return; B.reload = broadReload(); unlockAudio(); sfx.throw(); ballistaHud.fire();
   const t = T(), n = 3 + P.up.ballista, dir = Math.sign(B.eC - B.yC);
   for (let i = 0; i < n; i++) { const s = (i / (n - 1) - 0.5) * t.L * 0.6, [fx, fz] = lanePos(B, B.sp + s, B.yC + dir * t.B * 0.5), [hx, hz] = lanePos(B, B.sp + s, B.eC);
     setTimeout(() => { if (battle && battle.broad === B) launch({ x: fx, y: boat.y + 1.8, z: fz }, { x: hx, y: 1, z: hz }, P.up.ballista ? 'bolt' : 'spear'); }, i * 50); }
@@ -465,9 +466,9 @@ function updateBroadside(dt) { const B = battle.broad, t = T(); battle.t += dt; 
       const diff = se - (B.sp + B.vp * (tf + 0.8)) - A.err; A.aimT = Math.abs(diff) < 3 ? A.aimT + dt : 0; if (A.last != null && Math.sign(diff) !== Math.sign(A.last)) { A.lock = { s: se, t: 0.8, thr: boat.throttle || 0 }; A.last = null; } else A.last = diff; }); }
   // the arrows: yours from your hull across to her lane, each of theirs from her hull across to yours
   const dirE = Math.sign(B.eC - B.yC), yawE = Math.atan2(B.cx * dirE, B.cz * dirE), y0 = ocean.heightAt(boat.x, boat.z) + 0.4, show = !B.swap && B.k >= 1;
-  const [ax0, az0] = lanePos(B, B.sp, B.yC + dirE * t.B * 0.6); B.my.position.set(ax0, y0, az0); B.my.rotation.y = yawE; B.my.scale.set(1.4, 1, B.gap + 4 - t.B * 0.6); B.my.visible = show;
-  B.my.material.opacity = B.reload <= 0 ? 0.85 : 0.25; B.my.material.color.setHex(B.reload <= 0 ? 0xffd24a : 0x9a8a6a);
-  B.foes.forEach((f, i) => { const A = f.bx, eT = tierOf(f), [hx, hz] = lanePos(B, foeAt(B, i), B.eC - dirE * eT.B * 0.6); A.arrow.position.set(hx, y0, hz); A.arrow.rotation.y = yawE + Math.PI; A.arrow.scale.set(1.4, 1, B.gap + 4 - eT.B * 0.6); A.arrow.visible = show;
+  const [ax0, az0] = lanePos(B, B.sp, B.yC + dirE * t.B * 0.6); B.my.position.set(ax0, y0, az0); B.my.rotation.y = yawE; B.my.scale.set(B.fpOn ? 0.35 : 1.4, 1, B.gap + 4 - t.B * 0.6); B.my.visible = show;
+  B.my.material.opacity = (B.reload <= 0 ? 0.85 : 0.25) * (B.fpOn ? 0.6 : 1); B.my.material.color.setHex(B.reload <= 0 ? 0xffd24a : 0x9a8a6a);
+  B.foes.forEach((f, i) => { const A = f.bx, eT = tierOf(f), [hx, hz] = lanePos(B, foeAt(B, i), B.eC - dirE * eT.B * 0.6); A.arrow.position.set(hx, y0, hz); A.arrow.rotation.y = yawE + Math.PI; A.arrow.scale.set(B.fpOn ? 0.5 : 1.4, 1, B.gap + 4 - eT.B * 0.6); A.arrow.visible = show;
     A.arrow.material.opacity = f.treasure ? 0.12 : A.aimT > 0 ? 0.55 + 0.4 * Math.sin(battle.t * 30) : 0.3; });
   // volleys landing
   for (let i = B.shots.length - 1; i >= 0; i--) { const s = B.shots[i]; s.t -= dt; if (s.t > 0) continue; B.shots.splice(i, 1);
@@ -483,18 +484,31 @@ function updateBroadside(dt) { const B = battle.broad, t = T(); battle.t += dt; 
   if (!B.foes.length) { endBroadside('win'); return; }
   // the timing strip: every ship's place along the line from your arrow, the green zone where one must be when you fire
   // (her column's speed times the flight already allowed for), its PERFECT middle, and the warning while one aims
-  const SPAN = 24, xOf = (v) => 50 + clamp(v / SPAN, -1, 1) * 50, ni = nearFoe(B), hl = tierOf(B.foes[ni]).L / 2 + 1.5, lead = -B.ve * tf;
-  $('bZone').style.left = xOf(lead - hl) + '%'; $('bZone').style.width = xOf(lead + hl) - xOf(lead - hl) + '%'; $('bPerf').style.left = xOf(lead - hl * 0.35) + '%'; $('bPerf').style.width = xOf(lead + hl * 0.35) - xOf(lead - hl * 0.35) + '%';
+  // (seen from the deck her lane runs the other way across the screen, so the strip turns round with it)
+  const SPAN = 24, mir = B.fpOn ? -1 : 1, xOf = (v) => 50 + mir * clamp(v / SPAN, -1, 1) * 50, ni = nearFoe(B), hl = tierOf(B.foes[ni]).L / 2 + 1.5, lead = -B.ve * tf, band = (el, a, b) => { const x0 = xOf(a), x1 = xOf(b); el.style.left = Math.min(x0, x1) + '%'; el.style.width = Math.abs(x1 - x0) + '%'; };
+  band($('bZone'), lead - hl, lead + hl); band($('bPerf'), lead - hl * 0.35, lead + hl * 0.35);
   B.foes.forEach((f, i) => { const el = $('bShip' + i); if (!el) return; const v = foeAt(B, i) - B.sp; el.style.left = xOf(v) + '%'; el.style.opacity = B.swap ? 0 : Math.abs(v) < SPAN ? 1 : 0.25; });
   $('bAim').style.opacity = B.foes.some((f) => f.bx.aimT > 0) ? 1 : 0; document.querySelector('#broad .bStrip').style.opacity = B.swap ? 0.3 : 1;
-  B.hudT = (B.hudT || 0) - dt; if (B.hudT <= 0) { B.hudT = 0.1; broadHud(); } }
+  B.hudT = (B.hudT || 0) - dt; if (B.hudT <= 0) { B.hudT = 0.1; broadHud(); }
+  // the deck view looks straight across at her lane, where your volley lands (while coming about, at the ship you circle with)
+  { const dirE = Math.sign(B.eC - B.yC), f = B.foes[0]; let ax = B.cx * dirE, az = B.cz * dirE; if (B.swap && f) { const dx = f.x - boat.x, dz = f.z - boat.z, dl = Math.hypot(dx, dz) || 1; ax = dx / dl; az = dz / dl; }
+    B.fk = Math.min(1, B.fk + dt / 2); $('bHint').classList.toggle('faded', B.fpOn && battle.t > 7 && !B.swap); if (!B.fpDir) B.fpDir = V(ax, 0, az); else { B.fpDir.x += (ax - B.fpDir.x) * Math.min(1, dt * 3); B.fpDir.z += (az - B.fpDir.z) * Math.min(1, dt * 3); B.fpDir.normalize(); } ballistaHud.update(dt); } }
+// ---------- the battle line from the deck (v1.11.0, Sean's picture) ----------
+// ACTION ship battles are seen from your ballista: the camera eases in over 2 s from the chase view to your deck, then looks
+// across the water at her lane; her ships sail past from the side and your volley lands straight ahead. Your own ship is
+// hidden (you stand on it) and the ballista overlay (shields on the rails) fires and reloads with you.
+function broadCam(cam) { const B = battle.broad; if (!B.fpDir) return; const t = T(), e = B.fk * B.fk * (3 - 2 * B.fk), d = B.fpDir, sh = (boat.shake || 0) * 0.25, port = innerWidth < innerHeight, off = port ? -8 : t.B * 0.25;
+  if (port && B.fpOn) { cam.fov = 66; cam.updateProjectionMatrix(); }
+  const px = boat.x + d.x * off + rnd(-sh, sh), py = boat.y + t.rise + 3 + rnd(-sh, sh), pz = boat.z + d.z * off + rnd(-sh, sh), lx = boat.x + d.x * B.gap, lz = boat.z + d.z * B.gap;
+  cam.position.set(lerp(B.cam0.x, px, e), lerp(B.cam0.y, py, e), lerp(B.cam0.z, pz, e)); cam.lookAt(lerp(B.look0.x, lx, e), lerp(B.look0.y, 1.5, e), lerp(B.look0.z, lz, e));
+  const fp = e > 0.6; if (fp !== B.fpOn) { B.fpOn = fp; if (ship) ship.g.visible = !fp; ballistaHud.show(fp); document.body.classList.toggle('broadFp', fp); } }
 function broadHud() { const B = battle && battle.broad; if (!B || !B.foes.length) return; const f = B.foes[nearFoe(B)];
   $('bFoeName').innerHTML = f.name + ' <small>Lv ' + (Math.round(f.lv) + 1) + '</small>' + (B.foes.length > 1 ? ' <small>· ' + B.foes.length + ' ships</small>' : ''); $('bFoeHp').style.width = clamp(f.hp / f.maxHp, 0, 1) * 100 + '%';
   $('bLoad').style.width = (1 - clamp(B.reload / broadReload(), 0, 1)) * 100 + '%'; $('bFire').classList.toggle('ready', B.reload <= 0 && B.k >= 1 && !B.swap);
   const bf = boardTarget(B), bi = bf ? boardInfo(bf) : undefined, bb = $('bBoard'); bb.classList.toggle('hidden', !bf); if (bf) { bb.textContent = bi ? '🪝 ' + bi : '🪝 BOARD HER'; bb.classList.toggle('off', !!bi); } }
 // the ship you can board: the nearest one abeam whose hull is below 40%
 function boardTarget(B) { let best = null, bd = 1e9; B.foes.forEach((f, i) => { const d = Math.abs(foeAt(B, i) - B.sp); if (f.hp / f.maxHp <= 0.4 && d < bd && d < 16) { bd = d; best = f; } }); return best; }
-function clearBroadside() { const B = battle && battle.broad; if (!B) return; for (const a of [B.my, ...B.foes.map((f) => f.bx.arrow)]) { scene.remove(a); a.material.dispose(); } const ui = $('broad'); if (ui) ui.remove(); document.body.classList.remove('busy', 'broadOn'); $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); }
+function clearBroadside() { const B = battle && battle.broad; if (!B) return; if (B.fpOn) { ballistaHud.show(false); document.body.classList.remove('broadFp'); } if (ship) ship.g.visible = true; for (const a of [B.my, ...B.foes.map((f) => f.bx.arrow)]) { scene.remove(a); a.material.dispose(); } const ui = $('broad'); if (ui) ui.remove(); document.body.classList.remove('busy', 'broadOn'); $('acts').classList.remove('hidden'); $('helmWrap').classList.remove('hidden'); }
 function endBroadside(result) { const B = battle && battle.broad; if (!B) return; const foes = [...B.foes], target = result === 'board' ? boardTarget(B) : null; clearBroadside(); battle = null; setBattle(false); boat.lastHit = time; boat.grace = 3.5; hud();
   if (result === 'win') setThrottle(0, true);
   else if (result === 'flee') { damage(Math.max(...foes.map((f) => f.dmg)) * 0.5 * (1 - defense()), 'You break away under fire!'); for (const f of foes) f.stun = 7; boat.boost = 3.5; boat.v = topSpeed(); setThrottle(1, true); }
@@ -1660,7 +1674,7 @@ function tick(dt) { time += dt;
     $('region').textContent = rname(world.regionAt(boat.x, boat.z)) + (isNight() ? ' · 🌙' : ''); $('wxTxt').textContent = wx.k > 0.3 ? (P.realm === 'hel' && WXNAME_HEL[wx.type]) || WXNAME[wx.type] : ''; $('buff').textContent = [boat.thor > 0 ? '⚡ Thor ×2 damage ' + Math.ceil(boat.thor) + 's' : '', boat.curse > 0 ? '☠ Cursed ' + Math.ceil(boat.curse) + 's' : '', lairHud ? '⚔ Lair wave ' + lairHud : '', P.bounty ? '📜 ' + (P.bounty.n >= P.bounty.need ? 'Bounty done: claim it at a harbour' : bountyText(P.bounty) + ' ' + P.bounty.n + '/' + P.bounty.need) : '', boat.pod ? '🐬 Porpoises +10% speed' : '', boat.boost > 0 ? '💨 Escape +35% speed' : '', boat.bifrost > 0 ? '🌈 Bifröst +25% speed, mending ' + Math.ceil(boat.bifrost) + 's' : '', P.tithe > 0 && P.realm === 'hel' ? '🕯 Tithe +25% souls ' + Math.ceil(P.tithe / 60) + 'm' : '', boat.mending ? '🔨 Crew mending' : ''].filter(Boolean).join(' · '); $('hurt').classList.toggle('thor', boat.thor > 0); }
   else for (const mon of mons) mon.tag.style.display = 'none';
   msgT -= dt; if (msgT <= 0) $('msg').style.opacity = 0; warnT -= dt; if (warnT <= 0) $('warn').innerHTML = '';
-  if (raids && raids.mg) raids.camHook(camera); if (lgame && lgame.active) lgame.camHook(camera); renderer.render(scene, camera); }
+  if (raids && raids.mg) raids.camHook(camera); if (lgame && lgame.active) lgame.camHook(camera); if (battle && battle.broad && state !== 'title') broadCam(camera); renderer.render(scene, camera); }
 // start on the title: the ship rides at anchor off Valholm
 { const h = world.harbors[0]; boat.x = h.dock.x + Math.cos(h.dir) * 12; boat.z = h.dock.z + Math.sin(h.dir) * 12; boat.yaw = Math.atan2(Math.cos(h.dir), Math.sin(h.dir)); }
 const hadSave = load(); if (!hadSave) P.hp = maxHp(); rebuildShip(); placeWreck(); toTitle(); env.snap(P.tod, null, world.regionWeights(boat.x, boat.z, {})); camTgt.set(boat.x, 0, boat.z);

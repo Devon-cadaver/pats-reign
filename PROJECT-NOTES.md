@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.10.4. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.11.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.10.4: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.11.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -866,6 +866,17 @@ disagree with this file, this file wins.
   out behind the ship away from the legend (the legends' arms reach ~105-120 of the 130 between), D = 2L + 30. The hull's
   water mask is off and the sea does not hug the hull while it is in the air. It lands on the side with open water within
   30 if it can. The empty fight message box is hidden (it sat mid-screen). Proof: scratchpad tosstest.cjs.
+- v1.11.0 (Sean's picture: a ship battle from the deck, the ballista across the bottom, shields on the rails, her longship
+  across the water): ACTION ship battles (the battle line, raid defenders, treasure ships) are seen from your ballista. The
+  battle line plays exactly as before; main.js broadCam(camera) runs before the render: it eases over 2 s (B.fk) from the
+  chase view (B.cam0/look0) to your deck (rise + 3 above the sea) looking straight across at her lane where your volley
+  lands (B.fpDir, eased; while coming about it looks at her ship instead). From 60% of the way in (B.fpOn) your ship is
+  hidden, the ballista overlay shows (ballistaHud.fire on FIRE, update each frame) and body.broadFp moves the UI: the
+  overlay drops under the HUD (z-index 4), FIRE is a 96 px trigger at the foot of the ballista (128 on tablets), the
+  timing strip sits just above the ballista, the hint fades after 7 s. Seen from the deck her lane runs the other way
+  across the screen, so the strip is mirrored (xOf, band); the arrows on the water are thin lines. Portrait: the camera
+  stands 8 back and the lens widens to 66. clearBroadside puts it all back. CLASSIC ship fights are unchanged.
+  Proof: scratchpad decktest.cjs (phone, tablet, portrait; ship and strip mark on the same side), swaptest.cjs.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
