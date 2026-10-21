@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.1.4. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.2.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.1.4: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.2.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -662,6 +662,19 @@ disagree with this file, this file wins.
   sea). drawMap draws each as a dashed red circle with the beast's icon (GICON), the chart adds the name below; a
   ground whose beast cannot spawn at your tier yet is dim (groundOpen). The chart hint and the bounty tutorial step
   mention them. __pr exposes grounds and groundAt; scratchpad groundtest.cjs checks placing, bias and screenshots.
+- v1.2.0 (Sean sent a picture: a bone-white, octopus-shaped kraken with a crested dome, green eyes and suckered arms towering
+  over a longship; "make this the actual Kraken, with multiple types and the undead ones; keep the current krakens as
+  something else"): monsters.js kraken() is the new model: a merged head (a tall ellipsoid dome on a brow mass, a brow
+  plate, five ridges of cone spines, ribs over the dome, side plates, two horns, deep black sockets with glow eyes and a
+  transparent halo, cheek folds, a beak) and eight tentacle() arms (R*0.74, 28 rings) with two rows of suckers as one
+  InstancedMesh (SPH_LO, placed on the inner curling face each frame). Same anim(dt, st) interface (dive, attack,
+  reach) and size R*6 / top R*4.2, so updateKraken and the lair fight are unchanged; krakenEye moved to the new socket
+  (lx 0.98, lz 1.3, y +0.72 Rk). Variants: Bone (used, from the picture), Abyssal, Storm, Elder; undead palettes apply
+  as before. The old squid-shaped model is the Giant Squid (species squid: variants Abyssal/Storm/Elder Squid; MLV
+  3.6/4.2/4.8, speed 7.5, grab in action fights and the octopus grab in classic, GIANTS, a bounty type, the Terror of
+  the Deep deed, Mist and Frost sea bias, a Squid deep hunting ground). Bestiary: a Giant Squid family (the old kraken
+  pictures copied to squid-N), new kraken-N / -full / -giant pictures rendered headlessly (scratchpad rosterkraken.cjs).
+  Tests: scratchpad krakenshot.cjs (showcase shots), squidtest.cjs (squid fights, the lair fight, the ground).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).

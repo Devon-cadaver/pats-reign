@@ -3,7 +3,7 @@
 import { SPECIES, makeMonster } from './monsters.js';
 import { buildShip } from './ship.js';
 
-const ICON = { shark: '🦈', megalodon: '🦷', serpent: '🐉', eel: '⚡', octopus: '🐙', kraken: '🦑', crab: '🦀', angler: '🎣', jelly: '🪼', leviathan: '🐲', porpoise: '🐬', elder: '👁', jormungandr: '🌀' };
+const ICON = { shark: '🦈', megalodon: '🦷', serpent: '🐉', eel: '⚡', octopus: '🐙', kraken: '🦴🐙', squid: '🦑', crab: '🦀', angler: '🎣', jelly: '🪼', leviathan: '🐲', porpoise: '🐬', elder: '👁', jormungandr: '🌀' };
 export function install(extraButtons) {
   extraButtons((btn, ctx) => {
     const sep = document.createElement('div'); sep.style.width = '100%'; document.getElementById('bar').appendChild(sep);

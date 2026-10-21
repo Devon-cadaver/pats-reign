@@ -214,7 +214,42 @@ function cephalopod(P, S, kraken) {
     body.position.y = lerp(-R * 0.55, -R * 6, st.dive) + (kraken ? R * 0.15 : 0) + Math.sin(t * 0.8) * R * 0.08; face.rotation.x = Math.sin(t * 0.6) * 0.05 - st.attack * 0.2; }
   return { g, size: R * (kraken ? 6 : 4.2), top: R * (kraken ? 2.2 : 4), anim, mats: [mat], giant: kraken && S > 6 };
 }
-const octopus = (P, S) => cephalopod(P, S, false), kraken = (P, S) => cephalopod(P, S, true);
+const octopus = (P, S) => cephalopod(P, S, false), squid = (P, S) => cephalopod(P, S, true);
+// ---------- the Kraken (v1.2.0, from Sean's picture): a domed, crested head, a heavy brow over glowing eyes, eight thick arms with suckers ----------
+const _up = new THREE.Vector3(0, 1, 0), _dummy = new THREE.Object3D(), _q = new THREE.Quaternion();
+function kraken(P, S) {
+  const g = new THREE.Group(), body = grp(g), R = 1.3 * S, mat = glowVC(), arms = [], nA = 8;
+  const bone = M(P.top), plate = M(P.accent), dark = M(P.dark || lerpHex(P.top, 0, 0.45)), eye = M(P.eye, 'glow'), black = M(0x060606), suck = M(P.sucker || 0xe8d8d0);
+  // the head: a tall dome leaning back on a wide brow mass; bony plates ring the crown and three ridges of spines run over it
+  const head = grp(body, 0, R * 1.2, -R * 0.2); const C = V(0, 1.55 * R, -0.5 * R), RX = 1.5 * R, RY = 2.45 * R, RZ = 1.6 * R;
+  part(head, SPH(), bone, RX * 2, RY * 2, RZ * 2, C.x, C.y, C.z); part(head, SPH(), bone, 3.4 * R, 2.1 * R, 3.1 * R, 0, -0.15 * R, 0.1 * R);
+  part(head, SPH(), plate, 3.3 * R, 0.55 * R, 1.3 * R, 0, 0.62 * R, 1.05 * R); // the brow ridge
+  const spike = (d, x, y, z, h, w, m) => { const o = new THREE.Mesh(CON(), m); o.scale.set(w, h, w); o.position.set(x, y, z); o.quaternion.setFromUnitVectors(_up, d.normalize()); o.position.addScaledVector(d, h * 0.45); head.add(o); };
+  const onDome = (ph, th) => { const d = V(Math.sin(ph) * Math.cos(th * 0.5), Math.cos(th) * Math.cos(ph), -Math.sin(th) * Math.cos(ph)); return [d, V(C.x + d.x * RX, C.y + d.y * RY, C.z + d.z * RZ)]; };
+  for (const ridge of [-1.0, -0.5, 0, 0.5, 1.0]) for (let k = 0; k < 6; k++) { const th = 0.15 + (k / 5) * 2.1, [d, p] = onDome(ridge, th), lean = V(d.x, d.y + 0.3, d.z - 0.6), big = ridge === 0 ? 1 : Math.abs(ridge) < 0.7 ? 0.8 : 0.6; spike(lean, p.x, p.y, p.z, (1.5 - k * 0.15) * R * big, 0.42 * R * big, k % 2 ? plate : bone); }
+  for (let m = 0; m < 10; m++) { const ph = -1.35 + (m / 9) * 2.7; for (let k = 0; k < 5; k++) { const th = 0.45 + k * 0.42, [d, p] = onDome(ph, th), tan = V(0, -Math.sin(th), -Math.cos(th)); const o = new THREE.Mesh(CAP(), plate); o.scale.set(0.17 * R, 0.8 * R, 0.17 * R); o.position.copy(p).addScaledVector(d, -0.04 * R); o.quaternion.setFromUnitVectors(_up, tan.normalize()); head.add(o); } } // ribs over the dome
+  for (const sd of [-1, 1]) { for (let k = 0; k < 4; k++) { const a = 0.9 + k * 0.5, p = V(C.x + Math.sin(a) * sd * RX * 0.98, C.y + Math.cos(a) * RY * 0.3 - 0.2 * R, C.z - 0.1 * R + k * 0.25 * R); spike(V(sd * 1, 0.1, -0.3), p.x, p.y, p.z, 0.5 * R, 0.22 * R, plate); } // side plates
+    spike(V(sd * 0.35, 1, 0.45), sd * 1.0 * R, 1.55 * R, 0.75 * R, 1.05 * R, 0.34 * R, plate); // the two horns over the brow
+    part(head, SPH(), black, 1.05 * R, 0.78 * R, 0.8 * R, sd * 0.98 * R, 0.08 * R, 1.25 * R); part(head, SPH(), eye, 0.62 * R, 0.46 * R, 0.46 * R, sd * 0.98 * R, 0.08 * R, 1.5 * R); const halo = new THREE.Mesh(SPH(), new THREE.MeshBasicMaterial({ color: P.eye, transparent: true, opacity: 0.28, depthWrite: false })); halo.scale.set(1.15 * R, 0.9 * R, 0.9 * R); halo.position.set(sd * 0.98 * R, 0.08 * R, 1.5 * R); head.add(halo);
+    part(head, CAP(), dark, 0.28 * R, 0.7 * R, 0.28 * R, sd * 1.5 * R, -0.75 * R, 0.6 * R, 0.3, 0, sd * 0.5); } // cheek folds
+  part(head, CON(), M(0x2a1a14), 0.55 * R, 0.6 * R, 0.55 * R, 0, -0.95 * R, 0.75 * R, Math.PI + 0.3); // the beak
+  mergeParts(head);
+  // eight arms, thick at the root, with two rows of suckers underneath (one instanced mesh for all of them)
+  const nSeg = 28, perArm = 10, suckers = new THREE.InstancedMesh(SPH_LO(), suck, nA * perArm * 2); suckers.frustumCulled = false; body.add(suckers);
+  for (let i = 0; i < nA; i++) { const tb = tentacle(P, R * 0.74, nSeg, 13, mat, P.glow ? (s) => (Math.abs(Math.sin(s * 30)) > 0.85 ? 1.3 : 0) : null); body.add(tb.mesh); arms.push({ tb, a0: (i / nA) * TAU + 0.2 + (i % 2) * 0.12, ph: (i * 1.7) % TAU, pts: Array.from({ length: nSeg }, () => new THREE.Vector3()) }); }
+  let t = 0; const dir = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), side = new THREE.Vector3(), off = new THREE.Vector3(), inner = new THREE.Vector3(), sideV = new THREE.Vector3();
+  function anim(dt, st) { t += dt * (1 + st.speed); const surf = 1 - st.dive; let si = 0;
+    for (const A of arms) { const n = A.pts.length, segL = 0.42 * R * (st.reach ?? 1); const rise = (0.85 + 0.3 * Math.sin(t * 0.9 + A.ph)) * surf + st.attack * 1.2;
+      const az = A.a0 + Math.sin(t * 0.5 + A.ph) * 0.2; dir.set(Math.sin(az), 0, Math.cos(az)); side.crossVectors(up, dir);
+      A.pts[0].set(dir.x * R * 1.35, -R * 0.25, dir.z * R * 1.35 + R * 0.2); let ang = -0.3, yaw = 0;
+      for (let k = 1; k < n; k++) { const s = k / (n - 1); ang += (rise * 3.6 / n) * (0.35 + s * 1.5) * (1 + Math.sin(t * 2 + A.ph + s * 4) * 0.3) + Math.sin(t * 1.7 + A.ph + s * 7) * 0.07; yaw = Math.sin(t * 1.3 + A.ph + s * 3) * 0.35 * s;
+        const ca = Math.cos(ang), sa = Math.sin(ang), d2 = tmpV.copy(dir).multiplyScalar(ca).addScaledVector(up, sa).addScaledVector(side, yaw); A.pts[k].copy(A.pts[k - 1]).addScaledVector(d2.normalize(), segL); }
+      A.tb.set(A.pts);
+      for (let j = 0; j < perArm; j++) { const k = 3 + j * 2, s = k / (n - 1), rr = A.tb.r(s), fr = A.tb.frameAt(k); inner.set(0, A.pts[k].y * 0.35 + R * 2.2, 0).sub(A.pts[k]); inner.addScaledVector(fr.T, -inner.dot(fr.T)).normalize(); sideV.crossVectors(fr.T, inner).normalize(); for (const row of [-0.42, 0.42]) { off.copy(inner).multiplyScalar(Math.cos(row)).addScaledVector(sideV, Math.sin(row)); _dummy.position.copy(A.pts[k]).addScaledVector(off, rr * 0.92); _dummy.quaternion.setFromUnitVectors(_up, off); const d = rr * 0.9; _dummy.scale.set(d, d * 0.45, d); _dummy.updateMatrix(); suckers.setMatrixAt(si++, _dummy.matrix); } } }
+    suckers.instanceMatrix.needsUpdate = true;
+    body.position.y = lerp(-R * 0.55, -R * 6.5, st.dive) + Math.sin(t * 0.8) * R * 0.08; head.rotation.x = Math.sin(t * 0.6) * 0.04 - st.attack * 0.18; }
+  return { g, size: R * 6, top: R * 4.2, anim, mats: [mat], giant: S > 6 };
+}
 
 // ---------- giant crab ----------
 function crab(P, S) {
@@ -399,9 +434,14 @@ export const SPECIES = {
     { name: 'Blue-Ringed Octopus', top: 0xd8b04a, belly: 0xf0e0b0, accent: 0x1a8aff, eye: 0x1a1a1a, pattern: 'rings', glow: true },
     { name: 'Ghost Octopus', top: 0xd8e0e4, belly: 0xffffff, accent: 0x9ab0c0, eye: 0x6affff, pattern: 'spots' } ] },
   kraken: { name: 'Kraken', build: kraken, variants: [
-    { name: 'Abyssal Kraken', top: 0x7a1a1a, belly: 0xe0a090, accent: 0x3a0a0a, fin: 0x5a1010, eye: 0xffd23a, pattern: 'spots' },
-    { name: 'Storm Kraken', top: 0x3a4a5a, belly: 0xc0ccd8, accent: 0x6ad6ff, fin: 0x2a3a4a, eye: 0x9affff, pattern: 'rings', glow: true },
-    { name: 'Elder Kraken', top: 0x3a4a2a, belly: 0xb8b890, accent: 0x1a2410, fin: 0x2a3a1a, eye: 0xff4a1a, pattern: 'scars' } ] },
+    { name: 'Bone Kraken', top: 0xd8d2c4, belly: 0xb0a098, accent: 0xaea496, dark: 0x6a6058, eye: 0x5aff5a, sucker: 0xe4d2cc, pattern: 'scars' },
+    { name: 'Abyssal Kraken', top: 0x6a1818, belly: 0xd09888, accent: 0x3a0a0a, dark: 0x2a0808, eye: 0xffd23a, sucker: 0xe8b8a8, pattern: 'spots' },
+    { name: 'Storm Kraken', top: 0x3a4a5a, belly: 0xb8c4d0, accent: 0x6ad6ff, dark: 0x1e2a36, eye: 0x9affff, sucker: 0xd8e4f0, pattern: 'rings', glow: true },
+    { name: 'Elder Kraken', top: 0x3a4a2a, belly: 0xb0b088, accent: 0x1a2410, dark: 0x14200c, eye: 0xff4a1a, sucker: 0xd8d0a8, pattern: 'scars' } ] },
+  squid: { name: 'Giant Squid', build: squid, variants: [
+    { name: 'Abyssal Squid', top: 0x7a1a1a, belly: 0xe0a090, accent: 0x3a0a0a, fin: 0x5a1010, eye: 0xffd23a, pattern: 'spots' },
+    { name: 'Storm Squid', top: 0x3a4a5a, belly: 0xc0ccd8, accent: 0x6ad6ff, fin: 0x2a3a4a, eye: 0x9affff, pattern: 'rings', glow: true },
+    { name: 'Elder Squid', top: 0x3a4a2a, belly: 0xb8b890, accent: 0x1a2410, fin: 0x2a3a1a, eye: 0xff4a1a, pattern: 'scars' } ] },
   crab: { name: 'Giant Crab', build: crab, variants: [
     { name: 'Rust Crab', top: 0xb8501e, belly: 0xf0c8a0, accent: 0xf0e0c0, eye: 0x1a1a1a },
     { name: 'Iron Crab', top: 0x3a5a62, belly: 0x9ab0b4, accent: 0xc0d0d4, eye: 0xffd23a },
