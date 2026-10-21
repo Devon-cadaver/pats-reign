@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.1.2. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.1.3. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.1.2: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.1.3: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -640,6 +640,19 @@ disagree with this file, this file wins.
   escape +35%, Bifröst, Thor x2 damage, tithe +25% souls); the helmsman eases to 3 (salvage speed) near a wreck ahead
   (wreckNear) without stopping; the HELM camera is level with the horizon (it follows the ship's heading and a smoothed
   height, not its pitch and roll); nights are brighter in both realms (env.js night ambient .44/.48, sunK .72/.66).
+- v1.1.3 (Sean's third round, from phone screenshots): the tutorial card got in the way, so every step is now one or two
+  short lines ("Tap REPAIR to mend the hull"), the card is smaller, and placeTut keeps it clear: on the chart it sits
+  below the chart (portrait) or beside it (landscape; updateTut now runs in the chart state too), in the harbour it sits
+  at the top and pushes the harbour content down (harbor paddingTop, reset in tutEnd), and a card for a target near the
+  top of the screen goes below the target. The hand shows over the harbour (a stray z-index: 6 on #tutHand hid it), so
+  it stays on REPAIR, then TAKE IT, then SET SAIL. The bounty is named in the HUD line (📜 Hunt 4 sharks 1/4; "Bounty
+  done: claim it at a harbour") and a 13th step at sea points at it with a one-line how-to per kind (BOUNTY_HOW; done
+  after 14 s or the first count). The SPEARS button flashed green every frame at the start of the learn fight:
+  classList.toggle(name, undefined) flips the class, and L.rear was unset before the first rear; the aim flags are
+  booleans now and beastStart sets rear/parried. Snow and ash followed the ship (the Points object was re-centred on
+  the camera every frame): flakes live in world space and wrap around the camera target (wrap90); rain drops wrap too
+  (wrap100). __pr exposes tut, fall and rain. Tests: scratchpad learnflash.cjs (colour changes per fight), chartshot.cjs,
+  snowtest.cjs, tutend.cjs (14 steps).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
