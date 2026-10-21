@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.10.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.10.1. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.10.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-21, v1.10.1: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" rebuild release/itch/valhallas-tide-vX.Y.Z-html5.zip with
@@ -819,6 +819,14 @@ disagree with this file, this file wins.
   enraged): slam (mash FIRE 7-14 times in 2.6 s or take 1.4x damage; success cuts 35% of that arm) or toss (the ship is
   lifted and thrown round the body to a new angle, small damage). Camera: the bow, above the prow, looking at the target.
   The Kraken rises 0.95 x its size away. Test: scratchpad kgametest.cjs (real-time waits).
+- v1.10.1 (Sean: a ballista on screen like the wheel; a pause button in boss fights; third person when tossed; nothing
+  may block the view): src/ballista.js, an SVG ballista at the bottom of the screen in both first-person fights (legend
+  ballista, raid gunner): swings toward the chosen part or tapped target, kicks and snaps its string on firing, cranks back
+  to loaded. ⏸ in the fight header (the HUD with its pause button is hidden): the legend fight drops a half-made shot
+  first (interrupt); the raid gunner leaves the circle and re-enters on resume; #paused z-index 60. During a first-person
+  fight the player ship is hidden (shipVisible) and the legend's own lair rocks too (L.hideFight, respected by setNear);
+  abortFight shows the ship again. Tossed: the ship shows and the camera pulls out to the side to watch it fly. Fixed: the
+  special-move choice never picked the toss (a !L.toss that was always true); ATTACK and TRADE showed during fights.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
