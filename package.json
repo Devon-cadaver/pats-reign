@@ -1,6 +1,6 @@
 {
   "name": "valhallas-tide",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "Viking ocean game (Three.js + Vite)",
   "scripts": {
     "dev": "vite",
