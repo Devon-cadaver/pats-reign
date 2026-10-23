@@ -194,5 +194,17 @@ export function setSea(level, storm = 0) { if (!ctx || !noiseBuf) return;
     const lfo = ctx.createOscillator(); lfo.frequency.value = 0.11; const lg = ctx.createGain(); lg.gain.value = 0.025; lfo.connect(lg).connect(g.gain); lfo.start(); sea = { g, f }; }
   const key = level.toFixed(2) + '|' + storm.toFixed(2); if (key === seaKey) return; seaKey = key; // called every frame: only send a change, not 60 automation events a second
   sea.g.gain.setTargetAtTime(level * 0.05, ctx.currentTime, 0.6); sea.f.frequency.setTargetAtTime(380 + storm * 900, ctx.currentTime, 0.6); }
-// for the saga music engine (music.js): the shared context, master volume and noise buffer
+// rain and wind (v1.13.0): a soft hiss while it rains (brighter and louder in storms) and gusting wind in storms and snow
+let wxs = null, wxKey = '';
+export function setWeatherSound(rain, wind) { if (!ctx) return;
+  if (!wxs) { // a three-second noise loop (the sea's half second would repeat audibly in a steady hiss)
+    const len = ctx.sampleRate * 3, b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const loop = () => { const s = ctx.createBufferSource(); s.buffer = b; s.loop = true; return s; };
+    const r = loop(), rh = ctx.createBiquadFilter(), rl = ctx.createBiquadFilter(), rg = ctx.createGain(); rh.type = 'highpass'; rh.frequency.value = 900; rl.type = 'lowpass'; rl.frequency.value = 5000; rg.gain.value = 0; r.connect(rh).connect(rl).connect(rg).connect(master); r.start(0, 0.7);
+    const w = loop(), wf = ctx.createBiquadFilter(), wg = ctx.createGain(), gust = ctx.createOscillator(), gd = ctx.createGain(), sweep = ctx.createOscillator(), sd = ctx.createGain(); wf.type = 'bandpass'; wf.frequency.value = 500; wf.Q.value = 0.8; wg.gain.value = 0;
+    gust.frequency.value = 0.09; gd.gain.value = 0; gust.connect(gd).connect(wg.gain); sweep.frequency.value = 0.13; sd.gain.value = 260; sweep.connect(sd).connect(wf.frequency); w.connect(wf).connect(wg).connect(master); w.start(0, 1.9); gust.start(); sweep.start();
+    wxs = { rg, rl, wg, gd }; }
+  const key = rain.toFixed(2) + '|' + wind.toFixed(2); if (key === wxKey) return; wxKey = key; const t = ctx.currentTime; // only changes, not 60 a second
+  wxs.rg.gain.setTargetAtTime(rain * 0.035, t, 0.8); wxs.rl.frequency.setTargetAtTime(5000 + rain * 3000, t, 0.8); wxs.wg.gain.setTargetAtTime(wind * 0.04, t, 1); wxs.gd.gain.setTargetAtTime(wind * 0.025, t, 1); }
+// for the soundtrack (music.js): the shared context, master volume and noise buffer
 export function audioNodes() { return { ctx, master, noiseBuf, music: musicOut }; }

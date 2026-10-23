@@ -287,6 +287,8 @@ html.tabletHud #tutHand { font-size: 50px; width: 58px; height: 58px; line-heigh
 #arenaEnd { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 50; padding: 12px 16px; border-radius: 12px; background: #1a120af0; border: 2px solid var(--gold); display: flex; flex-direction: column; gap: 8px; text-align: center; color: var(--gold2); }
 /* the raid bombardment (v1.9.0) */
 .raidBtn.attack { background: linear-gradient(#ff7a4a, #8a1a1a); }
+/* v1.13.0: the RAID button names the settlement; its level line is in the danger colours; red-black when it is far too strong */
+.raidBtn.attack small { display: block; font-size: 11px; letter-spacing: .5px; margin-top: 3px; text-shadow: 0 1px 2px #000; } .raidBtn.attack.danger { background: linear-gradient(#5a1420, #1e0608); border-color: #ff4a3a; }
 #bombGame { position: fixed; inset: 0; z-index: 25; pointer-events: none; } #bombGame.hidden { display: none; } body.bombOn #hud, body.bombOn #acts, body.bombOn #throttle, body.bombOn #helmWrap, body.bombOn #spellBar2, body.bombOn #map, body.bombOn #dockBtn, body.bombOn #swapBtn { visibility: hidden; }
 #bombGame .bgHead { position: absolute; top: calc(8px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: flex; gap: 12px; align-items: center; padding: 6px 12px; background: #1a120ae0; border: 1.5px solid var(--gold); border-radius: 10px; color: var(--gold2); pointer-events: auto; white-space: nowrap; } #bombGame .bgHead button { padding: 4px 10px; font-size: 12px; }
 #bombGame .bgBars { position: absolute; top: calc(56px + env(safe-area-inset-top, 0px)); left: 8px; width: min(36vw, 220px); display: flex; flex-direction: column; gap: 3px; } #bombGame .bgBar { position: relative; height: 16px; background: #000a; border: 1px solid #ffd24a66; border-radius: 4px; overflow: hidden; font-size: 10px; color: #fff; } #bombGame .bgBar span { position: relative; z-index: 1; padding-left: 4px; line-height: 16px; } #bombGame .bgBar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #b8322a, #ff8a4a); } #bombGame .bgBar.dead { opacity: .4; }
@@ -338,7 +340,6 @@ html.tabletHud #broad .bStrip { bottom: calc(200px + env(safe-area-inset-bottom,
    view and DOCK), the minimap and the ⇄ swap button on the other. html.leftHand mirrors it all for left-handed play. ---------- */
 #swapBtn { position: absolute; pointer-events: auto; padding: 4px 10px; font-size: 16px; line-height: 1.2; }
 body.busy #swapBtn { display: none; }
-body.busy.broadOn #throttle { display: flex; } /* the telegraph stays in a ship battle: your speed spoils her aim */
 /* phone */
 html:not(.tabletHud) #throttle { left: auto; right: max(8px, env(safe-area-inset-right, 0px)); }
 html:not(.tabletHud) #acts { right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(170px + env(safe-area-inset-bottom, 0)); }
@@ -418,12 +419,10 @@ html.leftHand.tabletHud #swapBtn { left: auto; right: calc(max(12px, env(safe-ar
 #bombGame .bgMsg, #legGame .bgMsg { bottom: calc(40vh + 6px); } html.tabletHud #bombGame .bgMsg, html.tabletHud #legGame .bgMsg { bottom: calc(34vh + 6px); } .bgPower { top: 34%; } .bgStrike { top: 46%; } .lgSlam { top: 22%; }
 /* an empty message box is hidden (v1.10.4: during the toss it sat in the middle of the view) */
 #bombGame .bgMsg:empty, #legGame .bgMsg:empty { display: none; }
-/* v1.11.0: a ship battle seen from the deck: the HUD sits over the ballista; the timing strip just above the ballista, clear of
-   her ship; from v1.12.0 there is no FIRE (you aim at her parts) and the hint says what to do next */
+/* v1.11.0: a ship battle seen from the deck: the HUD sits over the ballista; from v1.12.0 there is no FIRE (you aim at her parts)
+   and the hint says what to do next; from v1.13.0 the ships lie still, so no timing strip or speed telegraph either */
 body.broadFp #ballistaHud { z-index: 4; }
-body.broadFp #broad .bFire, body.broadFp #broad .bStrip b { display: none; } /* v1.12.0: no blind volleys from the deck, you aim at her parts */
-body.broadFp #broad .bStrip, html:not(.tabletHud) body.broadFp #broad .bStrip { bottom: calc(40vh + 22px); }
-html.tabletHud body.broadFp #broad .bStrip { bottom: calc(34vh + 22px); }
+body.broadOn #broad .bFire, body.broadOn #broad .bStrip { display: none; } /* v1.13.0: the ships lie still: no blind volleys, no timing strip */
 body.broadFp #broad .bHint { font-size: 13px; } html.tabletHud body.broadFp #broad .bHint { font-size: 17px; }
 /* v1.12.0: aiming at her mast, oars and hull from the deck: markers on her ship, her parts' bars on the left, the gunner game */
 #shipGame { position: fixed; inset: 0; z-index: 6; pointer-events: none; } #shipGame.hidden { display: none; }

@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-21, version 1.12.2. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-23, version 1.13.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-21, v1.12.2: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-23, v1.13.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" run npm run build:itch (dist-itch: no BOSS ARENA button, his
@@ -898,6 +898,34 @@ disagree with this file, this file wins.
   the spot (2.4x) and the next click sets the course; the line under SEA CHART (#chartHint, chartHint()) gives the step's
   guidance in green (tutChartHint, onChartStep: TUT step flagged chart: true) and otherwise the plain hint in mouse or touch
   words (keyPad). Proof: scratchpad tutchart2.cjs (PC and phone, click-only and scroll paths), tutfull.cjs.
+- v1.13.0 (Sean: "the beginning is too hard, ship battles too hard in action mode, have the ships stay still, the game should
+  be casual and only get difficult at higher levels"; then the RAID button, the towers, his soundtrack, rain and wind).
+  Balance, measured by two casual bots in the real game (scratchpad diffsim.cjs: beasts the game spawns at each ship size
+  with a typical player's upgrades; shipsim.cjs: the deck gunner game played in real time). Beasts, hull lost a fight
+  before -> after: Faering 35% (worst 90%, 58 s) -> 9% (worst 21%, 29 s); Karvi 12% -> 8%; Snekkja 15% (worst 46%) -> 5%;
+  Skeid 4-6%, Drakkar 2-3% (unchanged). Ship battles: Faering 60% of the hull lost a fight and none of 3 won in 2 minutes (her ship sailed out of your sights; 1-6 shots) -> 0% (about 10 s); Karvi 72% (one sank) -> 10-21%; Snekkja 45% -> 6%; Drakkar 2% -> 3%.
+  How: spawnMon multiplies the health and damage of every non-boss spawn (beasts, raiders, raid defenders, siege ships) by
+  EASE_HP [0.5, 0.75, 0.85, 1] and EASE_DMG [0.6, 0.7, 0.8, 1] by your ship size (full from the Skeid); levelled() caps the
+  roll above your size at DELTA_CAP [0.5, 1, 1] (the Faering met Lv +1.5 beasts); raiders a little rarer on the Faering;
+  raid tower arrows eased the same (G.easeDmg). Legends are untouched. The mid and late game stays easy (2-6% a fight):
+  Sean to decide whether to ramp it up.
+  Ship battles hold still: after the 1.4 s run-in both ships lie side by side (anchor 0, no sweeping, no coming about:
+  broadAI and broadSwap removed); she takes aim (warn "TAKES AIM", 1.4 s), then fires every 5.5 - 0.25 lv (+0-1.5) s,
+  hitting 45% at the lowest levels up to 85%; her mast down weakens her volleys (x0.6, x0.45 crippled), her oars smashed
+  slow them (reload x1.5, x1.8) (shipgame.js volleyK, reloadK). The speed telegraph, the timing strip, FIRE and the gold
+  arrow are gone from ship battles.
+  RAID button (raids.js raidLabel): "🏰 RAID <NAME>" with "Lv N size" in the danger colours and "its towers and ships fight
+  back"; a settlement a full level or more above your ship says "💀 too strong for you" and the first tap only warns (a
+  second within 4 s raids); the nearest settlement is raided. The towers hold fire through the fleet part of a raid and in
+  any fight (they shoot while you bombard). Proof: raidbtntest.cjs.
+  Soundtrack (src/music.js rewritten; the synth saga music is gone): public/music sail-1.mp3, sail-2.mp3, battle.mp3 (Sean's
+  Suno songs, re-encoded 128 kbps, cover art stripped, 11 MB). <audio> players through audioNodes().music with a gain each:
+  sail-1 then sail-2 then round again, crossfading 3 s over each fade-out (ends 238 s / 221 s); a fight drops into the
+  battle song's heavy part at 35.1 s (found by loudness: it jumps at 35.15 s) in 0.4 s and loops there (two players, end
+  212 s); afterwards the sailing song resumes where it paused. Every player is started on the first tap (iOS). Paused while
+  MUSIC or SOUND is off or the page is hidden. Proof: musictest.cjs.
+  Rain and wind (audio.js setWeatherSound): a high-passed noise hiss while it rains (louder and brighter in storms, half in
+  Helheim's ash) and band-passed gusting wind in storms and over the Frost Sea's snow.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
