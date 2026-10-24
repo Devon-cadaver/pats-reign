@@ -1448,7 +1448,9 @@ function updateHulls() { const list = []; const push = (s, x, z, yaw) => { s.g.u
 
 // ---------- camera ----------
 // views: TOP (high), CHASE (behind), HELM (the captain's eye at the steering place on the stern; the sail goes see-through)
-$('viewBtn').onclick = () => { viewMode = viewMode === 'top' ? 'chase' : viewMode === 'chase' ? 'helm' : 'top'; $('viewBtn').textContent = viewMode.toUpperCase(); if (tut) tut.views.add(viewMode); };
+$('viewBtn').onclick = () => { viewMode = viewMode === 'top' ? 'chase' : viewMode === 'chase' ? 'helm' : 'top'; $('viewBtn').textContent = viewMode.toUpperCase(); if (tut) { tut.views.add(viewMode);
+  // the view step says what each view is and what comes next
+  if (TUT[tut.i] && TUT[tut.i].view) { const t = viewMode === 'helm' ? '👁 This is <b>HELM</b>: your eye at the steering oar. Again for <b>TOP</b>.' : viewMode === 'top' ? '👁 <b>TOP</b> looks down on the sea. Once more, back to <b>CHASE</b>.' : tut.views.size < 3 ? '👁 Back on <b>CHASE</b>. Keep tapping to see <b>HELM</b> and <b>TOP</b>.' : null; if (t) $('tutTxt').innerHTML = t; } } };
 // battles get their own zoom: each starts framed (1), pinch or the wheel zooms it, and your sailing zoom comes back after
 let camBattle = false, zoomSail = 1;
 function updateCamera(dt) { const t = T(); let tgt, dist, pitch; if (!!battle !== camBattle) { camBattle = !!battle; if (camBattle) { zoomSail = zoom; zoom = 1; } else zoom = zoomSail; }
@@ -1552,7 +1554,8 @@ const TUT = [
   { txt: '⛵ Tap <b>HALF</b> or <b>FULL</b> to raise the sail.', keys: 'W and S', at: () => thrEl.querySelector('[data-n="3"]'), done: () => (boat.throttle || 0) > 0.4 },
   { txt: '☸ Swipe along the <b>wheel</b> to turn.', keys: 'A and D', at: () => 'wheel', done: () => tut.turn > 1.1 },
   { txt: '⏹ Tap <b>STOP</b> to furl the sail.', keys: 'S', at: () => thrEl.querySelector('[data-n="1"]'), done: () => (boat.throttle || 0) <= 0.05 && boat.v < 2 },
-  { txt: '👁 Tap <b>TOP</b> to change the view. Try all three.', at: () => $('viewBtn'), done: () => tut.views.size >= 3 },
+  // all three views, ending back on CHASE before the zoom step (v1.13.3, Sean); the button names the view you are in
+  { view: true, txt: '👁 Tap the <b>view button</b> (top right) to change the view: <b>HELM</b>, then <b>TOP</b>, then back to <b>CHASE</b>.', pc: '👁 Press <b>C</b> (or click the view button, top right) to change the view: <b>HELM</b>, then <b>TOP</b>, then back to <b>CHASE</b>.', at: () => $('viewBtn'), done: () => tut.views.size >= 3 && viewMode === 'chase' },
   { txt: '🔍 <b>Pinch</b> the sea to zoom.', pc: '🔍 Roll the <b>mouse wheel</b> over the sea to zoom.', at: () => 'pinch', done: () => Math.abs(zoom - tut.zoom0) > 0.15 },
   { txt: '🧭 Tap the <b>little map</b> to open the chart. Zoom in on the glowing ✕, then tap it to set a course.', pc: '🧭 Click the <b>little map</b> (or E) to open the chart. Scroll in on the glowing ✕, then click it to set a course.', at: () => $('map'), chart: true, enter: () => tutTarget(), done: () => tut.chart && tut.zoomed && !!boat.wp && boat.wp !== tut.wp0 },
   { txt: '⚔ <b>Pick your fights.</b> ACTION: dodge and shoot at the helm. CLASSIC: an aim bar, turn by turn. Change it any time in the pause menu.', choice: true, at: () => null, done: () => tut.choice },
@@ -1581,7 +1584,9 @@ function updateTut(dt) { if (!tut) return; const st = TUT[tut.i]; tut.st += dt;
   tut.turn += Math.abs(angDiff(boat.yaw, tut.yaw)); tut.yaw = boat.yaw;
   // the tutorial shark waits at the ✕ (never culled for distance: keep) until the shark step; then it chases, and if you are far
   // off (over 60) it comes out 40 ahead of you
-  { const m = tut.mon; if (m && m.tutHome && !m.dead) { if (TUT[tut.i] && TUT[tut.i].shark) { m.state = 'chase'; m.tutHome = null; if (Math.hypot(m.x - boat.x, m.z - boat.z) > 60) { const a = boat.yaw + rnd(-0.5, 0.5), x = boat.x + Math.sin(a) * 40, z = boat.z + Math.cos(a) * 40; if (!world.blockAt(x, z, 8)) { m.x = x; m.z = z; } } } else { m.state = 'wander'; m.x += (m.tutHome.x - m.x) * Math.min(1, dt * 0.6); m.z += (m.tutHome.z - m.z) * Math.min(1, dt * 0.6); } } }
+  { const m = tut.mon; if (m && !m.dead && TUT[tut.i] && TUT[tut.i].shark) { if (!battle) { m.state = 'chase'; m.chaseT = 0; m.tutHome = null; // it never gives up the chase on its step
+      if (Math.hypot(m.x - boat.x, m.z - boat.z) > 60) for (let k = 0; k < 12; k++) { const a = boat.yaw + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.35, x = boat.x + Math.sin(a) * 40, z = boat.z + Math.cos(a) * 40; if (!world.blockAt(x, z, 8)) { m.x = x; m.z = z; break; } } } }
+    else if (m && m.tutHome && !m.dead) { m.state = 'wander'; m.x += (m.tutHome.x - m.x) * Math.min(1, dt * 0.6); m.z += (m.tutHome.z - m.z) * Math.min(1, dt * 0.6); } }
   if (st.enter && (!tut.mon || (!tut.mon.dead && !mons.includes(tut.mon)))) { tut.mon = null; tut.wait -= dt; if (tut.wait <= 0) tutShark(); } // the shark got away or you sank: send another
   if (st.done()) { if (tut.i >= TUT.length - 1) { tutEnd(); say('Skål! The tutorial is done. Explore the seas, grow your ship, and face the legends.', 4); return; } tutNext(); return; }
   // the pointing hand: beside a button (pointing in from the middle of the screen), or swiping along the wheel

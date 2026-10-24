@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-23, version 1.13.2. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-23, version 1.13.3. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-23, v1.13.2: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-23, v1.13.3: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" run npm run build:itch (dist-itch: no BOSS ARENA button, his
@@ -951,6 +951,12 @@ disagree with this file, this file wins.
   contact range) and touches from 1.5 further. The RAID button has a ✕ (it leaves that settlement be until you sail 150
   away) and hides while you fish or are busy (G.busy); smaller on an upright phone. Proof: tutshark.cjs (top-view stills,
   repeated), raidx.cjs.
+- v1.13.3 (Sean: cycle through the views but end back on CHASE before the zoom step): the view step (flagged view: true)
+  names the order (HELM, TOP, back to CHASE; the old text said Tap TOP but the button names the view you are in, starting
+  CHASE), the view button writes a line after each tap, and it is done only with all three seen and CHASE back on. The
+  tutorial shark still failed to come now and then: a chaser gives up when far or after 24 s, and the move 40 ahead was
+  skipped when that spot was land. On its step it now chases every frame (chaseT reset) and, over 60 away, is brought 40
+  from you at the first open angle round your bow. Proof: tutview.cjs, tutfull.cjs x4, tutshark.cjs.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
