@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-23, version 1.13.1. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-23, version 1.13.2. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-23, v1.13.1: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-23, v1.13.2: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" run npm run build:itch (dist-itch: no BOSS ARENA button, his
@@ -940,6 +940,17 @@ disagree with this file, this file wins.
   fight is done; on the Faering nothing spawns within 110 of Valholm (70 before). Sharks and megalodons cruise with only the
   dorsal fin up (FIN_ONLY: dive 0.2 while not attacking, eased; in ACTION fights they circle fin-only and surface to
   strike). Proof: scratchpad uxtest.cjs (11 checks, phone and tablet).
+- v1.13.2 (Sean's iPhone recordings of v1.13.1): sharks still floated in ACTION fights. Cause: the fights hold a steady
+  attack pose (learn 0.3, exposed 0.5, ...) and the shark model turns attack into a leap (sin(attack x pi), highest at
+  0.5), lifting it ~1.5 above the sea the whole fight; cruising outside fights was already fin-only. Now st.leap (set in
+  animMon: unposed 1 only during a bite, mon.attT >= 0; in beast fights 1 only in strike, hold, tear and the learn rear)
+  scales the leap, so they circle fin-only and leap to bite. The tutorial shark fought you when you sailed onto the chart's
+  ✕ (where it waits): startBattle and contact now refuse it before its step, the FIGHT action ignores it, the shark step
+  reuses the waiting shark (it spawned a second one) and brings it 40 ahead if over 60 away; tutEnd drops its keep. A
+  chasing beast near you turns hard (4.5 rad/s inside 14; at 1.6 a shark circled a stopped ship 4-9 away for ever, out of
+  contact range) and touches from 1.5 further. The RAID button has a ✕ (it leaves that settlement be until you sail 150
+  away) and hides while you fish or are busy (G.busy); smaller on an upright phone. Proof: tutshark.cjs (top-view stills,
+  repeated), raidx.cjs.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).

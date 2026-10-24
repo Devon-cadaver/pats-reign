@@ -77,7 +77,8 @@ function shark(P, S, mega = false) {
     // bite: the snout lifts, the upper teeth thrust forward and down, the jaw drops wide
     const a = st.attack; upper.rotation.x = -0.22 * a; upTeeth.position.set(0, -0.32 * R * H - 0.12 * R * a, 0.22 * R * a); upTeeth.rotation.x = 0.1 * a; jaw.rotation.x = 0.12 + a * 0.95;
     stick(dorsal, tube, pts, 5, R * 0.9); stick(dorsal2, tube, pts, 11, R * 0.4); if (crest) stick(crest, tube, pts, 1, R * 0.95); stick(tail, tube, pts, N - 1, 0); for (const p of pecs) stick(p, tube, pts, 4, -R * 0.4, p.userData.sd * R * 0.7);
-    const leap = Math.sin(Math.min(1, st.attack) * Math.PI); body.position.y = lerp(-R * 1.02, -R * 4, st.dive) + leap * R * (mega ? 2.2 : 3.5); body.rotation.x = -Math.cos(st.attack * Math.PI) * 0.5 * leap;
+    // st.leap (v1.13.2): 0 holds it in the water whatever its attack pose (the fights hold a steady pose); a bite, a rear or a strike leaps
+    const leap = Math.sin(Math.min(1, st.attack) * Math.PI) * (st.leap ?? 1); body.position.y = lerp(-R * 1.02, -R * 4, st.dive) + leap * R * (mega ? 2.2 : 3.5); body.rotation.x = -Math.cos(st.attack * Math.PI) * 0.5 * leap;
   }
   return { g, size: L * 0.45, top: R * 2, anim, mats: [mat] };
 }

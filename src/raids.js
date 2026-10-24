@@ -69,7 +69,7 @@ const REBUILD = 480; // seconds of play before a sacked village is back
 
 export function createRaids(G) {
   const { scene, world, ocean, foam, smoke, embers, sfx } = G;
-  const list = []; let alertT = 0, flare = null, raid = null, btns = null, shakeOut = 0, atkS = null, armed = null; // atkS: the settlement the RAID button would raid
+  const list = []; let alertT = 0, flare = null, raid = null, btns = null, shakeOut = 0, atkS = null, armed = null, dismissed = null; // atkS: the settlement the RAID button would raid
   const tmp = new THREE.Object3D(), ray = new THREE.Raycaster(), down = V(0, -1, 0);
   // ---------- where they go: one per suitable island, up to four per sea ----------
   function groundY(x, z) { ray.set(V(x, 80, z), down); const hit = ray.intersectObject(world.group, true).find((h) => h.object.isMesh && !h.object.isInstancedMesh); return hit ? hit.point.y : 0; }
@@ -154,7 +154,7 @@ export function createRaids(G) {
   // the RAID button: which settlement, its level in the danger colours, and a warning when it is far above your ship
   const tooStrong = (S) => !S.practice && S.lvl - G.P.tier >= 1; // a full level above your ship: its towers and fleet can sink a small ship fast
   function raidLabel(S) { const strong = tooStrong(S), tough = !strong && S.lvl - G.P.tier >= 0.5, arm = armed && armed.S === S && performance.now() < armed.until;
-    const html = (arm ? '💀 RAID ANYWAY?' : '🏰 RAID ' + S.name.toUpperCase()) + '<small style="color:' + (strong ? '#ff6a5a' : G.danger(S.lvl)) + '">Lv ' + (Math.round(S.lvl) + 1) + ' ' + S.size + (S.practice ? ' · ⚔ a practice raid: start here' : strong ? ' · 💀 too strong for you' : tough ? ' · a tough fight' : ' · its towers and ships fight back') + '</small>';
+    const html = '<i class="rbX" data-x="1" aria-label="Not now">✕</i>' + (arm ? '💀 RAID ANYWAY?' : '🏰 RAID ' + S.name.toUpperCase()) + '<small style="color:' + (strong ? '#ff6a5a' : G.danger(S.lvl)) + '">Lv ' + (Math.round(S.lvl) + 1) + ' ' + S.size + (S.practice ? ' · ⚔ a practice raid: start here' : strong ? ' · 💀 too strong for you' : tough ? ' · a tough fight' : ' · its towers and ships fight back') + '</small>';
     if (btns.attack._h !== html) { btns.attack.innerHTML = html; btns.attack._h = html; } btns.attack.classList.toggle('danger', strong); }
   function alarm(S) { if (S.state !== 'idle') return; S.state = 'fleet'; const n = S.practice ? 1 : Math.max(1, Math.min(5, Math.round(S.lvl * 0.8) + (S.size === 'village' ? 1 : 0) + (ward(S) === 'guards' ? 1 : 0))); S.fleet = { n, i: 0, cur: null, wait: 1.5 }; sfx.horn && sfx.horn(); G.warn('🔔 ' + S.name.toUpperCase() + ' SOUNDS THE ALARM! ' + n + ' DEFENDER' + (n > 1 ? 'S' : '') + ' COME OUT, ONE AT A TIME', 3.5);
     if (S.practice) setTimeout(() => G.say('⚔ <b>Practice raid, part 1: the defender.</b> Her ship comes alongside. From your deck tap her <b>HULL</b> (or MAST, OARS), tap the red targets, then stop the needle in the green and LOOSE.', 8), 3600); }
@@ -166,6 +166,8 @@ export function createRaids(G) {
     btns = { attack: mk('attackBtn', '⚔ ATTACK', 'raidBtn attack'), trade: mk('tradeBtn', '⚖ TRADE', 'raidBtn trade'), ret: mk('returnBtn', '🔥 RETURN', 'raidBtn ret'), breath: mk('breathBtn', '<em>🐉</em><small>BREATH</small><i class="cd"></i>', 'act breath'), frost: mk('frostBtn', '<em>❄</em><small>FROST</small><i class="cd"></i>', 'act spell'), veil: mk('veilBtn', '<em>🌫</em><small>VEIL</small><i class="cd"></i>', 'act spell'), sun: mk('sunBtn', '<em>☀</em><small>SUN</small><i class="cd"></i>', 'act spell') };
     btns.ret.onclick = (e) => { e.stopPropagation(); if (flare) G.sailTo(flare.x, flare.z, flare.name); btns.ret.classList.add('hidden'); };
     btns.breath.onclick = (e) => { e.stopPropagation(); breath(); }; btns.trade.onclick = (e) => { e.stopPropagation(); openTrade(); }; btns.attack.onclick = (e) => { e.stopPropagation(); const S = atkS; if (!S || S.state !== 'idle') return;
+      // its ✕: leave this settlement be until you sail away from it
+      if (e.target && e.target.dataset && e.target.dataset.x) { dismissed = S; armed = null; btns.attack.classList.add('hidden'); G.say('You leave ' + S.name + ' be. Sail away and come back to raid it.', 2.5); return; }
       // far above your ship: warn first, raid on a second tap within 4 s
       if (tooStrong(S) && !(armed && armed.S === S && performance.now() < armed.until)) { armed = { S, until: performance.now() + 4000 }; G.warn('💀 ' + S.name.toUpperCase() + ' (LV ' + (Math.round(S.lvl) + 1) + ') IS TOO STRONG FOR YOUR ' + G.T().name.toUpperCase() + ': ITS TOWERS WOULD SINK YOU. TAP AGAIN TO RAID ANYWAY.', 4); return; }
       armed = null; alarm(S); }; for (const k of ['frost', 'veil', 'sun']) btns[k].onclick = (e) => { e.stopPropagation(); cast(k); }; const bar = document.createElement('div'); bar.id = 'spellBar'; bar.append(btns.breath, btns.frost, btns.veil, btns.sun); bar.style.display = 'none'; document.body.appendChild(bar); }
@@ -267,7 +269,8 @@ export function createRaids(G) {
       if (S.state === 'fleet' && playing) updateFleet(S, dt); if (S.state === 'bomb' && playing) updateBomb(S, dt, time);
       S.repT = Math.max(0, (S.repT || 0) - dt); if (S.state === 'ours' && S.claim === 'outpost' && !S.repT && !G.inBattle() && Math.hypot(S.lx - b.x, S.lz - b.z) < 14 && b.v < 4 && G.P.hp < G.maxHp() - 0.5) { S.repT = 20; G.P.hp = G.maxHp(); G.hud(); G.say('⚑ ' + S.name + ' mends your hull.', 2.5); sfx.coins && sfx.coins(); }
     }
-    if (btns) { const fight = G.inBattle(); btns.trade.classList.toggle('hidden', !(canTrade && playing && !fight)); btns.attack.classList.toggle('hidden', !(canAttack && playing && !mg && !canTrade && !fight)); if (atkS) raidLabel(atkS); if (!canTrade) { const tp = document.getElementById('tradePanel'); if (tp) tp.classList.add('hidden'); } } }
+    if (btns) { const fight = G.inBattle(); btns.trade.classList.toggle('hidden', !(canTrade && playing && !fight)); if (dismissed && Math.hypot(dismissed.cx - b.x, dismissed.cz - b.z) > 150) dismissed = null; // sailed away: it may be raided again
+    btns.attack.classList.toggle('hidden', !(canAttack && playing && !mg && !canTrade && !fight && !G.busy() && atkS !== dismissed)); if (atkS) raidLabel(atkS); if (!canTrade) { const tp = document.getElementById('tradePanel'); if (tp) tp.classList.add('hidden'); } } }
   // the ground under a villager: a 2-unit height grid sampled once per village (no ray casts while they walk)
   function groundYFast(S, x, z) { if (!S.hf) { const R = S.isl.R * 1.3, n = Math.ceil((R * 2) / 2) + 1, a = new Float32Array(n * n); for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) a[j * n + i] = Math.max(0.2, groundY(S.isl.x - R + i * 2, S.isl.z - R + j * 2)); S.hf = { x0: S.isl.x - R, z0: S.isl.z - R, n, a }; }
     const H = S.hf, fx = Math.max(0, Math.min(H.n - 1.001, (x - H.x0) / 2)), fz = Math.max(0, Math.min(H.n - 1.001, (z - H.z0) / 2)), i = fx | 0, j = fz | 0, u = fx - i, v = fz - j, A = H.a, n = H.n; return A[j * n + i] * (1 - u) * (1 - v) + A[j * n + i + 1] * u * (1 - v) + A[(j + 1) * n + i] * (1 - u) * v + A[(j + 1) * n + i + 1] * u * v; }

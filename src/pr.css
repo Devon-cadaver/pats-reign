@@ -288,6 +288,9 @@ html.tabletHud #tutHand { font-size: 50px; width: 58px; height: 58px; line-heigh
 /* the raid bombardment (v1.9.0) */
 .raidBtn.attack { background: linear-gradient(#ff7a4a, #8a1a1a); }
 /* v1.13.0: the RAID button names the settlement; its level line is in the danger colours; red-black when it is far too strong */
+/* v1.13.2: the RAID button's ✕ dismisses it for that settlement until you sail away; smaller on an upright phone */
+.raidBtn .rbX { position: absolute; top: -11px; right: -11px; width: 26px; height: 26px; border-radius: 50%; background: #1a120a; border: 1.5px solid var(--gold); color: #fff; font-style: normal; font-size: 13px; line-height: 23px; text-align: center; letter-spacing: 0; }
+@media (orientation: portrait) { html:not(.tabletHud) .raidBtn { font-size: 13px; padding: 5px 12px; max-width: 70vw; } }
 .raidBtn.attack small { display: block; font-size: 10px; letter-spacing: .3px; margin-top: 1px; text-shadow: 0 1px 2px #000; } html.tabletHud .raidBtn { font-size: 17px; padding: 8px 18px; } html.tabletHud .raidBtn.attack small { font-size: 12px; } /* v1.13.1: compact (it took half the screen) */ .raidBtn.attack.danger { background: linear-gradient(#5a1420, #1e0608); border-color: #ff4a3a; }
 #bombGame { position: fixed; inset: 0; z-index: 25; pointer-events: none; } #bombGame.hidden { display: none; } body.bombOn #hud, body.bombOn #acts, body.bombOn #throttle, body.bombOn #helmWrap, body.bombOn #spellBar2, body.bombOn #map, body.bombOn #dockBtn, body.bombOn #swapBtn { visibility: hidden; }
 #bombGame .bgHead { position: absolute; top: calc(8px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: flex; gap: 12px; align-items: center; padding: 6px 12px; background: #1a120ae0; border: 1.5px solid var(--gold); border-radius: 10px; color: var(--gold2); pointer-events: auto; white-space: nowrap; } #bombGame .bgHead button { padding: 4px 10px; font-size: 12px; }
