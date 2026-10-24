@@ -288,6 +288,8 @@ html.tabletHud #tutHand { font-size: 50px; width: 58px; height: 58px; line-heigh
 /* the raid bombardment (v1.9.0) */
 .raidBtn.attack { background: linear-gradient(#ff7a4a, #8a1a1a); }
 /* v1.13.0: the RAID button names the settlement; its level line is in the danger colours; red-black when it is far too strong */
+/* v1.14.0: at a town's dock TRADE and RAID stand side by side */
+.raidBtn.trade.pair { transform: translateX(calc(-100% - 6px)); } .raidBtn.attack.pair { transform: translateX(6px); }
 /* v1.13.2: the RAID button's ✕ dismisses it for that settlement until you sail away; smaller on an upright phone */
 .raidBtn .rbX { position: absolute; top: -11px; right: -11px; width: 26px; height: 26px; border-radius: 50%; background: #1a120a; border: 1.5px solid var(--gold); color: #fff; font-style: normal; font-size: 13px; line-height: 23px; text-align: center; letter-spacing: 0; }
 @media (orientation: portrait) { html:not(.tabletHud) .raidBtn { font-size: 13px; padding: 5px 12px; max-width: 70vw; } }

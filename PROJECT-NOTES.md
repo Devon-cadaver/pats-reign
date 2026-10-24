@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-23, version 1.13.3. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-23, version 1.14.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-23, v1.13.3: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-23, v1.14.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" run npm run build:itch (dist-itch: no BOSS ARENA button, his
@@ -957,6 +957,15 @@ disagree with this file, this file wins.
   tutorial shark still failed to come now and then: a chaser gives up when far or after 24 s, and the move 40 ahead was
   skipped when that spot was land. On its step it now chases every frame (chaseT reset) and, over 60 away, is brought 40
   from you at the first open angle round your bow. Proof: tutview.cjs, tutfull.cjs x4, tutshark.cjs.
+- v1.14.0 (Sean: go to the town's dock before the RAID button pops up; a raid one thing at a time: ships one at a time, the
+  sea wall if they have one, then the towers one at a time; it was too hard with several things hitting you at once):
+  RAID shows only at the settlement's dock (within 14 of S.lx/lz and slow), side by side with TRADE (.pair). At most 3
+  defenders (round(lvl x 0.6) + village + guards ward), still one at a time. startBomb builds one queue of yellow circles:
+  the stake wall (circle outside the stakes at R0 + 9), each watchtower (nearest the harbour first, its circle off it),
+  then the three quarters (houses only); updateBomb shows and enters only the first standing one; only the tower being
+  bombarded shoots back (none at the wall or the quarters); the message names the next target. No alarm any more for
+  sailing near a town raided before: a raid starts only from RAID (or by shooting its buildings). Proof: raidflow.cjs
+  (9 checks), bombtest2.cjs (all six targets to a sacked town).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
