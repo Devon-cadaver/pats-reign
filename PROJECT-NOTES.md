@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-23, version 1.13.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-23, version 1.13.1. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-23, v1.13.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-23, v1.13.1: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" run npm run build:itch (dist-itch: no BOSS ARENA button, his
@@ -926,6 +926,20 @@ disagree with this file, this file wins.
   MUSIC or SOUND is off or the page is hidden. Proof: musictest.cjs.
   Rain and wind (audio.js setWeatherSound): a high-passed noise hiss while it rains (louder and brighter in storms, half in
   Helheim's ash) and band-passed gusting wind in storms and over the Frost Sea's snow.
+- v1.13.1 (Sean, playing v1.13.0): the RAID button is compact (14 px, 6x14 padding: it took half the screen; .raidBtn for
+  TRADE and RETURN too). The home settlement nearest Valholm's dock (Torvik) is a practice raid until first sacked
+  (S.practice, set in raids.init): Lv 1 (lvl = its growth only), never "too strong", one defender 0.6 of a level weaker,
+  its towers at 40%, and a guide line for each part (the defender from the deck; the yellow circles). The bounty left the
+  status line for a tappable badge (#bountyBtn under it, bountyBadge each frame) that opens #bountyPage: how (BOUNTY_PAGE),
+  where (bountyTarget: the nearest hunting ground of that beast, else its likeliest sea; seaPoint: open water well inside a
+  sea; the nearest lair for a young; the nearest fishing spot; ships and fleets come to you), with distance and compass
+  direction; SAIL THERE (auto-course, full sail, h.sea so arriving does not open a harbour: the raid flare's RETURN had the
+  same bug) and SHOW ON CHART (the chart zoomed on a pulsing "YOUR BOUNTY" ring, bountyMark). The tutorial's bounty step
+  points at the badge and ends when you open it. The tutorial shark waits at the ✕ (wander, held near tutHome) until the
+  shark step (TUT step flagged shark: true): it chased you from the chart step on; no other monster spawns until that
+  fight is done; on the Faering nothing spawns within 110 of Valholm (70 before). Sharks and megalodons cruise with only the
+  dorsal fin up (FIN_ONLY: dive 0.2 while not attacking, eased; in ACTION fights they circle fin-only and surface to
+  strike). Proof: scratchpad uxtest.cjs (11 checks, phone and tablet).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
