@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-23, version 1.14.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-25, version 1.14.1. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-23, v1.14.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-25, v1.14.1: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" run npm run build:itch (dist-itch: no BOSS ARENA button, his
@@ -966,6 +966,14 @@ disagree with this file, this file wins.
   bombarded shoots back (none at the wall or the quarters); the message names the next target. No alarm any more for
   sailing near a town raided before: a raid starts only from RAID (or by shooting its buildings). Proof: raidflow.cjs
   (9 checks), bombtest2.cjs (all six targets to a sacked town).
+- v1.14.1 (Sean: a lot of ships attacking while he fights monsters like sharks; all ships should leave him alone in monster
+  battles): updateMons gives every monster not in the fight (ships and beasts; not the tutorial shark or a fleeing treasure
+  ship) calmT = 8 while a battle, fishing or a dig is on, counting down once you are free. While calm it holds its fire (the
+  arrows live in the chase branch), sails straight away while within 60, else wanders; a chaser's give-up clock (chaseT)
+  stops meanwhile, so a fleet still hunting you (hunt) comes back after; an ordinary raider that drifted past 1.8x its sight
+  loses you. Before: in a CLASSIC fight or while fishing, chasing ships sailed up to 6 away and loosed volleys, and one began
+  a ship battle the moment the fight ended (an ACTION fight already removes ships within 90 as it starts; ones from further
+  out still came in). Proof: leavealone.cjs (7 checks; old code fails 4).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).
