@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-25, version 1.14.1. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-27, version 1.15.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-25, v1.14.1: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-27, v1.15.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" run npm run build:itch (dist-itch: no BOSS ARENA button, his
@@ -974,6 +974,20 @@ disagree with this file, this file wins.
   loses you. Before: in a CLASSIC fight or while fishing, chasing ships sailed up to 6 away and loosed volleys, and one began
   a ship battle the moment the fight ended (an ACTION fight already removes ships within 90 as it starts; ones from further
   out still came in). Proof: leavealone.cjs (7 checks; old code fails 4).
+- v1.15.0 (Sean: the wheel should only turn slightly each way and go back to straight when let go; the Kraken fight was too
+  close to the monster to see what you shoot at; and: the game is usually played in PORTRAIT, judge screenshots there):
+  HMAX 2.4 -> 0.7 (about 40 degrees each way), full rudder at the stop, so the hardest turn is as before; with no course and
+  hands (and keys) off, the wheel springs back to 0 at 2.5 HMAX a second; on a course the helmsman steers as before (rate now
+  1.5 HMAX a second). The double-tap centring is gone; the tutorial line and How to play say hold the wheel to turn, let go
+  to sail straight. Kraken / Great Squid gunner's view (legendgame.js bowCam): stands back from the bow until the beast
+  (KCAM: 4.4 R high in 62% of the screen, 7 R wide, at most 2x the height fit) fits, a little higher as it backs; camBack
+  picks straight back or up to 0.6 rad to one side, never into land (lairs have rocks behind the ship), cached until the ship
+  moves; the look point rises with the distance (lk). On a tall screen the camera is wide-angle (fov 68, main.js) for this
+  fight. In phone portrait the view was 17% of the Kraken with none of its 8 targets on screen; now 98% of it, the face, both
+  eyes and 4 of 8 targets (the outer arm tips are 20-80 px off the sides: fitting them needs 1.5x the distance, and the rocks
+  behind the lair stop it); tablet portrait 6 of 8; landscape all 8. On a phone held upright its hint sits just above the
+  ballista and its name banner moves left of FLEE (it covered FLEE). Proof: wheeltest.cjs (9 checks, portrait and
+  landscape), kcam.cjs (framing numbers and screenshots at 390x844, 844x390, 820x1180).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).

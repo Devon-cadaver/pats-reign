@@ -10,7 +10,7 @@ import { ballistaHud } from './ballista.js';
 import { HALF } from './world.js';
 
 export function createLegendGame(G) {
-  let L = null, el = null; const V3 = new THREE.Vector3();
+  let L = null, el = null; const V3 = new THREE.Vector3(), KCAM = { h: 4.4, w: 7, fill: 0.62, cap: 2, up: 0.12, lk: 0.12 };
   const atk = () => G.attack();
   // the world position of a part: a tentacle (a point along its arm) or an eye
   function partPos(p, out = V3) { const m = L.mon.m; if (p.kind === 'arm') { const A = m.arms[p.i], k = Math.min(A.pts.length - 1, Math.round(A.pts.length * 0.55)); return m.body.localToWorld(out.copy(A.pts[k])); } return m.head.localToWorld(out.copy(m.eyes[p.i])); }
@@ -97,9 +97,18 @@ export function createLegendGame(G) {
     if (L.phase === 'pick') { L.specialT -= dt * (mon.hp < mon.maxHp * 0.5 ? 1.5 : 1); if (L.specialT <= 0) { L.specialT = 9 + Math.random() * 5; special(); } } }
   // the ballista's view: on the bow, looking at the chosen part (or the legend's head); in a toss it eases out to the watch,
   // out behind the ship, the legend looming beyond it, and back again
-  function bowCam(pos, look) { const b = G.boat, t = G.T(), R = L.mon.size / 6, hx = L.mon.x, hz = L.mon.z, mid = L.sel && !L.sel.dead ? partPos(L.sel) : V3.set(hx, R * 1.6, hz), f = t.L * 0.35 + 3;
-    pos.set(b.x + Math.sin(b.yaw) * f, b.y + t.rise + 4, b.z + Math.cos(b.yaw) * f); look.set(mid.x * 0.5 + hx * 0.5, Math.max(R * 1.2, mid.y * 0.6), mid.z * 0.5 + hz * 0.5); }
-  function camHook(cam) { if (!L) return; bowCam(CP, CL); const T = L.toss;
+  // the gunner's view (v1.15.0, Sean: too close to see what you shoot at): back from the bow and a little up, far enough that
+  // the beast (K.h x R high, K.w x R wide) fits above the ballista; a tall phone stands back further (and sees wide-angle)
+  function bowCam(pos, look, cam) { const b = G.boat, t = G.T(), R = L.mon.size / 6, hx = L.mon.x, hz = L.mon.z, mid = L.sel && !L.sel.dead ? partPos(L.sel) : V3.set(hx, R * 1.6, hz), f = t.L * 0.35 + 3;
+    const K = KCAM, tv = Math.tan(((cam ? cam.fov : 50) * Math.PI) / 360), asp = cam ? cam.aspect : 2, dH = (R * K.h) / (2 * tv * K.fill), need = Math.min(Math.max(dH, (R * K.w) / (2 * tv * asp)), dH * K.cap);
+    const [back, a] = camBack(b, Math.max(0, need - (Math.hypot(hx - b.x, hz - b.z) - f))), yy = b.yaw + Math.PI + a;
+    pos.set(b.x + Math.sin(b.yaw) * f + Math.sin(yy) * back, b.y + t.rise + 4 + back * K.up, b.z + Math.cos(b.yaw) * f + Math.cos(yy) * back); look.set(mid.x * 0.5 + hx * 0.5, Math.max(R * 1.2, mid.y * 0.6) + back * K.lk, mid.z * 0.5 + hz * 0.5); }
+  // where it stands back: straight back along the deck if that water is clear, else a little to one side; never into land (an
+  // island or rocks behind the ship would fill the view). Worked out again only when the ship moves
+  function camBack(b, want) { const key = Math.round(b.x) + ',' + Math.round(b.z) + ',' + b.yaw.toFixed(2) + ',' + Math.round(want); if (L.camKey === key) return L.camBest; const W = G.world(); let best = [0, 0];
+    for (const a of [0, 0.3, -0.3, 0.6, -0.6]) { const yy = b.yaw + Math.PI + a; let ok = want; for (let s = 6; s < want + 10; s += 6) if (W.blockAt(b.x + Math.sin(yy) * s, b.z + Math.cos(yy) * s, 6)) { ok = Math.max(0, s - 10); break; } if (ok > best[0] + 1) best = [ok, a]; if (ok >= want) break; }
+    L.camKey = key; return (L.camBest = best); }
+  function camHook(cam) { if (!L) return; bowCam(CP, CL, cam); const T = L.toss;
     if (T && T.cam && T.w > 0) { CP.lerp(T.cam, T.w); CL.lerp(T.look, T.w); }
     cam.position.copy(CP); cam.lookAt(CL); }
   function clear() { if (L && L.toss && L.toss.A) { L.toss.A.grip = null; L.toss.A.tb.r = L.toss.r0; } G.boat.held = null; ballistaHud.show(false); G.shipVisible(true); if (L) G.hideLair(L.mon, false); if (el) el.classList.add('hidden'); document.body.classList.remove('legGameOn'); L = null; }

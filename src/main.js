@@ -159,12 +159,12 @@ canvas.addEventListener('pointermove', (e) => { if (touches.has(e.pointerId)) to
 const pUp = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pinch0 = 0; if (tapStart && tapStart.id === e.pointerId) { if (performance.now() - tapStart.t < 350 && Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y) < 18) tapSea(e.clientX, e.clientY); tapStart = null; } }; canvas.addEventListener('pointerup', pUp); canvas.addEventListener('pointercancel', pUp);
 
 // ---------- the helm: a big ship's wheel across the bottom of the screen, its hub just below the edge so the top half
-// shows. Swipe along it to turn it; it stays where you leave it, and on a set course it steers itself back toward the
-// mark when you let go. Double-tap it to centre it. The sail telegraph (BACK / STOP / ROW / HALF / FULL; a column on the controls side, see ⇄) sets sail and
+// shows. Swipe along it to turn it, a little each way; let go and it springs back to straight (v1.15.0), or on a set course
+// the helmsman steers back toward the mark. The sail telegraph (BACK / STOP / ROW / HALF / FULL; a column on the controls side, see ⇄) sets sail and
 // oar power with a tap; STOP furls the sails and cancels the course. Taps and sideways swipes only, so nothing on the
 // controls is a downward swipe (iPad Safari closes full screen on those). ----------
-const HMAX = 2.4; // the wheel turns about 140 degrees each way
-const helm = { angle: 0, held: false, id: null, last: 0, tapT: 0 }; const helmEl = $('helm'), helmCtx = helmEl.getContext('2d'); let helmDrawn = null;
+const HMAX = 0.7; // the wheel turns about 40 degrees each way (v1.15.0; it was 140), full rudder at the stops
+const helm = { angle: 0, held: false, id: null, last: 0 }; const helmEl = $('helm'), helmCtx = helmEl.getContext('2d'); let helmDrawn = null;
 const helmBox = { R: 150, cw: 354, ch: 168 }; // R: rim radius in CSS px; the hub sits 0.06 R below the canvas
 function layoutHelm() { const W = innerWidth, H = innerHeight, tablet = Math.min(W, H) >= 700;
   // phones: a small wheel (Sean); tablets: a big one
@@ -175,11 +175,10 @@ function layoutHelm() { const W = innerWidth, H = innerHeight, tablet = Math.min
 addEventListener('resize', layoutHelm); layoutHelm();
 function helmHub() { const r = helmEl.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height + helmBox.R * 0.06]; }
 function helmAngleAt(e) { const [cx, cy] = helmHub(); return Math.atan2(e.clientY - cy, e.clientX - cx); }
-helmEl.addEventListener('pointerdown', (e) => { const [cx, cy] = helmHub(); if (Math.hypot(e.clientX - cx, e.clientY - cy) > helmBox.R * 1.18) return; e.preventDefault(); e.stopPropagation(); if (state !== 'play') return; unlockAudio(); helm.held = true; helm.id = e.pointerId; helm.last = helmAngleAt(e); try { helmEl.setPointerCapture(e.pointerId); } catch { /* ignore */ } helm.downT = performance.now(); helm.downX = e.clientX; helm.downY = e.clientY; });
+helmEl.addEventListener('pointerdown', (e) => { const [cx, cy] = helmHub(); if (Math.hypot(e.clientX - cx, e.clientY - cy) > helmBox.R * 1.18) return; e.preventDefault(); e.stopPropagation(); if (state !== 'play') return; unlockAudio(); helm.held = true; helm.id = e.pointerId; helm.last = helmAngleAt(e); try { helmEl.setPointerCapture(e.pointerId); } catch { /* ignore */ } });
 helmEl.addEventListener('pointermove', (e) => { if (!helm.held || e.pointerId !== helm.id) return; const a = helmAngleAt(e); helm.angle = clamp(helm.angle + angDiff(a, helm.last) * 0.8, -HMAX, HMAX); helm.last = a; });
 for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) helmEl.addEventListener(ev, (e) => { if (e.pointerId === helm.id) { helm.held = false; helm.id = null;
-  // a tap is short and barely moves; two taps close together centre the wheel
-  if (ev === 'pointerup') { const now = performance.now(); if (now - (helm.downT || 0) < 220 && Math.hypot(e.clientX - (helm.downX || 0), e.clientY - (helm.downY || 0)) < 10) { if (now - helm.tapT < 350) helm.angle = 0; helm.tapT = now; } } } });
+} });
 function drawHelm() { if (!helmEl.clientWidth) return; const dpr = Math.min(2, devicePixelRatio || 1), W = Math.round(helmBox.cw * dpr), Hh = Math.round(helmBox.ch * dpr); if (helmEl.width !== W || helmEl.height !== Hh) { helmEl.width = W; helmEl.height = Hh; helmDrawn = null; } if (helmDrawn !== null && Math.abs(helmDrawn - helm.angle) < 0.002) return; helmDrawn = helm.angle;
   const g = helmCtx, R = helmBox.R * dpr, k = R / 70, cx = W / 2, cy = Hh + R * 0.06, rim = R, hub = R * 0.3; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, Hh);
   g.translate(cx, cy); g.rotate(helm.angle); g.lineCap = 'round';
@@ -1411,12 +1410,14 @@ function updateBoat(dt) {
   const t = T(); let thr = boat.throttle || 0, want = null;
   const kTurn = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0), kThr = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0);
   if (kThr && thrKeyOk()) { thrHold += dt; if (thrHold > 0.4) { thrHold -= 0.22; thrKeyStep(kThr); } } else thrHold = 0; // held: the next notch every 0.22 s after 0.4 s
-  if (state === 'play' && (!battle || (battle.legend && battle.legend.sail && !battle.legend.coil)) && !fishing) { if (kTurn) helm.angle = clamp(helm.angle + kTurn * dt * 2.2, -HMAX, HMAX);
+  if (state === 'play' && (!battle || (battle.legend && battle.legend.sail && !battle.legend.coil)) && !fishing) { if (kTurn) helm.angle = clamp(helm.angle + kTurn * dt * HMAX * 2.2, -HMAX, HMAX);
     if (boat.wp) { const dx = boat.wp.x - boat.x, dz = boat.wp.z - boat.z, d = Math.hypot(dx, dz);
       if (d < 4 + t.L * 0.3) { const au = autoOn() && boat.auto.h; boat.wp = null; boat.auto = null; courseMark.visible = false; setThrottle(0, true); if (au && !au.sea) openHarbor(au); else say('Arrived' + (au ? ' at ' + au.name : '') + '. Sails furled.'); }
       else { courseMark.position.set(boat.wp.x, ocean.heightAt(boat.wp.x, boat.wp.z) + 0.2, boat.wp.z); courseMark.rotation.z += dt; thr = Math.min(thr, clamp(d / 18, 0.25, 1));
         // hands off the wheel: the helmsman turns it back toward the mark (and around land)
-        if (!helm.held && !kTurn) { want = steerAround(Math.atan2(dx, dz), Math.min(d, 26 + t.L)); const target = -clamp(angDiff(want, boat.yaw) * 1.8, -1, 1) * HMAX; helm.angle += clamp(target - helm.angle, -dt * 3.5, dt * 3.5); } } } }
+        if (!helm.held && !kTurn) { want = steerAround(Math.atan2(dx, dz), Math.min(d, 26 + t.L)); const target = -clamp(angDiff(want, boat.yaw) * 1.8, -1, 1) * HMAX; helm.angle += clamp(target - helm.angle, -dt * HMAX * 1.5, dt * HMAX * 1.5); } } }
+    // hands off the wheel and no course: it springs back to straight (v1.15.0)
+    if (!boat.wp && !helm.held && !kTurn) helm.angle -= clamp(helm.angle, -dt * HMAX * 2.5, dt * HMAX * 2.5); }
   else thr = 0;
   // backing water (BACK), the wheel steers like reversing a car
   const r0 = helm.angle / HMAX, rudder = Math.sign(r0) * Math.pow(Math.abs(r0), 1.4), tr = turnRate() * (0.35 + 0.65 * Math.min(1, Math.abs(boat.v) / (t.speed * 0.6))); boat.yaw += -rudder * tr * dt * (boat.v < -0.3 ? -1 : 1) + boat.spin * dt; boat.spin *= 1 - dt * 1.2;
@@ -1478,7 +1479,8 @@ function updateCamera(dt) { const t = T(); let tgt, dist, pitch; if (!!battle !=
   if (fishing && !battle) { const s = fishing.s; tgt = V((boat.x + s.x) / 2, 0, (boat.z + s.z) / 2); dist = 26 + t.L * 1.4; pitch = 0.75; }
   camTgt.lerp(tgt, Math.min(1, dt * 4)); const lx = Math.sin(camYaw), lz = Math.cos(camYaw); const want = V(camTgt.x - lx * Math.cos(pitch) * dist, Math.sin(pitch) * dist + 2, camTgt.z - lz * Math.cos(pitch) * dist); camPos.lerp(want, Math.min(1, dt * 3)); camera.position.copy(camPos); camera.lookAt(camTgt);
   const helmCam = viewMode === 'helm' && !battle && !fishing && state !== 'title' && ship; if (helmCam) { ship.g.updateMatrixWorld(true); const zb = clamp(zoom - 0.9, 0, 1.7), eye = ship.g.localToWorld(V(t.B * 0.28, ship.deckY + 2.2 + t.L * 0.04 + zb * 3, -t.L * 0.36 - zb * 7)), look = ship.g.localToWorld(V(t.B * 0.1, ship.deckY + 0.6, t.L * 3)); helmY = helmY == null ? eye.y : helmY + (eye.y - helmY) * Math.min(1, dt * 1.5); eye.y = helmY; look.y = helmY - 1.6 - zb * 3; camPos.copy(eye); camTgt.copy(look); camera.position.copy(eye); camera.lookAt(look); } else helmY = null;
-  const fov = helmCam ? 66 : 50; if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
+  // the Kraken and Great Squid gunner's view is wide-angle on a tall screen (v1.15.0), so the beast and its arms fit
+  const fov = helmCam ? 66 : lgame && lgame.active && camera.aspect < 1 ? 68 : 50; if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
   if (ship) { const op = helmCam ? 0.35 : 1; if (ship.sailMat.opacity !== op) { ship.sailMat.transparent = op < 1 || P.skin === 'ghost'; ship.sailMat.opacity = op; ship.sailMat.depthWrite = op === 1; ship.sailMat.needsUpdate = true; } } }
 
 // ---------- HUD buttons ----------
@@ -1556,7 +1558,7 @@ const TUT_KEY = 'pr_tut', keyPad = matchMedia('(pointer: fine)').matches; let tu
 const tutSeen = () => { try { return !!localStorage.getItem(TUT_KEY); } catch (e) { return true; } };
 const TUT = [
   { txt: '⛵ Tap <b>HALF</b> or <b>FULL</b> to raise the sail.', keys: 'W and S', at: () => thrEl.querySelector('[data-n="3"]'), done: () => (boat.throttle || 0) > 0.4 },
-  { txt: '☸ Swipe along the <b>wheel</b> to turn.', keys: 'A and D', at: () => 'wheel', done: () => tut.turn > 1.1 },
+  { txt: '☸ Swipe along the <b>wheel</b> and hold it to turn. Let go and she sails straight.', keys: 'A and D', at: () => 'wheel', done: () => tut.turn > 1.1 },
   { txt: '⏹ Tap <b>STOP</b> to furl the sail.', keys: 'S', at: () => thrEl.querySelector('[data-n="1"]'), done: () => (boat.throttle || 0) <= 0.05 && boat.v < 2 },
   // all three views, ending back on CHASE before the zoom step (v1.13.3, Sean); the button names the view you are in
   { view: true, txt: '👁 Tap the <b>view button</b> (top right) to change the view: <b>HELM</b>, then <b>TOP</b>, then back to <b>CHASE</b>.', pc: '👁 Press <b>C</b> (or click the view button, top right) to change the view: <b>HELM</b>, then <b>TOP</b>, then back to <b>CHASE</b>.', at: () => $('viewBtn'), done: () => tut.views.size >= 3 && viewMode === 'chase' },
