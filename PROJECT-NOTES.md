@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-27, version 1.15.1. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-27, version 1.15.2. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-27, v1.15.1: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-27, v1.15.2: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" run npm run build:itch (dist-itch: no BOSS ARENA button, his
@@ -1001,6 +1001,22 @@ disagree with this file, this file wins.
   W or S, or tapping AUTO calls takeHelm(), which ends it. The action buttons moved up 38 px (46 on a tablet) to make room.
   Proof: v1151test.cjs (49 checks at 390x844, 844x390, 820x1180: no overlapping controls, AUTO over FULL, every way of
   taking the helm, SAGA, the note's size and place, each fight kind stops and stays stopped, FLEE at full sail).
+- v1.15.2 (Sean: taking out a boss's parts: the eye pops and goo oozes; a tentacle shows broken off, goo pouring, the water
+  turning that colour round it; "all big bosses"; "different colors"): src/gore.js (createGore, gooColor). Goo by lair
+  (GOO): Kraken bright green, Great Squid ink blue-black, Jormungandr yellow venom, Elder violet, Hafgufa tar-black, Surtr
+  molten orange, Nidhogg blood-red (Sean may change them in the roster). Drops: one InstancedMesh (600) of wet blobs tinted
+  per drop, gravity, each that meets the sea feeds a stain; pour() sources follow a moving point (26 a second, then 9,
+  then 3); stains: an 8x8 plane per stain whose vertices hug the waves (ocean.heightAt) under a shared blotchy canvas
+  texture, growing toward what was poured in but never past their max (they once grew a quarter per drop and flooded the
+  sea), fading 50 s after the last feed; at most 14. Kraken-kind (kgame) parts: an arm breaks at half its length (A.cut;
+  monsters.js cutArm folds the points past it onto the stump a hair apart and carries A.cap, a raw goo wound), the piece
+  past the cut becomes its own taperTube (the arm's colours and material) that is flung off, splashes, stains and sinks out
+  of sight; goo pours from the stump through the fight. An eye pops: a dark socket over it, a goo bulge, a burst and an
+  ooze down the face. lgame.start heals a beast fought again (gore.heal: caps and sockets off, arms back). Jormungandr and
+  the Elder (no parts): each hard hit spurts and oozes (scaled to size / 2.5); the CLASSIC Kraken's severed tentacles spurt
+  and stain; any boss slain leaves a great stain where it sinks. Also: in beast and boss fights the hint is a small note
+  top-left (four lines at most), the messages below it, and THE SAGA's button hides in every fight. Proof: goretest.cjs (all
+  seven bosses: stump, falling piece, popped eye, stains in each colour, capped), screenshots gore-<boss>-1s / -5s.
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).

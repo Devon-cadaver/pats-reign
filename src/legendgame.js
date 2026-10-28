@@ -14,7 +14,7 @@ export function createLegendGame(G) {
   const atk = () => G.attack();
   // the world position of a part: a tentacle (a point along its arm) or an eye
   function partPos(p, out = V3) { const m = L.mon.m; if (p.kind === 'arm') { const A = m.arms[p.i], k = Math.min(A.pts.length - 1, Math.round(A.pts.length * 0.55)); return m.body.localToWorld(out.copy(A.pts[k])); } return m.head.localToWorld(out.copy(m.eyes[p.i])); }
-  function start(Lg, mon) { L = Lg; L.mon = mon; const m = mon.m, squid = mon.type === 'squid', arms = m.arms.map((A, i) => i).filter((i) => (squid ? i >= 4 : true)), nArm = arms.length, armHp = mon.maxHp * (squid ? 0.1 : 0.08), eyeHp = (mon.maxHp - armHp * nArm) / 2;
+  function start(Lg, mon) { L = Lg; L.mon = mon; G.gore.heal(mon.m); for (const A of mon.m.arms) { A.dead = false; A.tb.mesh.visible = true; if (A.club) A.club.visible = true; } const m = mon.m, squid = mon.type === 'squid', arms = m.arms.map((A, i) => i).filter((i) => (squid ? i >= 4 : true)), nArm = arms.length, armHp = mon.maxHp * (squid ? 0.1 : 0.08), eyeHp = (mon.maxHp - armHp * nArm) / 2;
     L.parts = arms.map((i, n) => ({ id: 'a' + i, kind: 'arm', i, name: (squid && i >= 8 ? 'Club tentacle ' : 'Tentacle ') + (n + 1), hp: armHp, max: armHp, dead: false })).concat([0, 1].map((i) => ({ id: 'e' + i, kind: 'eye', i, name: (i ? 'Right' : 'Left') + ' eye', hp: eyeHp, max: eyeHp, dead: false })));
     L.phase = 'pick'; L.sel = null; L.specialT = 8; { const b = G.boat, d0 = mon.size * 0.95, a = Math.atan2(mon.x - b.x, mon.z - b.z); mon.x = b.x + Math.sin(a) * d0; mon.z = b.z + Math.cos(a) * d0; b.yaw = a; mon.yaw = a + Math.PI; } L.t = 0; L.slam = null; L.toss = null;
     el = document.getElementById('legGame') || (() => { const d = document.createElement('div'); d.id = 'legGame'; document.body.appendChild(d); return d; })(); el.classList.remove('hidden'); document.body.classList.add('legGameOn'); ballistaHud.show(true); G.shipVisible(false); G.hideLair(mon, true); paint(); G.say('🎯 Tap a tentacle to aim the ballista at it. The eyes are shielded until half its tentacles are cut.', 5); }
@@ -36,7 +36,9 @@ export function createLegendGame(G) {
     msg((k > 1.2 ? '💥 PERFECT POWER! ' : k > 0.8 ? '💥 Good shot. ' : '💨 Weak shot. ') + Math.round(acc * 100) + '% on target'); const b = G.boat, from = { x: b.x + Math.sin(b.yaw) * G.T().L * 0.4, y: b.y + 2.6, z: b.z + Math.cos(b.yaw) * G.T().L * 0.4 }, to = partPos(p).clone();
     G.launch(from, { x: to.x, y: to.y, z: to.z }, 'bolt', () => { if (!L) return; hurt(p, d); }); G.sfx.throw && G.sfx.throw(); setTimeout(() => { if (L && L.phase === 'fire') { L.phase = 'pick'; L.sel = null; paint(); } }, 1300); }
   function hurt(p, d) { const pos = partPos(p).clone(); p.hp -= d; G.pop(pos.x, pos.y + 2, pos.z, '−' + Math.round(d), p.kind === 'eye' ? '#7dff3a' : '#ffd24a'); G.splash(pos.x, pos.z, 1.5); L.mon.stState.hurt = 1;
-    if (p.hp <= 0 && !p.dead) { p.dead = true; p.hp = 0; G.explode(pos.x, pos.y, pos.z, p.kind === 'eye' ? 1.4 : 1.1, p.kind === 'eye' ? 0x7dff3a : 0x6a3a8a); if (p.kind === 'arm') { const A = L.mon.m.arms[p.i]; A.dead = true; A.tb.mesh.visible = false; if (A.club) A.club.visible = false; G.say('🐙 ' + p.name + ' severed!' + (eyesOpen() && !L.eyesSaid ? ' Its eyes are open to you now!' : ''), 2.5); if (eyesOpen()) L.eyesSaid = true; } else G.say('👁 An eye is put out!', 2.5); }
+    if (p.hp <= 0 && !p.dead) { p.dead = true; p.hp = 0; const goo = G.gooColor(L.mon), R = L.mon.size / 6, alive = () => !!L; G.explode(pos.x, pos.y, pos.z, p.kind === 'eye' ? 1.4 : 1.1, goo);
+      // v1.15.2: the arm breaks off at the shot (half way) and falls into the sea, goo pouring from the stump; an eye pops
+      if (p.kind === 'arm') { const A = L.mon.m.arms[p.i]; A.dead = true; A.cut = Math.max(2, Math.round((A.pts.length - 1) * 0.5)); G.gore.sever(goo, L.mon.m, A, R, alive); if (A.club) A.club.visible = false; G.say('🐙 ' + p.name + ' severed!' + (eyesOpen() && !L.eyesSaid ? ' Its eyes are open to you now!' : ''), 2.5); if (eyesOpen()) L.eyesSaid = true; } else { G.gore.popEye(goo, L.mon.m, p.i, R * 0.6, R, alive); G.say('👁 An eye is put out!', 2.5); } }
     L.mon.hp = L.parts.reduce((s, q) => s + Math.max(0, q.hp), 0); paint(); if (!live().length) { L.mon.hp = 0; finish(); } }
   function finish() { clear(); G.endLegend('win'); }
   // ---------- special moves ----------
@@ -112,5 +114,5 @@ export function createLegendGame(G) {
     if (T && T.cam && T.w > 0) { CP.lerp(T.cam, T.w); CL.lerp(T.look, T.w); }
     cam.position.copy(CP); cam.lookAt(CL); }
   function clear() { if (L && L.toss && L.toss.A) { L.toss.A.grip = null; L.toss.A.tb.r = L.toss.r0; } G.boat.held = null; ballistaHud.show(false); G.shipVisible(true); if (L) G.hideLair(L.mon, false); if (el) el.classList.add('hidden'); document.body.classList.remove('legGameOn'); L = null; }
-  return { interrupt, start, update, camHook, clear, mash, get active() { return !!L; }, get L() { return L; } };
+  return { interrupt, start, update, camHook, clear, mash, hurt, get active() { return !!L; }, get L() { return L; } };
 }

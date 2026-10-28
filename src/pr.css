@@ -52,7 +52,10 @@ html.leftHand:not(.tabletHud) #notes { left: auto; right: max(8px, env(safe-area
 #sagaHud { position: absolute; right: max(8px, env(safe-area-inset-right, 0px)); top: calc(130px + env(safe-area-inset-top, 0px)); pointer-events: auto; padding: 4px 9px; font-size: 11px; color: #ffe9c0; background: linear-gradient(#a3221c, #6b120f); }
 html.tabletHud #sagaHud { right: max(12px, env(safe-area-inset-right, 0px)); top: calc(140px + var(--padTop)); font-size: 14px; }
 html.leftHand #sagaHud { right: auto; left: max(8px, env(safe-area-inset-left, 0px)); } html.leftHand.tabletHud #sagaHud { left: max(12px, env(safe-area-inset-left, 0px)); }
-body.busy #sagaHud { display: none; }
+body.busy #sagaHud, body.legendOn #sagaHud, body.broadOn #sagaHud, body.bombOn #sagaHud, body.legGameOn #sagaHud { display: none; }
+/* v1.15.2: in the beast and boss fights the hint is a small note top-left as well (four lines at most), the messages below it */
+body.legendOn #broad .bHint { left: max(8px, env(safe-area-inset-left, 0px)); transform: none; width: auto; max-width: min(64vw, 300px); text-align: left; font-size: 12.5px; line-height: 1.3; padding: 4px 9px 0; border: 0 solid transparent; border-bottom-width: 4px; border-radius: 8px; background: #0b1a26c8; outline: 1px solid #ffd24a44; outline-offset: -1px; text-shadow: 0 1px 2px #000; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }
+body.legendOn #broad .bHint:empty { display: none; } html.tabletHud body.legendOn #broad .bHint { font-size: 15px; max-width: min(46vw, 420px); }
 #stick { position: absolute; left: calc(50% - 46px); bottom: calc(24px + env(safe-area-inset-bottom, 0)); width: 130px; height: 130px; border-radius: 50%; background: radial-gradient(#d8b04a22, #d8b04a10 60%, #0000 61%); border: 2px solid #d8b04a88; }
 #stick::after { content: 'ᛏ'; position: absolute; left: 50%; top: 6px; transform: translateX(-50%); color: #d8b04a99; font-size: 14px; }
 #knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #f2d27a, #a8781a); box-shadow: 0 0 14px #d8b04a88; transform: translate(-50%, -50%); }
@@ -406,6 +409,7 @@ html:not(.tabletHud) #broad .bStrip { bottom: calc(204px + env(safe-area-inset-b
 body.legendOn #map, body.legendOn #swapBtn { display: none; }
 body.legendOn #notes, body.broadOn #notes { top: calc(150px + env(safe-area-inset-top, 0px)); }
 html.tabletHud body.legendOn #notes, html.tabletHud body.broadOn #notes { top: calc(176px + var(--padTop)); }
+body.legendOn #notes { top: calc(180px + env(safe-area-inset-top, 0px)); } html.tabletHud body.legendOn #notes { top: calc(214px + var(--padTop)); }
 /* the shipwright header on a narrow phone: title and DONE on top, the tabs and the name below */
 #wright .wrHead { flex-wrap: wrap; }
 #wrName { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

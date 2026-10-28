@@ -192,6 +192,10 @@ function jormungandr(P, S) { const m = serpentBody(P, S, { R: 2.1, N: 80, seg: 1
 // arm arcs up from its root and over, then its last part coils round p (the ship's waist, r its half-beam, len its length), the
 // tentacle's own thickness outside the hull; k blends it from the arm's own pose
 const _g1 = new THREE.Vector3(), _g2 = new THREE.Vector3(), _ge = new THREE.Vector3(), _gs = new THREE.Vector3(), _gq = new THREE.Vector3();
+// a severed arm (v1.15.2): the points past the cut fold onto the stump's end a hair apart, so the tube stops there; its raw
+// wound (A.cap, from the gore) rides on the end
+const _cd = new THREE.Vector3();
+function cutArm(A) { const c = A.cut; if (c == null) return; _cd.subVectors(A.pts[c], A.pts[c - 1]).normalize().multiplyScalar(1e-3); for (let k = c + 1; k < A.pts.length; k++) A.pts[k].copy(A.pts[k - 1]).add(_cd); if (A.cap) A.cap.position.copy(A.pts[c]); }
 function gripArm(A) { const H = A.grip; if (!H || !(H.k > 0)) return; const n = A.pts.length, m = Math.round(n * 0.6), p0 = A.pts[0], rr = (k) => H.r + A.tb.r(k / (n - 1)) * 0.85, e = _ge.copy(H.p).addScaledVector(H.up, rr(m)).addScaledVector(H.ax, -H.len * 0.25), top = Math.max(p0.y, e.y) + H.lift;
   _g1.set(p0.x, top, p0.z); _g2.set(e.x, top, e.z); _gs.crossVectors(H.ax, H.up).normalize();
   for (let k = 1; k < m; k++) { const s = k / (m - 1), a = 1 - s; _gq.set(0, 0, 0).addScaledVector(p0, a * a * a).addScaledVector(_g1, 3 * a * a * s).addScaledVector(_g2, 3 * a * s * s).addScaledVector(e, s * s * s); A.pts[k].lerp(_gq, H.k); }
@@ -219,7 +223,7 @@ function cephalopod(P, S, kraken) {
       const p = A.pts[0].set(dir.x * R * 0.9, R * 0.1, dir.z * R * 0.9 + R * 0.4); let ang = -0.35, yaw = 0;
       for (let k = 1; k < n; k++) { const s = k / (n - 1); ang += (rise * 3.6 / n) * (0.35 + s * 1.5) * (1 + Math.sin(t * 2 + A.ph + s * 4) * 0.3) + Math.sin(t * 1.7 + A.ph + s * 7) * 0.07; yaw = Math.sin(t * 1.3 + A.ph + s * 3) * 0.35 * s;
         const ca = Math.cos(ang), sa = Math.sin(ang), d2 = tmpV.copy(dir).multiplyScalar(ca).addScaledVector(up, sa).addScaledVector(side, yaw); A.pts[k].copy(A.pts[k - 1]).addScaledVector(d2.normalize(), segL); }
-      void p; gripArm(A); A.tb.set(A.pts); if (A.club) { A.club.position.copy(A.pts[n - 1]); const fr = A.tb.frameAt(n - 1); orient(A.club, tmpV2.copy(fr.T).negate().negate(), fr.N); } }
+      void p; gripArm(A); cutArm(A); A.tb.set(A.pts); if (A.club) { A.club.position.copy(A.pts[n - 1]); const fr = A.tb.frameAt(n - 1); orient(A.club, tmpV2.copy(fr.T).negate().negate(), fr.N); } }
     body.position.y = lerp(-R * 0.55, -R * 6, st.dive) + (kraken ? R * 0.15 : 0) + Math.sin(t * 0.8) * R * 0.08; face.rotation.x = Math.sin(t * 0.6) * 0.05 - st.attack * 0.2; }
   return { g, size: R * (kraken ? 6 : 4.2), top: R * (kraken ? 2.2 : 4), anim, mats: [mat], giant: kraken && S > 6, arms, body, head: face, eyes: [V(-0.9 * R, 0.25 * R, 0.55 * R + 0.06 * R * ek), V(0.9 * R, 0.25 * R, 0.55 * R + 0.06 * R * ek)] };
 }
@@ -264,7 +268,7 @@ function kraken(P, S) {
       A.pts[0].set(dir.x * R * 1.35, -R * 0.25, dir.z * R * 1.35 + R * 0.2); let ang = -0.3, yaw = 0;
       for (let k = 1; k < n; k++) { const s = k / (n - 1); ang += (rise * 3.6 / n) * (0.35 + s * 1.5) * (1 + Math.sin(t * 2 + A.ph + s * 4) * 0.3) + Math.sin(t * 1.7 + A.ph + s * 7) * 0.07; yaw = Math.sin(t * 1.3 + A.ph + s * 3) * 0.35 * s;
         const ca = Math.cos(ang), sa = Math.sin(ang), d2 = tmpV.copy(dir).multiplyScalar(ca).addScaledVector(up, sa).addScaledVector(side, yaw); A.pts[k].copy(A.pts[k - 1]).addScaledVector(d2.normalize(), segL); }
-      gripArm(A); A.tb.set(A.pts);
+      gripArm(A); cutArm(A); A.tb.set(A.pts);
       for (let j = 0; j < perArm; j++) { const k = 3 + j * 2, s = k / (n - 1), rr = A.tb.r(s), fr = A.tb.frameAt(k); inner.set(0, A.pts[k].y * 0.35 + R * 2.2, 0).sub(A.pts[k]); inner.addScaledVector(fr.T, -inner.dot(fr.T)).normalize(); sideV.crossVectors(fr.T, inner).normalize(); for (const row of [-0.42, 0.42]) { off.copy(inner).multiplyScalar(Math.cos(row)).addScaledVector(sideV, Math.sin(row)); _dummy.position.copy(A.pts[k]).addScaledVector(off, rr * 0.92); _dummy.quaternion.setFromUnitVectors(_up, off); const d = A.dead ? 0.0001 : rr * 0.9; _dummy.scale.set(d, d * 0.45, d); _dummy.updateMatrix(); suckers.setMatrixAt(si++, _dummy.matrix); } } }
     suckers.instanceMatrix.needsUpdate = true;
     body.position.y = lerp(-R * 0.15, -R * 6.5, st.dive) + Math.sin(t * 0.8) * R * 0.08; head.rotation.x = Math.sin(t * 0.6) * 0.04 - st.attack * 0.18; }
