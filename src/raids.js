@@ -255,7 +255,7 @@ export function createRaids(G) {
     let canTrade = false, canAttack = false, atkD = 1e9; atkS = null;
     for (const S of list) { const d = Math.hypot(S.cx - b.x, S.cz - b.z), near = d < 230;
       if (S.state === 'ruin') { S.sacked -= dt; if (S.sacked <= 0 && d > 160) rebuild(S); }
-      if (!S.seen && d < 110 && playing) { S.seen = true; const F = FAITHS[S.faith]; G.say(PEOPLES[S.people].icon + ' <b style="color:' + G.danger(S.lvl) + '">' + S.name + ' (Lv ' + (Math.round(S.lvl) + 1) + ')</b>, a ' + S.size + ' of the ' + PEOPLES[S.people].name + '. Jarl: ' + S.jarl + '. They worship ' + F.icon + ' ' + F.name + '. ' + F.desc, 6); }
+      if (!S.seen && d < 110 && playing) { S.seen = true; const F = FAITHS[S.faith]; G.say(PEOPLES[S.people].icon + ' <b style="color:' + G.danger(S.lvl) + '">' + S.name + ' (Lv ' + (Math.round(S.lvl) + 1) + ')</b> · ' + PEOPLES[S.people].name + ' · ' + F.icon + ' ' + F.desc, 4.5); }
       if (S.g) S.g.visible = near; if (!near) continue;
       // villagers walk between houses; when the alarm sounds they run for the hall
       const scared = S.state === 'alert' || S.state === 'raid' || S.state === 'fleet' || S.state === 'bomb', n = S.fig.count;

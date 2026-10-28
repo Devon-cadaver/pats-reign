@@ -1,6 +1,6 @@
 # Valhalla's Tide (was Pats Reign): project notes and session handoff
 
-READ THIS FIRST after a context compaction. Current as of 2026-10-27, version 1.15.0. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
+READ THIS FIRST after a context compaction. Current as of 2026-10-27, version 1.15.1. The game was renamed Valhalla's Tide at v1.0.0 (2026-10-21): the player is
 the Jarl (the Jarl's saga, hall and crest; Valholm is the home harbour); older notes below still say Pats Reign and Pat. Where older notes or memory
 disagree with this file, this file wins.
 
@@ -49,7 +49,7 @@ disagree with this file, this file wins.
   upgrades, the shipwright's designs, bounties, Pat's saga, Pat's Hall, plus a round of fixes from six tester agents.
   Each has its own section below.
 
-## Where we left off (2026-10-27, v1.15.0: Sean is playtesting and sending one-line requests; itch.io release in progress)
+## Where we left off (2026-10-27, v1.15.1: Sean is playtesting and sending one-line requests; itch.io release in progress)
 - The game is Valhalla's Tide (renamed at v1.0.0; the repo and Pages URL keep pats-reign). Sean plays each push and sends
   batches of suggestions; the loop is: build and test each one (one headless browser at a time, see the CPU rule in
   memory), push when a batch is done, and when he says "zip" run npm run build:itch (dist-itch: no BOSS ARENA button, his
@@ -988,6 +988,19 @@ disagree with this file, this file wins.
   behind the lair stop it); tablet portrait 6 of 8; landscape all 8. On a phone held upright its hint sits just above the
   ballista and its name banner moves left of FLEE (it covered FLEE). Proof: wheeltest.cjs (9 checks, portrait and
   landscape), kcam.cjs (framing numbers and screenshots at 390x844, 844x390, 820x1180).
+- v1.15.1 (Sean, four asks): (1) "when a fight starts, the ship should auto stop, unless you hit flee": startBattle furls the
+  sail (setThrottle 0) for every fight, classic, ACTION beast, ship battle and legend, and nothing raises it after (the ship
+  battle no longer sets HALF); FLEE still leaves at full sail. (2) THE SAGA has its own red button (#sagaHud) under the view
+  button, gone from the pause menu; it pauses the sea and BACK returns to it; the tutorial step points at it. (3) "the info
+  on screen should never block the screen ... smaller, shorter, out of the main view": #msg, #warn and the sea's name
+  (#seaBanner, removed from the column when its animation ends) are small notes in one column (#notes) top-left under the
+  bounty, 12.5px (15 on a tablet), three lines at most (warnings two; the gap under the clamp is a clear border so a cut line
+  never shows); a settlement's hail is shorter (name, level, people, its ward). (4) an AUTO light (#autoBtn) over FULL while
+  the ship steers itself (any set course, SAIL TO DOCK, SAIL THERE); turning the wheel (a real turn, not a tap), A or D, a
+  different notch on the telegraph (thrNotch: the notch already lit does not count; a course sails at 0.8, which lights FULL),
+  W or S, or tapping AUTO calls takeHelm(), which ends it. The action buttons moved up 38 px (46 on a tablet) to make room.
+  Proof: v1151test.cjs (49 checks at 390x844, 844x390, 820x1180: no overlapping controls, AUTO over FULL, every way of
+  taking the helm, SAGA, the note's size and place, each fight kind stops and stays stopped, FLEE at full sail).
 
 ## Pages and modules
 - index.html + src/main.js: the game. src/pr.css: all styling (Dead City's style.css is copied but unused).

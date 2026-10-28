@@ -159,8 +159,8 @@ canvas.addEventListener('pointermove', (e) => { if (touches.has(e.pointerId)) to
 const pUp = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pinch0 = 0; if (tapStart && tapStart.id === e.pointerId) { if (performance.now() - tapStart.t < 350 && Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y) < 18) tapSea(e.clientX, e.clientY); tapStart = null; } }; canvas.addEventListener('pointerup', pUp); canvas.addEventListener('pointercancel', pUp);
 
 // ---------- the helm: a big ship's wheel across the bottom of the screen, its hub just below the edge so the top half
-// shows. Swipe along it to turn it, a little each way; let go and it springs back to straight (v1.15.0), or on a set course
-// the helmsman steers back toward the mark. The sail telegraph (BACK / STOP / ROW / HALF / FULL; a column on the controls side, see ⇄) sets sail and
+// shows. Swipe along it to turn it, a little each way; let go and it springs back to straight (v1.15.0). On a set course
+// the helmsman steers (AUTO); turning the wheel takes the helm and ends the course (v1.15.1). The sail telegraph (BACK / STOP / ROW / HALF / FULL; a column on the controls side, see ⇄) sets sail and
 // oar power with a tap; STOP furls the sails and cancels the course. Taps and sideways swipes only, so nothing on the
 // controls is a downward swipe (iPad Safari closes full screen on those). ----------
 const HMAX = 0.7; // the wheel turns about 40 degrees each way (v1.15.0; it was 140), full rudder at the stops
@@ -176,7 +176,7 @@ addEventListener('resize', layoutHelm); layoutHelm();
 function helmHub() { const r = helmEl.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height + helmBox.R * 0.06]; }
 function helmAngleAt(e) { const [cx, cy] = helmHub(); return Math.atan2(e.clientY - cy, e.clientX - cx); }
 helmEl.addEventListener('pointerdown', (e) => { const [cx, cy] = helmHub(); if (Math.hypot(e.clientX - cx, e.clientY - cy) > helmBox.R * 1.18) return; e.preventDefault(); e.stopPropagation(); if (state !== 'play') return; unlockAudio(); helm.held = true; helm.id = e.pointerId; helm.last = helmAngleAt(e); try { helmEl.setPointerCapture(e.pointerId); } catch { /* ignore */ } });
-helmEl.addEventListener('pointermove', (e) => { if (!helm.held || e.pointerId !== helm.id) return; const a = helmAngleAt(e); helm.angle = clamp(helm.angle + angDiff(a, helm.last) * 0.8, -HMAX, HMAX); helm.last = a; });
+helmEl.addEventListener('pointermove', (e) => { if (!helm.held || e.pointerId !== helm.id) return; const a = helmAngleAt(e), da = angDiff(a, helm.last) * 0.8; if (Math.abs(da) > 0.004) takeHelm(); helm.angle = clamp(helm.angle + da, -HMAX, HMAX); helm.last = a; });
 for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) helmEl.addEventListener(ev, (e) => { if (e.pointerId === helm.id) { helm.held = false; helm.id = null;
 } });
 function drawHelm() { if (!helmEl.clientWidth) return; const dpr = Math.min(2, devicePixelRatio || 1), W = Math.round(helmBox.cw * dpr), Hh = Math.round(helmBox.ch * dpr); if (helmEl.width !== W || helmEl.height !== Hh) { helmEl.width = W; helmEl.height = Hh; helmDrawn = null; } if (helmDrawn !== null && Math.abs(helmDrawn - helm.angle) < 0.002) return; helmDrawn = helm.angle;
@@ -196,17 +196,24 @@ function drawHelm() { if (!helmEl.clientWidth) return; const dpr = Math.min(2, d
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#f2d27a'; g.strokeStyle = '#2a1608'; g.lineWidth = 1.5 * dpr; g.beginPath(); g.moveTo(cx - 7 * dpr, 1 * dpr); g.lineTo(cx + 7 * dpr, 1 * dpr); g.lineTo(cx, 10 * dpr); g.closePath(); g.fill(); g.stroke(); }
 const thrEl = $('throttle'), THR_LV = [-0.22, 0, 0.3, 0.6, 1]; // BACK (a slow reverse), STOP, ROW, HALF, FULL
 function setThrottle(v, quiet) { v = clamp(v, THR_LV[0], 1); if (Math.abs(v) < 0.06) v = 0; if (v > 0.95) v = 1; const was = boat.throttle || 0; boat.throttle = v; if (v <= 0 && was > 0 && boat.wp) { boat.wp = null; courseMark.visible = false; if (!quiet) say('Sails furled. Course cancelled.'); } drawThrottle(); }
-function drawThrottle() { const v = boat.throttle || 0, n = v < -0.05 ? 0 : v === 0 ? 1 : v < 0.4 ? 2 : v < 0.75 ? 3 : 4; thrEl.querySelectorAll('button').forEach((b, i) => { if (b.classList.contains('on') !== (i === n)) b.classList.toggle('on', i === n); }); }
+// the notch a sail setting lights (a course sails at 0.8: FULL)
+const thrNotch = (v) => (v < -0.05 ? 0 : v === 0 ? 1 : v < 0.4 ? 2 : v < 0.75 ? 3 : 4);
+function drawThrottle() { const v = boat.throttle || 0, n = thrNotch(v); thrEl.querySelectorAll('button').forEach((b, i) => { if (b.classList.contains('on') !== (i === n)) b.classList.toggle('on', i === n); }); }
 // tap a notch, or slide sideways along the row
-function thrPick(e) { const el = document.elementFromPoint(e.clientX, e.clientY), b = el && el.closest && el.closest('#throttle button'); if (b) setThrottle(THR_LV[+b.dataset.n]); }
+function thrPick(e) { const el = document.elementFromPoint(e.clientX, e.clientY), b = el && el.closest && el.closest('#throttle button'); if (!b) return; if (+b.dataset.n !== thrNotch(boat.throttle || 0)) takeHelm(); setThrottle(THR_LV[+b.dataset.n]); }
 let thrId = null; thrEl.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); if (state !== 'play') return; unlockAudio(); thrId = e.pointerId; try { thrEl.setPointerCapture(e.pointerId); } catch { /* ignore */ } thrPick(e); });
 thrEl.addEventListener('pointermove', (e) => { if (e.pointerId === thrId) thrPick(e); });
 for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) thrEl.addEventListener(ev, (e) => { if (e.pointerId === thrId) thrId = null; });
 canvas.addEventListener('wheel', (e) => { zoom = clamp(zoom * Math.exp(e.deltaY * 0.001), 0.3, 2.6); }, { passive: true });
 // W / S (or up / down): a tap moves the sail telegraph one notch (STOP, ROW, HALF, FULL); held, it steps on through them
 const thrKeyOk = () => state === 'play' && !fishing && (!battle || !!battle.broad || !!(battle.legend && battle.legend.sail));
-function thrKeyStep(dir) { if (!thrKeyOk()) return; const cur = boat.throttle || 0, next = dir > 0 ? THR_LV.find((l) => l > cur + 0.02) : [...THR_LV].reverse().find((l) => l < cur - 0.02); if (next != null) setThrottle(next); }
+function thrKeyStep(dir) { if (!thrKeyOk()) return; const cur = boat.throttle || 0, next = dir > 0 ? THR_LV.find((l) => l > cur + 0.02) : [...THR_LV].reverse().find((l) => l < cur - 0.02); if (next != null) { takeHelm(); setThrottle(next); } }
 let thrHold = 0;
+// hands back on the wheel or the telegraph end the auto-drive (v1.15.1, Sean): a set course, SAIL TO DOCK or SAIL THERE
+function takeHelm() { if (!boat.wp && !boat.auto) return; const was = autoOn(); boat.wp = null; boat.auto = null; courseMark.visible = false; say(was ? 'You take the helm.' : 'Course cancelled: you take the helm.', 2); }
+// the AUTO light over FULL shows while the ship steers itself; a tap on it takes the helm too
+let autoShown = null; function drawAutoBtn() { const on = !!boat.wp && state === 'play'; if (on !== autoShown) { autoShown = on; $('autoBtn').classList.toggle('hidden', !on); } }
+$('autoBtn').onclick = (e) => { e.stopPropagation(); unlockAudio(); takeHelm(); };
 const keys = {}; addEventListener('keydown', (e) => { const k = e.key.toLowerCase(); keys[k] = true; if (e.key === ' ' && !/INPUT|TEXTAREA/.test(e.target.tagName || '')) { e.preventDefault(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); if (state === 'play') fire(true); }
   if (state === 'play' && battle && battle.legend && battle.legend.kind === 'elder' && k >= '1' && k <= '4') elderRune(+k - 1);
   // C changes the view; E opens and shuts the sea chart
@@ -377,7 +384,9 @@ function startBattle(mon, firstStrike, opts = {}) {
   // the tutorial shark fights only on its own step (Sean: sailing to the chart's mark met it early)
   if (tut && mon === tut.mon && !(TUT[tut.i] && TUT[tut.i].shark)) return;
   if (autoOn()) { autoFlee(mon); return; } // SAIL TO DOCK: flee every fight
-  if (battle) return; if (mon.naval && BROAD.on && !opts.classic && startBroadside(mon)) return; if (!mon.naval && !opts.classic && startLegend(mon)) return; battle = { mon, t: 0 }; boat.wp = null; helm.held = false; setBattle(true);
+  if (battle) return;
+  // every fight starts with the sail furled (v1.15.1, Sean): the ship stops and stays stopped after; FLEE leaves at full sail
+  setThrottle(0, true); if (mon.naval && BROAD.on && !opts.classic && startBroadside(mon)) return; if (!mon.naval && !opts.classic && startLegend(mon)) return; battle = { mon, t: 0 }; boat.wp = null; helm.held = false; setBattle(true);
   // place the foe beside the ship, facing it
   const gap = mon.giant ? mon.size * 0.36 + T().L * 0.3 : T().L * 0.25 + mon.size * 0.75 + 4; let side = boat.yaw + Math.PI / 2; const toFoe = Math.atan2(mon.x - boat.x, mon.z - boat.z);
   for (const c of [toFoe, boat.yaw + Math.PI / 2, boat.yaw - Math.PI / 2, boat.yaw + Math.PI, boat.yaw, toFoe + 2.4, toFoe - 2.4]) { const x = boat.x + Math.sin(c) * gap, z = boat.z + Math.cos(c) * gap; if (!world.blockAt(x, z, mon.size * 0.6 + 2) && !world.blockAt((x + boat.x) / 2, (z + boat.z) / 2, 2)) { side = c; break; } }
@@ -426,7 +435,7 @@ function startBroadside(mon) {
   if (!F) { say('⚔ No sea room for a battle line here: <b>close quarters!</b>', 3); return false; }
   const B = { ...F, gap, spacing, Lh, foes, yC: -gap / 2, eC: gap / 2, sp: 0, vp: 0, anchor: 0, ve: 0, mode: 'move', target: -Lh * 0.75, holdT: 0, stopNext: Math.random() < 0.5, sweeps: 0, swap: null, k: 0, reload: 0.8, start: [[boat.x, boat.z], ...foes.map((f) => [f.x, f.z])], camYaw: Math.atan2(F.cx, F.cz), my: broadArrow(0xffd24a), shots: [], burn: new Map(), fk: 0, fpDir: null, fpOn: false, cam0: camera.position.clone(), look0: camera.position.clone().add(camera.getWorldDirection(V(0, 0, 0)).multiplyScalar(30)) };
   for (const f of foes) { f.bx = { reload: 4 + Math.random() * 2, err: 0, last: null, aimT: 0, arrow: broadArrow(0xff4a3a) }; f.state = 'chase'; }
-  battle = { mon, t: 0, broad: B }; boat.wp = null; helm.held = false; setBattle(true); if ((boat.throttle || 0) < 0.3) setThrottle(0.6, true);
+  battle = { mon, t: 0, broad: B }; boat.wp = null; helm.held = false; setBattle(true);
   $('acts').classList.add('hidden'); $('helmWrap').classList.add('hidden'); document.body.classList.add('busy', 'broadOn');
   const ui = document.createElement('div'); ui.id = 'broad';
   ui.innerHTML = `<div class="bFoe"><b id="bFoeName"></b><div class="hp foe"><i id="bFoeHp"></i></div></div><div class="bHint" id="bHint">⚔ Coming alongside her: to the ballista!</div><div class="bStrip"><b id="bZone"></b><b id="bPerf"></b><em>▲</em>${foes.map((_, i) => `<i id="bShip${i}"></i>`).join('')}<span id="bAim">⚠ SHE AIMS</span></div>
@@ -1123,7 +1132,8 @@ function sagaTitle() { let best = null, bs = 0; for (const D of DEEDS) { const r
 function drawSaga() { sagaCheck(); const list = $('sagaList'); list.innerHTML = ''; $('sagaName').textContent = sagaTitle();
   for (const D of DEEDS) { const r = P.st.d[D.id] || 0, n = D.n(), next = D.at[r], d = document.createElement('div'); d.className = 'deed' + (r >= D.at.length ? ' full' : '');
     d.innerHTML = `<span class="di">${D.icon}</span><span class="dt"><b>${D.name}</b> <span class="stars">${'★'.repeat(r)}${'☆'.repeat(D.at.length - r)}</span><i style="width:${next ? Math.min(100, (n / next) * 100) : 100}%"></i></span><span class="dn">${next ? Math.min(n, next) + ' / ' + next : '✔'}</span>`; list.appendChild(d); } }
-$('sagaBtn').onclick = () => { $('paused').classList.add('hidden'); $('saga').classList.remove('hidden'); drawSaga(); if (tut) tut.saga = true; }; $('sagaBack').onclick = () => { $('saga').classList.add('hidden'); $('paused').classList.remove('hidden'); };
+// THE SAGA opens from its own button on the screen (v1.15.1, Sean: not in the pause menu); the sea waits while it is open
+$('sagaHud').onclick = (e) => { e.stopPropagation(); if (state !== 'play' || battle || fishing) return; state = 'paused'; $('saga').classList.remove('hidden'); drawSaga(); if (tut) tut.saga = true; }; $('sagaBack').onclick = () => { $('saga').classList.add('hidden'); state = 'play'; };
 
 // ---------- The Jarl's Hall (v0.8.0): raised stage by stage at Valholm, where idle gold goes in the long run. Each stage lasts ----------
 const HALL = [
@@ -1376,7 +1386,7 @@ function closeChart() { $('chart').classList.add('hidden'); state = 'play'; cptr
 function chartHint(t, hot) { const h = $('chartHint'); h.innerHTML = t || (keyPad ? 'Scroll to zoom, drag to look around, click to set your course.' : 'Pinch to zoom, drag to look around, tap to set your course.') + ' Red circles are hunting grounds.'; h.classList.toggle('hot', !!hot); }
 const onChartStep = () => !!tut && !!tut.target && !!TUT[tut.i] && !!TUT[tut.i].chart;
 const tutChartHint = () => { if (!onChartStep()) return; if (chartView.zoom > 1.8) chartHint(keyPad ? '🔍 Zoomed in. Now click the ✕ (or anywhere) to set your course.' : '🔍 Zoomed in. Now tap the ✕ (or anywhere) to set your course.', true); else chartHint(keyPad ? '🧭 Scroll in on the glowing ✕ (or just click near it), then click to set your course.' : '🧭 Pinch in on the glowing ✕ (or just tap near it), then tap to set your course.', true); };
-function mapTap(cv, e) { const r = cv.getBoundingClientRect(); const x = ((e.clientX - r.left) / r.width) * WORLD - HALF, z = ((e.clientY - r.top) / r.height) * WORLD - HALF; setCourse(x, z); say('Course set. Turn the wheel any time; let go and the helmsman steers back to the mark.'); }
+function mapTap(cv, e) { const r = cv.getBoundingClientRect(); const x = ((e.clientX - r.left) / r.width) * WORLD - HALF, z = ((e.clientY - r.top) / r.height) * WORLD - HALF; setCourse(x, z); say('Course set: the helmsman steers (AUTO). Turn the wheel or change sail to take the helm.'); }
 let mapTapT = 0; mapEl.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); if (state === 'play' && !battle && !fishing) { mapTapT = performance.now(); $('chartBtn').click(); } });
 mapEl.addEventListener('touchend', (e) => { if (performance.now() - mapTapT < 600 || state !== 'play' || battle || fishing) return; e.preventDefault(); $('chartBtn').click(); }, { passive: false });
 $('chartBtn').onclick = () => { if (state !== 'play' || battle || fishing) return; if (tut) tut.chart = true; state = 'chart'; chartView.zoom = 1; chartView.cx = 0; chartView.cz = 0; cptr.clear(); $('chart').classList.remove('hidden'); chartHint(); tutChartHint(); drawMap(chartEl, chartCtx, true); requestAnimationFrame(() => { if (state === 'chart') drawMap(chartEl, chartCtx, true); }); };
@@ -1410,7 +1420,7 @@ function updateBoat(dt) {
   const t = T(); let thr = boat.throttle || 0, want = null;
   const kTurn = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0), kThr = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0);
   if (kThr && thrKeyOk()) { thrHold += dt; if (thrHold > 0.4) { thrHold -= 0.22; thrKeyStep(kThr); } } else thrHold = 0; // held: the next notch every 0.22 s after 0.4 s
-  if (state === 'play' && (!battle || (battle.legend && battle.legend.sail && !battle.legend.coil)) && !fishing) { if (kTurn) helm.angle = clamp(helm.angle + kTurn * dt * HMAX * 2.2, -HMAX, HMAX);
+  if (state === 'play' && (!battle || (battle.legend && battle.legend.sail && !battle.legend.coil)) && !fishing) { if (kTurn) { if (boat.wp) takeHelm(); helm.angle = clamp(helm.angle + kTurn * dt * HMAX * 2.2, -HMAX, HMAX); }
     if (boat.wp) { const dx = boat.wp.x - boat.x, dz = boat.wp.z - boat.z, d = Math.hypot(dx, dz);
       if (d < 4 + t.L * 0.3) { const au = autoOn() && boat.auto.h; boat.wp = null; boat.auto = null; courseMark.visible = false; setThrottle(0, true); if (au && !au.sea) openHarbor(au); else say('Arrived' + (au ? ' at ' + au.name : '') + '. Sails furled.'); }
       else { courseMark.position.set(boat.wp.x, ocean.heightAt(boat.wp.x, boat.wp.z) + 0.2, boat.wp.z); courseMark.rotation.z += dt; thr = Math.min(thr, clamp(d / 18, 0.25, 1));
@@ -1512,7 +1522,7 @@ function autoDock(on) {
   if (state !== 'play' || battle || fishing) return; if (ctx && ctx.kind === 'dock') { openHarbor(ctx.h); return; }
   const h = nearestHarbor(); if (!h) return;
   boat.auto = { h, path: null, i: 0, wp: null, replanT: 0 }; autoPlan(); setThrottle(1, true);
-  say('⚓ Sailing for ' + h.name + '. The crew steer around land and flee every fight. Tap STOP or ⚓ to take the helm.', 4.5); }
+  say('⚓ Sailing for ' + h.name + ' (AUTO): the crew steer round land and flee every fight. Turn the wheel or change sail to take the helm.', 4.5); }
 // plan (or plan again) from where the ship is now to just off the harbour's dock, then sail it leg by leg
 function autoPlan() { const A = boat.auto, h = A.h, gx = h.dock.x + Math.cos(h.dir) * 10, gz = h.dock.z + Math.sin(h.dir) * 10;
   A.path = planRoute(boat.x, boat.z, gx, gz) || [[gx, gz]]; A.i = 0; autoLeg(); }
@@ -1571,7 +1581,7 @@ const TUT = [
   { txt: '📜 Tap <b>TAKE IT</b> to take a bounty.', at: () => { const c = [...$('hbList').querySelectorAll('.card.bounty button')].find((b) => /TAKE IT/.test(b.textContent)); return c || null; }, done: () => !!P.bounty },
   { txt: () => '📜 <b>Bounty taken: ' + (P.bounty ? bountyText(P.bounty) : '') + '.</b> Now tap <b>SET SAIL</b>.', at: () => $('hbSail'), done: () => state === 'play' },
   { txt: () => '📜 <b>Your bounty shows here. Tap it</b> to see how to do it and where, and to sail there. Then CLAIM it at a harbour.', at: () => $('bountyBtn'), done: () => bountySeen || tut.st > 20 || !!(P.bounty && P.bounty.n > 0) },
-  { txt: '🏅 Tap <b>⏸</b> then <b>THE SAGA</b> to see your deeds and titles.', at: () => (state === 'paused' ? $('sagaBtn') : $('pauseBtn')), done: () => tut.saga },
+  { txt: '🏅 Tap <b>📜 SAGA</b> (top right) to see your deeds and titles.', at: () => $('sagaHud'), done: () => tut.saga },
 ];
 // the chart's glowing ✕ during the tutorial: open water 60-90 ahead; the first shark waits there
 function tutTarget() { for (let k = 0; k < 40; k++) { const a = boat.yaw + rnd(-0.8, 0.8), d = rnd(60, 90), x = boat.x + Math.sin(a) * d, z = boat.z + Math.cos(a) * d; if (Math.abs(x) > HALF - 40 || Math.abs(z) > HALF - 40 || world.blockAt(x, z, 14)) continue; tut.target = { x, z }; return; } tut.target = null; }
@@ -1621,6 +1631,7 @@ $('howTut').onclick = () => { $('how').classList.add('hidden'); tutForce = true;
 const rw = {}; let curSea = 'home', stormT = 5;
 const SEA_INTRO_HEL = { home: ['☠ GJÖLL ☠', 'The black river of the dead'], frost: ['❄ NIFLHEL ❄', 'Frozen mist where the dead wander'], storm: ['🔥 MUSPELHEIM 🔥', 'Seas of fire and burning ships'], mist: ['🦴 NÁSTROND 🦴', 'The corpse shore, where Nidhögg feeds'], warm: ['💀 GINNUNGAGAP 💀', 'Shores of bare bone over the abyss'] };
 const SEA_INTRO = { home: ['⚓ HOME WATERS ⚓', 'Green isles around Valholm'], frost: ['❄ THE FROST SEA ❄', 'Ice floes, snow peaks and frost wyrms'], storm: ['🌋 THE STORM SEA 🌋', 'Fire mountains, black rock and lightning'], mist: ['🌫 THE MIST SEA 🌫', 'Dead marshes, old stones and ghost lights'], warm: ['🌴 THE WARM SEA 🌴', 'White sands, palms and coral reefs'] };
+$('seaBanner').addEventListener('animationend', (e) => e.currentTarget.classList.remove('show'));
 function seaBanner(k) { const el = $('seaBanner'), I = (P.realm === 'hel' ? SEA_INTRO_HEL : SEA_INTRO)[k]; el.innerHTML = '<b>' + I[0] + '</b><small>' + I[1] + '</small>'; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); sfx.horn(); }
 const wrap90 = (d) => ((d + 45) % 90 + 90) % 90 - 45; // flakes and drops live in world space and wrap around the camera target
 const fall = (() => { const n = 700, pos = new Float32Array(n * 3), vel = new Float32Array(n); for (let i = 0; i < n; i++) { pos[i * 3] = rnd(-45, 45); pos[i * 3 + 1] = rnd(0, 40); pos[i * 3 + 2] = rnd(-45, 45); vel[i] = rnd(0.6, 1.4); }
@@ -1709,7 +1720,7 @@ function tick(dt) { time += dt;
   { const wl = LOOK[wx.type], on = state === 'title' ? 0 : 1, wet = wl === 'rain' || wl === 'storm' ? wx.k : 0; setWeatherSound(on * wet * (P.realm === 'hel' ? 0.5 : 1), on * Math.min(1, (wl === 'storm' ? wx.k * 0.9 : 0) + (rw.frost || 0) * 0.35)); }
   updateCamera(dt); updateHulls(); ocean.update(dt, camTgt, camera); foam.update(dt); foam.mat.uniforms.uLight.value = 0.35 + env.cur.ambient;
   if (state === 'play') { updateTags(dt); if ((mapFlip ^= 1)) drawMap(mapEl, mapCtx, false);
-    drawDockBtn(); ctx = actionContext(); const key = ctx ? ctx.kind + ctx.label : ''; if (key !== ctxKey) { ctxKey = key; const b = $('actBtn'); if (ctx) { b.classList.remove('hidden'); b.innerHTML = '<em>' + ctx.icon + '</em><small>' + ctx.label + '</small>'; b.style.borderColor = ctx.kind === 'fight' ? '#ff5a3a' : ctx.kind === 'slow' ? '#c8c8c8' : '#7dff3a'; } else b.classList.add('hidden'); }
+    drawDockBtn(); drawAutoBtn(); ctx = actionContext(); const key = ctx ? ctx.kind + ctx.label : ''; if (key !== ctxKey) { ctxKey = key; const b = $('actBtn'); if (ctx) { b.classList.remove('hidden'); b.innerHTML = '<em>' + ctx.icon + '</em><small>' + ctx.label + '</small>'; b.style.borderColor = ctx.kind === 'fight' ? '#ff5a3a' : ctx.kind === 'slow' ? '#c8c8c8' : '#7dff3a'; } else b.classList.add('hidden'); }
     const wk = P.up.ballista ? 'b' : 's'; if (wk !== fireKey) { fireKey = wk; $('fireBtn').innerHTML = '<em>' + (P.up.ballista ? '🏹' : '🗡') + '</em><small>' + (P.up.ballista ? 'BALLISTA' : 'SPEARS') + '</small><i class="cd" id="fireCd"></i>'; } $('fireCd').style.height = (boat.fireCd > 0 ? clamp(boat.fireCd / (P.up.ballista ? 2 : 1.2), 0, 1) * 100 : 0) + '%';
     $('region').textContent = rname(world.regionAt(boat.x, boat.z)) + (isNight() ? ' · 🌙' : ''); $('wxTxt').textContent = wx.k > 0.3 ? (P.realm === 'hel' && WXNAME_HEL[wx.type]) || WXNAME[wx.type] : ''; $('buff').textContent = [boat.thor > 0 ? '⚡ Thor ×2 damage ' + Math.ceil(boat.thor) + 's' : '', boat.curse > 0 ? '☠ Cursed ' + Math.ceil(boat.curse) + 's' : '', lairHud ? '⚔ Lair wave ' + lairHud : '', boat.pod ? '🐬 Porpoises +10% speed' : '', boat.boost > 0 ? '💨 Escape +35% speed' : '', boat.bifrost > 0 ? '🌈 Bifröst +25% speed, mending ' + Math.ceil(boat.bifrost) + 's' : '', P.tithe > 0 && P.realm === 'hel' ? '🕯 Tithe +25% souls ' + Math.ceil(P.tithe / 60) + 'm' : '', boat.mending ? '🔨 Crew mending' : ''].filter(Boolean).join(' · '); $('hurt').classList.toggle('thor', boat.thor > 0); }
   else for (const mon of mons) mon.tag.style.display = 'none';
